@@ -7,8 +7,13 @@ This repository contains the source code for **Jenova Runtime** developed for Go
 
 **J.E.N.O.V.A** is an extension library for the Godot 4 Game Engine that brings fully-featured C++ scripting directly into the Godot Editor. It allows the use of modern C++20 standards within the Godot Engine, similar to GDScript. With Jenova Framework there are no limits. You can integrate OpenCV, CUDA, Vulkan, OpenMP, and any other modern C++ features, all supported by the powerful MSVC backend.
 
-> [!CAUTION]
+> [!IMPORTANT]
 > This source code is licensed under MIT license.
+
+## Issue/Bug Reports and Questions
+If you want to report an issue or bug create a new thread at [Issues](https://github.com/Jenova-Framework/Jenova-Runtime/issues).
+
+If you have any questions you can create a new thread at [Discussions](https://github.com/Jenova-Framework/J.E.N.O.V.A/discussions).
 
 ## Dependencies
 
@@ -29,18 +34,14 @@ Jenova Core has following dependencies :
 
 ## Build System
 Jenova Core requires Visual Studio 2022 with C++20 Support
+You can always obtain pre-built binaries from [here](https://github.com/Jenova-Framework/J.E.N.O.V.A/releases).
 
 ## Open Source vs Proprietary
-
 While the public source code of Jenova is ~99% identical to the proprietary version, a few specific features have been removed or disabled.
 ### These changes include :
-
 - **Jenova Emulator Connector**  is provided in full source code but parts of the integration code for proprietary emulators have been removed. It remains functional if connected to another emulator module.
-
 - **A.K.I.R.A JIT** is removed from the public source code. This component was responsible for executing obfuscated code using a proprietary highly secured VM.
-
 - **Code Encryption and Key System** has been omitted from the public version to protect critical proprietary algorithms. However, Code Compression is fully included, Developers can add their own encryption on top of the existing buffering system.
-
 - **Jenova Code Virtualizer/Sandbox** removed due to reliance on the proprietary SecureAngel™ 2.0 technology.
 
   
