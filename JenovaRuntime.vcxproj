@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Editor|x64">
+      <Configuration>Editor</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Hybrid|x64">
+      <Configuration>Hybrid</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Game|x64">
+      <Configuration>Game</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{8546F551-80FE-49B0-ABE2-9C8498C0B34E}</ProjectGuid>
+    <RootNamespace>Jenova.Framework</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Jenova.Runtime</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <BuildPath>.\Win64\</BuildPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(BuildPath)</OutDir>
+    <IntDir>$(BuildPath)\Compiler_Cache\Runtime\</IntDir>
+    <TargetName>Jenova.Runtime.Win64</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;JENOVA_RUNTIME;JENOVA_SDK_BUILD;TYPED_METHOD_BIND;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>false</ConformanceMode>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>.\Libs;.\Libs\GodotSDK;.\Libs\Archive;.\Libs\Curl</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <AdditionalDependencies>.\Libs\GodotSDK\libGodot.x64.lib;.\Libs\MinHook.x64MT.VS2019.lib;.\Libs\AsmJIT.x64MT.VS2019.lib;.\Libs\MemoryModule.x64MT.VS2022.lib;.\Libs\libFastZlib.x64MT.VS2019.lib;.\Libs\libVSWhere.x64MT.VS2022.lib;.\Libs\libArchive.x64MT.VS2022.lib;.\Libs\libCurl.x64MT.VS2022.lib;.\Libs\libTinyCC.x64MT.VS2022.lib;comctl32.lib;Dbghelp.lib;Winhttp.lib;Wldap32.lib;Crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>dbghelp.dll;Winhttp.dll;Wldap32.dll;Crypt32.dll;bcrypt.dll;ole32.dll;</DelayLoadDLLs>
+      <TreatLinkerWarningAsErrors>
+      </TreatLinkerWarningAsErrors>
+      <AdditionalOptions>/IGNORE:4098 /IGNORE:4286 /IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)JenovaSDK.h" "$(BuildPath)JenovaSDK" /Y
+xcopy ".\Jenova.Runtime.gdextension" "$(BuildPath)" /Y
+xcopy "$(TargetDir)$(TargetName).lib" "$(BuildPath)JenovaSDK" /Y
+if exist "$(BuildPath)JenovaSDK\Jenova.SDK.x64.lib" del "$(BuildPath)JenovaSDK\Jenova.SDK.x64.lib"
+ren "$(BuildPath)JenovaSDK\$(TargetName).lib" "Jenova.SDK.x64.lib"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="asset_monitor.cpp" />
+    <ClCompile Include="emulator_connector.cpp" />
+    <ClCompile Include="emulator_firewall.cpp" />
+    <ClCompile Include="jenova.cpp" />
+    <ClCompile Include="jenovaSDK.cpp" />
+    <ClCompile Include="package_manager.cpp" />
+    <ClCompile Include="script_compiler.cpp" />
+    <ClCompile Include="script_interpreter.cpp" />
+    <ClCompile Include="script_manager.cpp" />
+    <ClCompile Include="script_resource.cpp" />
+    <ClCompile Include="script_object.cpp" />
+    <ClCompile Include="script_instance_base.cpp" />
+    <ClCompile Include="script_instance.cpp" />
+    <ClCompile Include="script_language.cpp" />
+    <ClCompile Include="script_templates.cpp" />
+    <ClCompile Include="tiny_profiler.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AboutImage.h" />
+    <ClInclude Include="asset_monitor.h" />
+    <ClInclude Include="InternalSources.h" />
+    <ClInclude Include="BuiltinFonts.h" />
+    <ClInclude Include="CodeTemplates.h" />
+    <ClInclude Include="TypesIcons.h" />
+    <ClInclude Include="Documentation.h" />
+    <ClInclude Include="emulator_connector.h" />
+    <ClInclude Include="emulator_firewall.h" />
+    <ClInclude Include="IconDatabase.h" />
+    <ClInclude Include="Jenova.hpp" />
+    <ClInclude Include="JenovaIcon64.h" />
+    <ClInclude Include="JenovaSDK.h" />
+    <ClInclude Include="package_manager.h" />
+    <ClInclude Include="script_compiler.h" />
+    <ClInclude Include="script_interpreter.h" />
+    <ClInclude Include="script_manager.h" />
+    <ClInclude Include="script_resource.h" />
+    <ClInclude Include="script_object.h" />
+    <ClInclude Include="script_instance_base.h" />
+    <ClInclude Include="script_instance.h" />
+    <ClInclude Include="script_language.h" />
+    <ClInclude Include="script_templates.h" />
+    <ClInclude Include="tiny_profiler.h" />
+    <ClInclude Include="VisualStudioTemplates.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Jenova.Runtime.gdextension" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Jenova.Runtime.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
