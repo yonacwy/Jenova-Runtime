@@ -35,6 +35,11 @@ Jenova Core has following dependencies :
 - [ArgParse++](https://github.com/p-ranav/argparse)
 - [Base64++](https://github.com/zaphoyd/websocketpp/blob/master/websocketpp/base64/base64.hpp)
 
+> [!NOTE]
+> - Edit **base64.hpp** namespace to `base64`
+> - Only header file `libtcc.h` is required from TinyCC beside static library
+> - In **FileWatch.hpp** change `_callback(file.first, file.second);` to `_callback(_path + file.first, file.second);`
+
 ## Build System
 Jenova Core requires Visual Studio 2022 with C++20 Support
 You can always obtain pre-built binaries from [here](https://github.com/Jenova-Framework/J.E.N.O.V.A/releases).
