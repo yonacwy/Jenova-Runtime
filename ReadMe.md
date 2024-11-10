@@ -1,11 +1,14 @@
 # Projekt J.E.N.O.V.A :: Core (Public Access)
 
 This repository contains the source code for **Jenova Runtime** developed for Godot 4+
+
 ![image](https://github.com/user-attachments/assets/013eed25-7047-407d-aef8-b964203e73b0)
 
 ## Overview
 
 **J.E.N.O.V.A** is an extension library for the Godot 4 Game Engine that brings fully-featured C++ scripting directly into the Godot Editor. It allows the use of modern C++20 standards within the Godot Engine, similar to GDScript. With Jenova Framework there are no limits. You can integrate OpenCV, CUDA, Vulkan, OpenMP, and any other modern C++ features, all supported by the powerful MSVC backend.
+
+Full feature list can be find [here](https://github.com/Jenova-Framework/J.E.N.O.V.A).
 
 > [!IMPORTANT]
 > This source code is licensed under MIT license.
