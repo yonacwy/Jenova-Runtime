@@ -40,6 +40,8 @@ Jenova Core has following dependencies :
 > - Only header file `libtcc.h` is required from TinyCC beside static library
 > - In **FileWatch.hpp** change `_callback(file.first, file.second);` to `_callback(_path + file.first, file.second);`
 
+> **Pre-Built Dependencise can be obtained from [here](https://drive.google.com/file/d/10qVZ3I0yVod3dSdpotCnNUcAs1jTDYG8/view?usp=sharing).**
+
 ## Build System
 Jenova Core requires Visual Studio 2022 with C++20 Support
 You can always obtain pre-built binaries from [here](https://github.com/Jenova-Framework/J.E.N.O.V.A/releases).
