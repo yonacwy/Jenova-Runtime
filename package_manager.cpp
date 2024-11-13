@@ -1117,13 +1117,13 @@ void JenovaPackageManager::SetBusy(bool busyState, int64_t taskID)
 	if (this->isBusy)
 	{
 		this->currentTaskID = taskID;
-		EnableWindow(jenova::GetMainWindowNativeHandle(), FALSE);
+		jenova::SetWindowState(jenova::GetMainWindowNativeHandle(), false);
 		taskTimer->start();
 	}
 	if (!this->isBusy)
 	{
 		this->currentTaskID = 0;
-		EnableWindow(jenova::GetMainWindowNativeHandle(), TRUE);
+		jenova::SetWindowState(jenova::GetMainWindowNativeHandle(), true);
 		taskTimer->stop();
 	}
 	if (this->isBusy && this->currentWindow) this->currentWindow->set_disable_input(true);

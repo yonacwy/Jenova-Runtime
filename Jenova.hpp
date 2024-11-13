@@ -30,8 +30,40 @@
 
 #ifndef NO_JENOVA_RUNTIME_SDK
 
-// Windows/C++ SDK
+// Define Target Platform
+#if defined(_WIN64) || defined(_WIN32)
+#define TARGET_PLATFORM_WINDOWS 1
+#define TARGET_PLATFORM_CURRENT TargetPlatform::Windows
+#elif defined(__linux__)
+#define TARGET_PLATFORM_LINUX 1
+#define TARGET_PLATFORM_CURRENT TargetPlatform::Linux
+#elif defined(__APPLE__) && defined(__MACH__)
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE
+#define TARGET_PLATFORM_IOS 1
+#define TARGET_PLATFORM_CURRENT TargetPlatform::iOS
+#elif TARGET_OS_MAC
+#define TARGET_PLATFORM_MACOS 1
+#define TARGET_PLATFORM_CURRENT TargetPlatform::MacOS
+#endif
+#elif defined(__ANDROID__)
+#define TARGET_PLATFORM_ANDROID 1
+#define TARGET_PLATFORM_CURRENT TargetPlatform::Android
+#elif defined(__EMSCRIPTEN__)
+#define TARGET_PLATFORM_WEB 1
+#define TARGET_PLATFORM_CURRENT TargetPlatform::Web
+#else
+#define TARGET_PLATFORM_UNKNOWN 1
+#define TARGET_PLATFORM_CURRENT TargetPlatform::Unknown
+#endif
+
+// Windows SDK
+#ifdef TARGET_PLATFORM_WINDOWS
 #include <Windows.h>
+#include <DbgHelp.h>
+#endif
+
+// C++ SDK
 #include <iostream>
 #include <regex>
 #include <string>
@@ -42,7 +74,6 @@
 #include <unordered_set>
 #include <functional>
 #include <filesystem>
-#include <DbgHelp.h>
 
 // Godot SDK
 #include <gdextension_interface.h>
@@ -197,6 +228,7 @@ using namespace godot;
 #define CREATE_GLOBAL_TEMPLATE(a,b,c)		JenovaTemplateManager::get_singleton()->RegisterNewGlobalScriptTemplate(a, CODE_TEMPLATE(b), c);
 #define CREATE_CLASS_TEMPLATE(a,b,c,d)		JenovaTemplateManager::get_singleton()->RegisterNewClassScriptTemplate(a, b, CODE_TEMPLATE(c), d);
 #define QUERY_ENGINE_MODE(mode)				(jenova::GlobalStorage::CurrentEngineMode == jenova::EngineMode::mode)
+#define QUERY_PLATFORM(platform)			(TARGET_PLATFORM_CURRENT == jenova::TargetPlatform::platform)
 #define SCALED(value)						(value * scaleFactor)
 
 // Jenova Namespace
@@ -207,6 +239,8 @@ namespace jenova
 	struct JenovaPackage;
 
 	// Typedefs
+	typedef void* ModuleHandle;
+	typedef void* WindowHandle;
 	typedef String ScriptIdentifier;
 	typedef uint32_t CompilerFeatures;
 	typedef std::string RootPath;
@@ -232,9 +266,18 @@ namespace jenova
 	typedef Vector<Ref<Resource>> ResourceCollection;
 	typedef intptr_t FunctionAddress;
 	typedef intptr_t PropertyAddress;
-	typedef HMODULE ModuleHandle;
 
 	// Enumerators
+	enum class TargetPlatform
+	{
+		Windows,
+		Linux,
+		MacOS,
+		Android,
+		iOS,
+		Web,
+		Unknown
+	};
 	enum class EngineMode
 	{
 		Editor,
@@ -496,7 +539,6 @@ namespace jenova
 		constexpr ModuleInitializationLevel PluginInitializationLevel(MODULE_INITIALIZATION_LEVEL_SCENE);
 
 		constexpr bool VerboseEnabled							= false;
-		constexpr bool EmulatorEnabled							= false;
 		constexpr bool ScriptingEnabled							= true;
 		constexpr bool BuildInternalSources						= true;
 		constexpr bool SafeExitOnPluginUnload					= true;
@@ -571,6 +613,15 @@ namespace jenova
 		constexpr int INTERPRETER_INIT_FAILED					= 0xE0C2;
 	}
 
+	// Operating System Abstraction Layer
+	#pragma region JenovaOS
+	jenova::ModuleHandle LoadModule(const char* libPath);
+	bool ReleaseModule(jenova::ModuleHandle moduleHandle);
+	void* GetModuleFunction(jenova::ModuleHandle moduleHandle, const char* functionName);
+	bool SetWindowState(jenova::WindowHandle windowHandle, bool windowState);
+	int ShowMessageBox(const char* msg, const char* title, int flags);
+	#pragma endregion
+
 	// Utilities & Helpers
 	#pragma region JenovaUtilities
 	void Alert(const char* fmt, ...);
@@ -621,8 +672,8 @@ namespace jenova
 	std::string ExtractReturnTypeFromSignature(const std::string& functionSignature);
 	std::string ExtractPropertyTypeFromSignature(const std::string& propertySignature);
 	bool LoadSymbolForModule(HANDLE process, DWORD64 baseAddress, const std::string& pdbPath, size_t dllSize);
-	bool InitializeExtensionModule(const char* initFuncName, HMODULE moduleBase);
-	bool CallModuleEvent(const char* eventFuncName, HMODULE moduleBase);
+	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase);
+	bool CallModuleEvent(const char* eventFuncName, jenova::ModuleHandle moduleBase);
 	ScriptModule CreateScriptModuleFromInternalSource(const std::string& sourceName, const std::string& sourceCode);
 	bool CreateFileFromInternalSource(const std::string& sourceFile, const std::string& sourceCode);
 	bool CreateBuildCacheDatabase(const std::string& cacheFile, const ModuleList& scriptModules, const jenova::HeaderList& scriptHeaders, bool skipHashes = false);
@@ -652,8 +703,8 @@ namespace jenova
 	bool CreateFontFileDataPackageFromAsset(const String& assetPath, const String& packagePath);
 	String CreateSecuredBase64StringFromString(const String& srcStr);
 	String RetriveStringFromSecuredBase64String(const String& securedStr);
-	HWND GetWindowNativeHandle(const Window* targetWindow);
-	HWND GetMainWindowNativeHandle();
+	jenova::WindowHandle GetWindowNativeHandle(const Window* targetWindow);
+	jenova::WindowHandle GetMainWindowNativeHandle();
 	bool AssignPopUpWindow(const Window* targetWindow);
 	bool ReleasePopUpWindow(const Window* targetWindow);
 	String FormatBytesSize(size_t byteSize);
@@ -683,16 +734,15 @@ namespace jenova
 	void* CoreMemoryMove(void* dest, const void* src, std::size_t count);
 
 	// Handlers
+	#ifdef TARGET_PLATFORM_WINDOWS
 	static LONG WINAPI JenovaCrashHandler(EXCEPTION_POINTERS* exceptionInfo);
+	#endif
 
 	// Imported Libraries
 	namespace libraries
 	{
 		std::string GetVisualStudioInstancesMetadata(std::string arguments);
 	}
-
-	// Deprecateds
-	_declspec(deprecated) jenova::SerializedData ProcessAndExtractPropertiesFromScriptDeprecated(OUT std::string& scriptSource, const std::string& scriptUID);
 }
 
 // Jenova Tools
@@ -710,9 +760,5 @@ namespace jenova
 #include "script_instance.h"
 #include "script_manager.h"
 #include "script_compiler.h"
-
-// Jenova Emulator System
-#include "emulator_firewall.h"
-#include "emulator_connector.h"
 
 #endif // NO_JENOVA_RUNTIME_SDK

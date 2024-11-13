@@ -177,7 +177,7 @@ bool JenovaInterpreter::UnloadModule()
     // Unload Module
 	if (!moduleHandle) return false;
 	if (!moduleBaseAddress) return false;
-    if (!FreeLibraryMemory(moduleHandle)) return false;
+    if (!FreeLibraryMemory(HMEMORYMODULE(moduleHandle))) return false;
     moduleHandle = nullptr;
 	moduleBaseAddress = 0;
     moduleMetaData = "{}";

@@ -37,26 +37,31 @@
 // Namespaces
 using namespace std;
 
-// Global Objects
-HINSTANCE jenovaRuntimeInstance = nullptr;
+// Windows Routine
+#ifdef TARGET_PLATFORM_WINDOWS
 
-// Entrypoint
-static BOOL WINAPI DllMain(HINSTANCE hinstDLL, ULONG fdwReason, LPVOID lpvReserved)
-{
-	// Handle Events
-    if (fdwReason == DLL_PROCESS_ATTACH)
-    {
-		// Disable Thread Calls
-		jenovaRuntimeInstance = hinstDLL;
-        DisableThreadLibraryCalls(jenovaRuntimeInstance);
+	// Windows Global Objects
+	HINSTANCE jenovaRuntimeInstance = nullptr;
 
-		// Update Module Path
-		jenova::GlobalStorage::CurrentJenovaRuntimeModulePath = jenova::GetLoadedModulePath(jenovaRuntimeInstance);
-    }
+	// Windows Entrypoint
+	static BOOL WINAPI DllMain(HINSTANCE hinstDLL, ULONG fdwReason, LPVOID lpvReserved)
+	{
+		// Handle Events
+		if (fdwReason == DLL_PROCESS_ATTACH)
+		{
+			// Disable Thread Calls
+			jenovaRuntimeInstance = hinstDLL;
+			DisableThreadLibraryCalls(jenovaRuntimeInstance);
 
-	// All Good
-    return TRUE;
-}
+			// Update Module Path
+			jenova::GlobalStorage::CurrentJenovaRuntimeModulePath = jenova::GetLoadedModulePath(jenovaRuntimeInstance);
+		}
+
+		// All Good
+		return TRUE;
+	}
+
+#endif
 
 // Jenova Core Implementations
 namespace jenova
@@ -692,24 +697,6 @@ namespace jenova
 				// Validate Theme
 				if (!editor_theme.is_valid()) return false;
 
-				// Register Emulator Class Icon
-				if (jenova::GlobalSettings::EmulatorEnabled)
-				{
-					if (!editor_theme->has_icon("JenovaEmulator", "EditorIcons"))
-					{
-						Ref<ImageTexture> iconImage = jenova::CreateImageTextureFromByteArray(BUFFER_PTR_SIZE_PARAM(JENOVA_RESOURCE(PNG_JENOVA_ICON_64)));
-						if (iconImage.is_valid())
-						{
-							editor_theme->set_icon("JenovaEmulator", "EditorIcons", iconImage);
-						}
-						else
-						{
-							jenova::Error("Jenova Plugin", "Cannot Load Emulator Icon.");
-							return false;
-						}
-					}
-				}
-
 				// Register C++ Script Icon
 				if (jenova::GlobalSettings::ScriptingEnabled)
 				{
@@ -757,9 +744,6 @@ namespace jenova
 			}
 			bool InitializeDocumentation()
 			{
-				// Register Nodes Documentation
-				if (jenova::GlobalSettings::EmulatorEnabled) jenova::RegisterDocumentationFromByteArray(BUFFER_PTR_SIZE_PARAM(jenova::documentation::JenovaEmulatorXML));
-
 				// Register Settings Documentation [ Disabled : This will replace entire Editor Settings ]
 				// jenova::RegisterDocumentationFromByteArray(BUFFER_PTR_SIZE_PARAM(jenova::documentation::EditorSettingsXML));
 
@@ -2215,6 +2199,13 @@ namespace jenova
 			// Visual Studio Integration
 			void OpenVisualStudioSelectorWindow()
 			{
+				// Validate Platform
+				if (!QUERY_PLATFORM(Windows))
+				{
+					jenova::Error("Visual Studio Integration", "Visual Studio Exporter is Only Available On Windows Platform.");
+					return;
+				}
+
 				// Collect Visual Studio Instances
 				try
 				{
@@ -2237,9 +2228,9 @@ namespace jenova
 						vsInstances.push_back(vsInstance);
 					}
 				}
-				catch (const std::exception&)
+				catch (const std::exception& error)
 				{
-					jenova::Error("Jenova Vistual Studio Locator", "Failed to Parse Visual Studio Metadata.");
+					jenova::Error("Jenova Vistual Studio Locator", "Failed to Parse Visual Studio Metadata. Reason : %s", error.what());
 					return;
 				}
 
@@ -3073,7 +3064,17 @@ namespace jenova
 			String _get_name() const override { return JenovaExportPluginName; }
 			bool _supports_platform(const Ref<EditorExportPlatform>& p_platform) const override
 			{
+				// .:: Add New Platforms Here ::.
+				#if defined(_MSC_VER)
+				#pragma message(" > Add Platform Support Here")
+				#elif defined(__GNUC__) || defined(__clang__)
+				#pragma message " > Add Platform Support Here"
+				#endif
+
+				// Supports Windows
 				if (p_platform->get_os_name() == "Windows") return true;
+
+				// Unsupported Platform
 				return false;
 			}
 
@@ -3465,10 +3466,6 @@ namespace jenova
 				CPPHeaderResourceSaver::init();
 				JenovaScriptManager::init();
 
-				// Initialize Emulator System If Enabled
-				if (jenova::GlobalSettings::EmulatorEnabled) JenovaFirewall::init();
-				if (jenova::GlobalSettings::EmulatorEnabled) JenovaEmulator::init();
-
 				// Load Module At Initialization [Debug/Runtime]
 				if (QUERY_ENGINE_MODE(Debug) || QUERY_ENGINE_MODE(Runtime))
 				{
@@ -3479,7 +3476,9 @@ namespace jenova
 				JenovaScriptManager::get_singleton()->register_runtime_start_event(&OnRuntimeStarted);
 
 				// Set the Custom Crash Handler
-				SetUnhandledExceptionFilter(jenova::JenovaCrashHandler);
+				#ifdef TARGET_PLATFORM_WINDOWS 
+					SetUnhandledExceptionFilter(jenova::JenovaCrashHandler);
+				#endif
 
 				// Uninitialize Runtime
 				JenovaRuntime::init();
@@ -3513,10 +3512,6 @@ namespace jenova
 				CPPHeaderResourceLoader::deinit();
 				CPPHeaderResourceSaver::deinit();
 
-				// Uninitialize Emulator System If Enabled
-				if (jenova::GlobalSettings::EmulatorEnabled) JenovaEmulator::deinit();
-				if (jenova::GlobalSettings::EmulatorEnabled) JenovaFirewall::deinit();
-
 				// Unload Module
 				VALIDATE_FUNCTION(JenovaInterpreter::UnloadModule());
 
@@ -3543,10 +3538,10 @@ namespace jenova
 			std::string wrapperDirectory = std::filesystem::path(GlobalStorage::CurrentJenovaRuntimeModulePath).parent_path().string();
 			std::string originalRuntimeModulePath = wrapperDirectory + "\\" + std::string(GlobalSettings::JenovaRuntimeModuleName);
 			if (!std::filesystem::exists(originalRuntimeModulePath)) return false;
-			HMODULE jenovaRuntimeModule = LoadLibraryA(originalRuntimeModulePath.c_str());
+			jenova::ModuleHandle jenovaRuntimeModule = jenova::LoadModule(originalRuntimeModulePath.c_str());
 			if (!jenovaRuntimeModule) return false;
 			typedef GDExtensionBool(*InitializeJenovaRuntimeFunc)(GDExtensionInterfaceGetProcAddress, const GDExtensionClassLibraryPtr, GDExtensionInitialization*);
-			InitializeJenovaRuntimeFunc InitializeJenovaRuntime = (InitializeJenovaRuntimeFunc)GetProcAddress(jenovaRuntimeModule, "InitializeRuntime");
+			InitializeJenovaRuntimeFunc InitializeJenovaRuntime = (InitializeJenovaRuntimeFunc)jenova::GetModuleFunction(jenovaRuntimeModule, "InitializeRuntime");
 			if (!InitializeJenovaRuntime) return false;
 			return InitializeJenovaRuntime(initializerData.godotGetProcAddress, initializerData.godotExtensionClassLibraryPtr, initializerData.godotExtensionInitialization);
 		}
@@ -3575,6 +3570,7 @@ namespace jenova
 		}
 
 		// Deployer (Called to Perform Tasks)
+		#ifdef TARGET_PLATFORM_WINDOWS
 		JENOVA_API void CALLBACK Deploy(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 		{
 			// Parse Arguments And Split to Argument Array
@@ -3792,6 +3788,7 @@ namespace jenova
 				quick_exit(EXIT_FAILURE);
 			}
 		}
+		#endif
 	}
 
 	// Global Storage
@@ -3821,6 +3818,45 @@ namespace jenova
 		int TerminalDefaultFontSize = 12;
 	}
 
+	// Operating System Abstraction Layer
+	#pragma region JenovaOS
+	jenova::ModuleHandle LoadModule(const char* libPath)
+	{
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return LoadLibraryA(libPath);
+		#endif
+		return nullptr;
+	}
+	bool ReleaseModule(jenova::ModuleHandle moduleHandle)
+	{
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return FreeLibrary(HMODULE(moduleHandle));
+		#endif
+		return true;
+	}
+	void* GetModuleFunction(jenova::ModuleHandle moduleHandle, const char* functionName)
+	{
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return GetProcAddress(HMODULE(moduleHandle), functionName);
+		#endif
+		return nullptr;
+	}
+	bool SetWindowState(jenova::WindowHandle windowHandle, bool windowState)
+	{
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return EnableWindow(HWND(windowHandle), windowState);
+		#endif
+		return true;
+	}
+	int ShowMessageBox(const char* msg, const char* title, int flags)
+	{
+		#ifdef TARGET_PLATFORM_WINDOWS
+			MessageBoxA(HWND(GetMainWindowNativeHandle()), msg, title, flags);
+		#endif
+		return 0;
+	}
+	#pragma endregion
+
 	// Utilities & Helpers
 	#pragma region JenovaUtilities
 	void Alert(const char* fmt, ...)
@@ -3830,7 +3866,7 @@ namespace jenova
 		va_start(args, fmt);
 		vsnprintf(buffer, sizeof(buffer), fmt, args);
 		va_end(args);
-		MessageBoxA(0, buffer, "[JENOVA]", 0);
+		ShowMessageBox(buffer, "[JENOVA]", 0);
 	}
 	std::string Format(const char* fmt, ...)
 	{
@@ -4105,8 +4141,7 @@ namespace jenova
 		va_end(args);
 
 		// Show Error Message
-		HWND godotWindow = (HWND)DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::HandleType::WINDOW_HANDLE);
-		MessageBoxA(godotWindow, buffer, title, MB_ICONERROR);
+		ShowMessageBox(buffer, title, MB_ICONERROR);
 	}
 	std::string ConvertToStdString(const godot::String& gstr)
 	{
@@ -4762,13 +4797,13 @@ namespace jenova
 		// All Good
 		return moduleBase == baseAddress;
 	}
-	bool InitializeExtensionModule(const char* initFuncName, HMODULE moduleBase)
+	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase)
 	{
 		// Initializer Function Typedef
 		typedef GDExtensionBool(*InitializeExtensionModuleFunc)(ExtensionInitializerData*);
 
 		// Get Initializer Function
-		InitializeExtensionModuleFunc InitializeModule = (InitializeExtensionModuleFunc)GetProcAddress(moduleBase, initFuncName);
+		InitializeExtensionModuleFunc InitializeModule = (InitializeExtensionModuleFunc)jenova::GetModuleFunction(moduleBase, initFuncName);
 		if (!InitializeModule) return false;
 
 		// Create A Clone from Initializer Data
@@ -4782,13 +4817,13 @@ namespace jenova
 		// All Good
 		return true;
 	}
-	bool CallModuleEvent(const char* eventFuncName, HMODULE moduleBase)
+	bool CallModuleEvent(const char* eventFuncName, jenova::ModuleHandle moduleBase)
 	{
 		// Initializer Function Typedef
 		typedef bool(*ModuleEventFun)(void);
 
 		// Get Initializer Function
-		ModuleEventFun ModuleEvent = (ModuleEventFun)GetProcAddress(moduleBase, eventFuncName);
+		ModuleEventFun ModuleEvent = (ModuleEventFun)jenova::GetModuleFunction(moduleBase, eventFuncName);
 
 		// Event Functions Are Optional, If Doesn't Exist We Ignore
 		if (!ModuleEvent) return true;
@@ -5305,17 +5340,18 @@ namespace jenova
 		// Feature is Removed Due to Proprietary Code
 		return securedStr;
 	}
-	HWND GetWindowNativeHandle(const Window* targetWindow)
+	jenova::WindowHandle GetWindowNativeHandle(const Window* targetWindow)
 	{
-		return HWND(DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::HandleType::WINDOW_HANDLE, targetWindow->get_window_id()));
+		return jenova::WindowHandle(DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::HandleType::WINDOW_HANDLE, targetWindow->get_window_id()));
 	}
-	HWND GetMainWindowNativeHandle()
+	jenova::WindowHandle GetMainWindowNativeHandle()
 	{
-		return HWND(DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::HandleType::WINDOW_HANDLE));
+		return jenova::WindowHandle(DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::HandleType::WINDOW_HANDLE));
 	}
 	bool AssignPopUpWindow(const Window* targetWindow)
 	{
-		HWND windowHandle = jenova::GetWindowNativeHandle(targetWindow);
+		#ifdef TARGET_PLATFORM_WINDOWS
+		HWND windowHandle = HWND(jenova::GetWindowNativeHandle(targetWindow));
 		if (windowHandle)
 		{
 			LONG style = GetWindowLong(windowHandle, GWL_STYLE);
@@ -5325,16 +5361,23 @@ namespace jenova
 			return true;
 		}
 		return false;
+		#else
+		return true;
+		#endif
 	}
 	bool ReleasePopUpWindow(const Window* targetWindow)
 	{
-		HWND windowHandle = jenova::GetWindowNativeHandle(targetWindow);
+		#ifdef TARGET_PLATFORM_WINDOWS
+		HWND windowHandle = HWND(jenova::GetWindowNativeHandle(targetWindow));
 		if (windowHandle)
 		{
 			SetWindowLongPtr(windowHandle, GWLP_HWNDPARENT, NULL);
 			return true;
 		}
 		return false;
+		#else
+		return true;
+		#endif
 	}
 	String FormatBytesSize(size_t byteSize)
 	{
@@ -6562,6 +6605,7 @@ namespace jenova
 	}
 	jenova::ScriptFileState BackupScriptFileState(const std::string& scriptFilePath)
 	{
+
 		ScriptFileState scriptFileState;
 		HANDLE hFile = CreateFileA(scriptFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hFile == INVALID_HANDLE_VALUE) return scriptFileState;
@@ -6609,6 +6653,7 @@ namespace jenova
 	}
 
 	// Handlers
+	#ifdef TARGET_PLATFORM_WINDOWS
 	LONG WINAPI JenovaCrashHandler(EXCEPTION_POINTERS* exceptionInfo)
 	{
 		// Generate Crash Dump
@@ -6620,121 +6665,5 @@ namespace jenova
 		// Suppress the Exception
 		return EXCEPTION_EXECUTE_HANDLER;
 	}
-
-	// Deprecateds
-	jenova::SerializedData ProcessAndExtractPropertiesFromScriptDeprecated(OUT std::string& scriptSource, const std::string& scriptUID)
-	{
-		// Property Metadata Serializer
-		nlohmann::json propertiesMetadata;
-
-		// Helpers
-		auto isCommented = [](const std::string& line)
-		{
-			std::regex commentRegex(R"(^\s*(//|/\*|\*/))");
-			return std::regex_search(line, commentRegex);
-		};
-		auto parseArguments = [](const std::string& argsString)
-		{
-			std::vector<std::string> args;
-			std::string currentArg;
-			int parenDepth = 0;
-			bool inQuotes = false;
-			for (size_t i = 0; i < argsString.size(); ++i)
-			{
-				char c = argsString[i];
-				if (c == '"') inQuotes = !inQuotes;
-				else if (c == '(') if (!inQuotes) ++parenDepth;
-				else if (c == ')') if (!inQuotes) --parenDepth;
-				if (c == ',' && parenDepth == 0 && !inQuotes)
-				{
-					// Trim whitespace around currentArg
-					currentArg.erase(currentArg.find_last_not_of(" \t\n\r\f\v") + 1);
-					currentArg.erase(0, currentArg.find_first_not_of(" \t\n\r\f\v"));
-					args.push_back(currentArg);
-					currentArg.clear();
-				}
-				else
-				{
-					currentArg += c;
-				}
-			}
-			if (!currentArg.empty())
-			{
-				currentArg.erase(currentArg.find_last_not_of(" \t\n\r\f\v") + 1);
-				currentArg.erase(0, currentArg.find_first_not_of(" \t\n\r\f\v"));
-				args.push_back(currentArg);
-			}
-			return args;
-		};
-
-		// Split scriptSource into lines for processing
-		std::istringstream scriptStream(scriptSource);
-		std::string line, paramHandlers;
-		int lineNumber = 0;
-		int paramCount = 0;
-
-		// Flags
-		bool isHeaderCommentAdded = false;
-
-		// Extract properties and replace lines
-		while (std::getline(scriptStream, line))
-		{
-			lineNumber++;
-
-			// Skip if line is commented
-			if (isCommented(line)) continue;
-
-			// Detect JENOVA_PROPERTY line
-			std::regex propertyRegex(R"(JENOVA_PROPERTY\s*\((.*)\))");
-			std::smatch match;
-			if (std::regex_search(line, match, propertyRegex))
-			{
-				paramCount++;
-
-				// Parse arguments
-				std::vector<std::string> args = parseArguments(match[1].str());
-				if (args.size() >= 3)
-				{
-					// Set Property Data
-					nlohmann::json propertyMetadata;
-					propertyMetadata["PropertyName"] = args[1];
-					propertyMetadata["PropertyType"] = args[0];
-					propertyMetadata["PropertyDefault"] = args[2];
-					if (args.size() >= 4) propertyMetadata["PropertyGroup"] = jenova::ReplaceAllMatchesWithStringAndReturn(args[3].substr(1, args[3].length() - 2), " ", "_");
-					if (args.size() >= 5) propertyMetadata["PropertyHint"] = args[4];
-					if (args.size() >= 6) propertyMetadata["PropertyHintString"] = args[5];
-					if (args.size() >= 7) propertyMetadata["PropertyClassName"] = args[6];
-					propertiesMetadata.push_back(propertyMetadata);
-
-					// Verbose
-					jenova::VerboseByID(__LINE__, "Property Extracted >> Name : [%s] Type : [%s]  Default Value :[%s]", args[0].c_str(), args[1].c_str(), args[2].c_str());
-				}
-
-				// Add Header Comment
-				if (!isHeaderCommentAdded)
-				{
-					paramHandlers += "// Script Properties Handlers\n";
-					isHeaderCommentAdded = true;
-				}
-
-				// Generate Properties & Handlers
-				size_t lineStartPos = scriptSource.find(line);
-				if (lineStartPos != std::string::npos)
-				{
-					scriptSource.replace(lineStartPos, line.length(), jenova::Format("%s* __prop_%s = nullptr;", args[0], args[1]));
-					paramHandlers += jenova::Format("#define %s *__prop_%s\n", args[1], args[1]);
-				}
-			}
-		}
-
-		// Add Handlers to Source
-		if (paramCount != 0)
-		{
-			paramHandlers += "\n";
-			scriptSource.insert(0, paramHandlers);
-		}
-
-		// Return Metadata
-		return propertiesMetadata.dump();
-	}
+	#endif
 }

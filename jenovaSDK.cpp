@@ -123,15 +123,6 @@ namespace jenova::sdk
 		int64_t time_msec = godot::Time::get_singleton()->get_ticks_msec();
 		return static_cast<double>(time_msec) / 1000.0f;
 	}
-	void Alert(const char* fmt, ...)
-	{
-		char buffer[1024];
-		va_list args;
-		va_start(args, fmt);
-		vsnprintf(buffer, sizeof(buffer), fmt, args);
-		va_end(args);
-		MessageBoxA(0, buffer, "[JENOVA-SDK]", 0);
-	}
 	godot::String Format(const char* format, ...)
 	{
 		char buffer[1024];
@@ -339,6 +330,15 @@ namespace jenova::sdk
 namespace jenova::sdk
 {
 	// Helpers Utilities
+	void Alert(const char* fmt, ...)
+	{
+		char buffer[1024];
+		va_list args;
+		va_start(args, fmt);
+		vsnprintf(buffer, sizeof(buffer), fmt, args);
+		va_end(args);
+		ShowMessageBox(buffer, "[JENOVA-SDK]", 0);
+	}
 	jenova::sdk::EngineMode GetEngineMode()
 	{
 		return jenova::sdk::EngineMode(jenova::GlobalStorage::CurrentEngineMode);

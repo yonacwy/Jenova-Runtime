@@ -2,12 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="jenova.cpp" />
-    <ClCompile Include="emulator_connector.cpp">
-      <Filter>Implementation\Emulator</Filter>
-    </ClCompile>
-    <ClCompile Include="emulator_firewall.cpp">
-      <Filter>Implementation\Emulator</Filter>
-    </ClCompile>
     <ClCompile Include="script_compiler.cpp">
       <Filter>Implementation\Engine</Filter>
     </ClCompile>
@@ -55,9 +49,6 @@
     <Filter Include="Resources">
       <UniqueIdentifier>{93b07def-781b-47eb-837c-0d403d2567f9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Implementation\Emulator">
-      <UniqueIdentifier>{665c6702-fc89-424b-a447-c6357a25f683}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Implementation\Engine">
       <UniqueIdentifier>{84fa0f04-3783-4208-be24-eaa1f69f68c3}</UniqueIdentifier>
     </Filter>
@@ -75,12 +66,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="emulator_connector.h">
-      <Filter>Implementation\Emulator</Filter>
-    </ClInclude>
-    <ClInclude Include="emulator_firewall.h">
-      <Filter>Implementation\Emulator</Filter>
-    </ClInclude>
     <ClInclude Include="script_compiler.h">
       <Filter>Implementation\Engine</Filter>
     </ClInclude>
