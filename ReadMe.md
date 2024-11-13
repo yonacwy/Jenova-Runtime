@@ -6,7 +6,14 @@ This repository contains the source code for **Jenova Runtime** developed for Go
 
 ## Overview
 
-**Projekt J.E.N.O.V.A** is a comprehensive series of extension libraries for the Godot 4 Game Engine that brings fully-featured C++ scripting directly into the Godot Editor. It allows the use of modern C++20/23 standards within the Godot Engine, similar to GDScript. With Jenova Framework there are no limits. You can integrate OpenCV, CUDA, Vulkan, OpenMP, and any other modern C++ features, all supported by the powerful MSVC backend.
+**Projekt J.E.N.O.V.A** is a comprehensive series of extension libraries for the Godot 4 Game Engine that brings fully-featured C++ scripting directly into the Godot Editor. It allows the use of modern C++20 standards within the Godot Engine, similar to GDScript. 
+
+By using Jenova Framework you can easily program your entire game or application in C/C++ without any issues. You can also integrate OpenCV, CUDA, Vulkan, OpenMP and any other modern C++ features seamlessly, All supported by the powerful backend.
+
+### Structure of Projekt J.E.N.O.V.A
+- **Jenova Framework**: The framework contains Jenova Runtime and JenovaSDK.
+- **Jenova Runtime (Core)**: The heart of the framework, It includes the Jenova Interpreter, Jenova Compiler Interface, Jenova Packer, etc.
+- **JenovaSDK**: An optional component of Jenova Runtime, providing helpers and APIs for hot-reloading, global allocation/access, etc.
 
 Full feature list can be found [here](https://github.com/Jenova-Framework/J.E.N.O.V.A#%EF%B8%8F-current-features).
 
