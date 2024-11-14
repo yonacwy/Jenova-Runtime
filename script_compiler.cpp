@@ -158,312 +158,323 @@ namespace jenova
     }
     CompileResult MicrosoftCompiler::CompileScriptModuleWithCustomSettingsContainer(const ScriptModuleContainer& scriptModulesContainer, const Dictionary& compilerSettings)
     {
-        // Create Compiler Result
-        CompileResult result;
+        // MSVC Only Supported On Windows
+        #ifdef TARGET_PLATFORM_WINDOWS
 
-        // Solve Settings [Cache]
-        if (!SolveCompilerSettings(compilerSettings))
-        {
-            result.compileResult = false;
-            result.hasError = true;
-            result.compileError = "C666 : Unable to Solve Compiler Settings.";
-            return result;
-        };
+            // Create Compiler Result
+            CompileResult result;
 
-        // Utilities
-        auto GenereatePreprocessDefinitions = [](const godot::String& defsSetting) -> std::string 
-        {
-            std::string defs = AS_STD_STRING(defsSetting);
-            if (defs.empty()) return "";
-            if (defs.back() == ';') defs.pop_back();
-            std::vector<std::string> defsArray;
-            size_t start = 0;
-            size_t end = defs.find(';');
-            while (end != std::string::npos) 
-            {
-                defsArray.push_back(defs.substr(start, end - start));
-                start = end + 1;
-                end = defs.find(';', start);
-            }
-            defsArray.push_back(defs.substr(start));
-            std::string result;
-            for (const auto& def : defsArray) result += "/D \"" + def + "\" ";
-            return result;
-        };
-        auto GenereateAdditionalIncludeDirectories = [](const godot::String& additionalDirs) -> std::string
-            {
-                std::string dirs = AS_STD_STRING(additionalDirs);
-                if (dirs.empty()) return "";
-                if (dirs.back() == ';') dirs.pop_back();
-                std::vector<std::string> dirArray;
-                size_t start = 0;
-                size_t end = dirs.find(';');
-                while (end != std::string::npos)
-                {
-                    dirArray.push_back(dirs.substr(start, end - start));
-                    start = end + 1;
-                    end = dirs.find(';', start);
-                }
-                dirArray.push_back(dirs.substr(start));
-                std::string result;
-                for (const auto& dir : dirArray) result += "/I \"" + dir + "\" ";
-                return result;
-            };
-
-        // Generate Compiler Arguments
-        std::string compilerArgument;
-        compilerArgument += "\"" + this->compilerBinaryPath + "\" /c ";
-        if (String(compilerSettings["cpp_language_standards"]) == "cpp20") compilerArgument += "/std:c++20 ";
-        if (String(compilerSettings["cpp_language_standards"]) == "cpp17") compilerArgument += "/std:c++17 ";
-        if (bool(compilerSettings["cpp_clean_stack"])) compilerArgument += "/Gd ";
-        if (bool(compilerSettings["cpp_intrinsic_functions"])) compilerArgument += "/Oi ";
-        if (bool(compilerSettings["cpp_open_mp_support"])) compilerArgument += "/openmp ";
-        if (bool(compilerSettings["cpp_multithreaded"])) compilerArgument += "/MT ";
-        if (bool(compilerSettings["cpp_debug_database"]) && bool(compilerSettings["cpp_generate_debug_info"])) compilerArgument += "/Zi ";
-        if (int(compilerSettings["cpp_exception_handling"]) == 1) compilerArgument += "/EHsc ";
-        if (int(compilerSettings["cpp_exception_handling"]) == 2) compilerArgument += "/EHa ";
-        compilerArgument += GenereatePreprocessDefinitions(compilerSettings["cpp_definitions"]);
-        compilerArgument += "/I \"./\" ";
-        compilerArgument += "/I \"" + this->includePath + "\" ";
-        compilerArgument += "/I \"" + this->jenovaSDKPath + "\" ";
-        compilerArgument += "/I \"" + this->godotSDKPath + "\" ";
-
-        // Add Additional Include Directories
-        compilerArgument += GenereateAdditionalIncludeDirectories(compilerSettings["cpp_extra_include_directories"]);
-
-        // Disable Logo
-        compilerArgument += "/nologo ";
-
-        // Load Cache if Exists
-        bool buildCacheFileFound = false;
-        nlohmann::json buildCacheDatabase;
-        if (!std::filesystem::exists(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile))
-        {
-            // Cache Doesn't Exists Generate It [Required for Proxies]
-            if (!jenova::CreateBuildCacheDatabase(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile, scriptModulesContainer.scriptModules, compilerSettings["CppHeaderFiles"], true))
+            // Solve Settings [Cache]
+            if (!SolveCompilerSettings(compilerSettings))
             {
                 result.compileResult = false;
                 result.hasError = true;
-                result.compileError = "C670 : Failed to Generate Build Cache Database.";
+                result.compileError = "C666 : Unable to Solve Compiler Settings.";
                 return result;
-            }
-        }
+            };
 
-        // Parse Cache File
-        try
-        {
-            std::ifstream buildCacheDatabaseReader(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile, std::ios::binary);
-            std::string buildCacheDatabaseContent(std::istreambuf_iterator<char>(buildCacheDatabaseReader), {});
-            if (!buildCacheDatabaseContent.empty())
+            // Utilities
+            auto GenereatePreprocessDefinitions = [](const godot::String& defsSetting) -> std::string 
             {
-                buildCacheDatabase = nlohmann::json::parse(buildCacheDatabaseContent);
-                buildCacheFileFound = true;
-            }
-        }
-        catch (const std::exception&) 
-        {
-            result.compileResult = false;
-            result.hasError = true;
-            result.compileError = "C671 : Failed to Parse Build Cache Database.";
-            return result;
-        }
-
-        // Check If Any Changes Applied to Headers
-        if (buildCacheDatabase.contains("Headers"))
-        {
-            // Detect Changes
-            bool detectedHeaderChanges = false;
-            PackedStringArray cppHeaderFiles = compilerSettings["CppHeaderFiles"];
-            for (const auto& cppHeaderFile : cppHeaderFiles)
-            {
-                String cppHeaderUID = jenova::GenerateStandardUIDFromPath(cppHeaderFile);
-                String cppHeaderHash = jenova::GenerateMD5HashFromFile(cppHeaderFile);
-                if (buildCacheDatabase["Headers"].contains(AS_STD_STRING(cppHeaderUID)))
+                std::string defs = AS_STD_STRING(defsSetting);
+                if (defs.empty()) return "";
+                if (defs.back() == ';') defs.pop_back();
+                std::vector<std::string> defsArray;
+                size_t start = 0;
+                size_t end = defs.find(';');
+                while (end != std::string::npos) 
                 {
-                    if (AS_STD_STRING(cppHeaderHash) != buildCacheDatabase["Headers"][AS_STD_STRING(cppHeaderUID)].get<std::string>())
+                    defsArray.push_back(defs.substr(start, end - start));
+                    start = end + 1;
+                    end = defs.find(';', start);
+                }
+                defsArray.push_back(defs.substr(start));
+                std::string result;
+                for (const auto& def : defsArray) result += "/D \"" + def + "\" ";
+                return result;
+            };
+            auto GenereateAdditionalIncludeDirectories = [](const godot::String& additionalDirs) -> std::string
+                {
+                    std::string dirs = AS_STD_STRING(additionalDirs);
+                    if (dirs.empty()) return "";
+                    if (dirs.back() == ';') dirs.pop_back();
+                    std::vector<std::string> dirArray;
+                    size_t start = 0;
+                    size_t end = dirs.find(';');
+                    while (end != std::string::npos)
                     {
-                        detectedHeaderChanges = true;
-                        break;
+                        dirArray.push_back(dirs.substr(start, end - start));
+                        start = end + 1;
+                        end = dirs.find(';', start);
                     }
+                    dirArray.push_back(dirs.substr(start));
+                    std::string result;
+                    for (const auto& dir : dirArray) result += "/I \"" + dir + "\" ";
+                    return result;
+                };
+
+            // Generate Compiler Arguments
+            std::string compilerArgument;
+            compilerArgument += "\"" + this->compilerBinaryPath + "\" /c ";
+            if (String(compilerSettings["cpp_language_standards"]) == "cpp23") compilerArgument += "/std:c++23 ";
+            if (String(compilerSettings["cpp_language_standards"]) == "cpp20") compilerArgument += "/std:c++20 ";
+            if (String(compilerSettings["cpp_language_standards"]) == "cpp17") compilerArgument += "/std:c++17 ";
+            if (bool(compilerSettings["cpp_clean_stack"])) compilerArgument += "/Gd ";
+            if (bool(compilerSettings["cpp_intrinsic_functions"])) compilerArgument += "/Oi ";
+            if (bool(compilerSettings["cpp_open_mp_support"])) compilerArgument += "/openmp ";
+            if (bool(compilerSettings["cpp_multithreaded"])) compilerArgument += "/MT ";
+            if (bool(compilerSettings["cpp_debug_database"]) && bool(compilerSettings["cpp_generate_debug_info"])) compilerArgument += "/Zi ";
+            if (int(compilerSettings["cpp_exception_handling"]) == 1) compilerArgument += "/EHsc ";
+            if (int(compilerSettings["cpp_exception_handling"]) == 2) compilerArgument += "/EHa ";
+            compilerArgument += GenereatePreprocessDefinitions(compilerSettings["cpp_definitions"]);
+            compilerArgument += "/I \"./\" ";
+            compilerArgument += "/I \"" + this->includePath + "\" ";
+            compilerArgument += "/I \"" + this->jenovaSDKPath + "\" ";
+            compilerArgument += "/I \"" + this->godotSDKPath + "\" ";
+
+            // Add Additional Include Directories
+            compilerArgument += GenereateAdditionalIncludeDirectories(compilerSettings["cpp_extra_include_directories"]);
+
+            // Disable Logo
+            compilerArgument += "/nologo ";
+
+            // Load Cache if Exists
+            bool buildCacheFileFound = false;
+            nlohmann::json buildCacheDatabase;
+            if (!std::filesystem::exists(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile))
+            {
+                // Cache Doesn't Exists Generate It [Required for Proxies]
+                if (!jenova::CreateBuildCacheDatabase(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile, scriptModulesContainer.scriptModules, compilerSettings["CppHeaderFiles"], true))
+                {
+                    result.compileResult = false;
+                    result.hasError = true;
+                    result.compileError = "C670 : Failed to Generate Build Cache Database.";
+                    return result;
                 }
             }
-            if (buildCacheDatabase.contains("HeaderCount"))
+
+            // Parse Cache File
+            try
             {
-                int headerCount = buildCacheDatabase["HeaderCount"].get<int>();
-                if (headerCount != cppHeaderFiles.size()) detectedHeaderChanges = true;
+                std::ifstream buildCacheDatabaseReader(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile, std::ios::binary);
+                std::string buildCacheDatabaseContent(std::istreambuf_iterator<char>(buildCacheDatabaseReader), {});
+                if (!buildCacheDatabaseContent.empty())
+                {
+                    buildCacheDatabase = nlohmann::json::parse(buildCacheDatabaseContent);
+                    buildCacheFileFound = true;
+                }
+            }
+            catch (const std::exception&) 
+            {
+                result.compileResult = false;
+                result.hasError = true;
+                result.compileError = "C671 : Failed to Parse Build Cache Database.";
+                return result;
             }
 
-            // If Contains Changes Reset All Script Cache
-            if (detectedHeaderChanges)
+            // Check If Any Changes Applied to Headers
+            if (buildCacheDatabase.contains("Headers"))
             {
-                if (buildCacheDatabase.contains("Modules")) for (const auto& scriptModule : buildCacheDatabase["Modules"].items()) scriptModule.value() = "No Hash";
-            }
-        }
+                // Detect Changes
+                bool detectedHeaderChanges = false;
+                PackedStringArray cppHeaderFiles = compilerSettings["CppHeaderFiles"];
+                for (const auto& cppHeaderFile : cppHeaderFiles)
+                {
+                    String cppHeaderUID = jenova::GenerateStandardUIDFromPath(cppHeaderFile);
+                    String cppHeaderHash = jenova::GenerateMD5HashFromFile(cppHeaderFile);
+                    if (buildCacheDatabase["Headers"].contains(AS_STD_STRING(cppHeaderUID)))
+                    {
+                        if (AS_STD_STRING(cppHeaderHash) != buildCacheDatabase["Headers"][AS_STD_STRING(cppHeaderUID)].get<std::string>())
+                        {
+                            detectedHeaderChanges = true;
+                            break;
+                        }
+                    }
+                }
+                if (buildCacheDatabase.contains("HeaderCount"))
+                {
+                    int headerCount = buildCacheDatabase["HeaderCount"].get<int>();
+                    if (headerCount != cppHeaderFiles.size()) detectedHeaderChanges = true;
+                }
 
-        // Add Source/Output Based On Compile Model
-        if (bool(compilerSettings["cpp_multi_threaded_compilation"]))
-        {
-            compilerArgument += "/MP ";
-            compilerArgument += "/Fo\"" + this->jenovaCachePath + "\" ";
-            for (const auto& scriptModule : scriptModulesContainer.scriptModules)
+                // If Contains Changes Reset All Script Cache
+                if (detectedHeaderChanges)
+                {
+                    if (buildCacheDatabase.contains("Modules")) for (const auto& scriptModule : buildCacheDatabase["Modules"].items()) scriptModule.value() = "No Hash";
+                }
+            }
+
+            // Add Source/Output Based On Compile Model
+            if (bool(compilerSettings["cpp_multi_threaded_compilation"]))
+            {
+                compilerArgument += "/MP ";
+                compilerArgument += "/Fo\"" + this->jenovaCachePath + "\" ";
+                for (const auto& scriptModule : scriptModulesContainer.scriptModules)
+                {
+                    // Skip If File Hash Didn't Change
+                    if (buildCacheDatabase.contains("Modules"))
+                    {
+                        if (buildCacheDatabase["Modules"].contains(AS_STD_STRING(scriptModule.scriptUID)))
+                        {
+                            if (AS_STD_STRING(scriptModule.scriptHash) == buildCacheDatabase["Modules"][AS_STD_STRING(scriptModule.scriptUID)].get<std::string>()) continue;
+                        }
+                    }
+               
+                    // Add Source
+                    compilerArgument += "\"" + AS_STD_STRING(scriptModule.scriptCacheFile) + "\" ";
+
+                    // Add Script Count
+                    result.scriptsCount++;
+                }
+            }
+            else
             {
                 // Skip If File Hash Didn't Change
                 if (buildCacheDatabase.contains("Modules"))
                 {
-                    if (buildCacheDatabase["Modules"].contains(AS_STD_STRING(scriptModule.scriptUID)))
+                    if (buildCacheDatabase["Modules"].contains(AS_STD_STRING(scriptModulesContainer.scriptModule.scriptUID)))
                     {
-                        if (AS_STD_STRING(scriptModule.scriptHash) == buildCacheDatabase["Modules"][AS_STD_STRING(scriptModule.scriptUID)].get<std::string>()) continue;
-                    }
-                }
-               
-                // Add Source
-                compilerArgument += "\"" + AS_STD_STRING(scriptModule.scriptCacheFile) + "\" ";
-
-                // Add Script Count
-                result.scriptsCount++;
-            }
-        }
-        else
-        {
-            // Skip If File Hash Didn't Change
-            if (buildCacheDatabase.contains("Modules"))
-            {
-                if (buildCacheDatabase["Modules"].contains(AS_STD_STRING(scriptModulesContainer.scriptModule.scriptUID)))
-                {
-                    if (AS_STD_STRING(scriptModulesContainer.scriptModule.scriptHash) != buildCacheDatabase["Modules"][AS_STD_STRING(scriptModulesContainer.scriptModule.scriptUID)].get<std::string>())
-                    {
-                        compilerArgument += "\"" + AS_STD_STRING(scriptModulesContainer.scriptModule.scriptCacheFile) + "\" ";
-                        compilerArgument += "/Fo\"" + AS_STD_STRING(scriptModulesContainer.scriptModule.scriptObjectFile) + "\" ";
-                        result.scriptsCount++;
+                        if (AS_STD_STRING(scriptModulesContainer.scriptModule.scriptHash) != buildCacheDatabase["Modules"][AS_STD_STRING(scriptModulesContainer.scriptModule.scriptUID)].get<std::string>())
+                        {
+                            compilerArgument += "\"" + AS_STD_STRING(scriptModulesContainer.scriptModule.scriptCacheFile) + "\" ";
+                            compilerArgument += "/Fo\"" + AS_STD_STRING(scriptModulesContainer.scriptModule.scriptObjectFile) + "\" ";
+                            result.scriptsCount++;
+                        }
                     }
                 }
             }
-        }
 
-        // Skip Compile If Source Count is 0
-        if (result.scriptsCount == 0)
-        {
-            result.compileResult = true;
-            result.hasError = false;
-            result.compileVerbose = "Cache System Detected No Script Requires to be Compiled.";
-            return result;
-        }
-
-        // Add Extra Options
-        compilerArgument += AS_STD_STRING(String(compilerSettings["cpp_extra_compiler"])) + " ";
-
-        // Dump Compiler Command If Developer Mode Enabled
-        if (jenova::GlobalStorage::DeveloperModeActivated) jenova::WriteStdStringToFile(jenovaCachePath + "CompilerCommand.txt", compilerArgument);
-
-        // Run Compiler
-        STARTUPINFO si;
-        PROCESS_INFORMATION pi;
-        ZeroMemory(&si, sizeof(si));
-        si.cb = sizeof(si);
-        si.dwFlags |= STARTF_USESTDHANDLES;
-
-        // Create pipes for capturing output
-        HANDLE hStdOutRead, hStdOutWrite;
-        SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
-        CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0);
-        SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
-        si.hStdOutput = hStdOutWrite;
-        si.hStdError = hStdOutWrite;
-
-        // Convert command to wide string
-        std::wstring wCompilerArgument(compilerArgument.begin(), compilerArgument.end());
-
-        // Execute the command
-        if (!CreateProcess(NULL, &wCompilerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
-        {
-            result.compileResult = false;
-            result.hasError = true;
-            result.compileError = "C667 : Failed to Run Compiler!";
-            return result;
-        }
-
-        // Close write end of the pipe
-        CloseHandle(hStdOutWrite);
-
-        // Read And Filter Output
-        std::vector<char> buffer(jenova::GlobalSettings::BuildOutputBufferSize);
-        DWORD bytesRead;
-        std::string resultOutput, accumulatedOutput;
-        while (ReadFile(hStdOutRead, buffer.data(), buffer.size(), &bytesRead, NULL) && bytesRead > 0)
-        {
-            accumulatedOutput.append(buffer.data(), bytesRead);
-            std::istringstream stream(accumulatedOutput);
-            std::string line;
-            std::regex pathRegex("(.*)\\((\\d+)\\): (.*)");
-            std::smatch match;
-            std::string remainingOutput;
-
-            // Parse Lines
-            while (std::getline(stream, line))
+            // Skip Compile If Source Count is 0
+            if (result.scriptsCount == 0)
             {
-                // If Incomplete, Save it for Next Read
-                if (stream.eof() && !line.empty() && accumulatedOutput.back() != '\n')
-                {
-                    remainingOutput = line;
-                    break;
-                }
+                result.compileResult = true;
+                result.hasError = false;
+                result.compileVerbose = "Cache System Detected No Script Requires to be Compiled.";
+                return result;
+            }
 
-                // Checks for time() Lines
-                if (line.find("time(") != std::string::npos) continue;
+            // Add Extra Options
+            compilerArgument += AS_STD_STRING(String(compilerSettings["cpp_extra_compiler"])) + " ";
 
-                // Check for Source File
-                if (line.size() >= 6 && line.compare(line.size() - 5, 5, ".cpp\r") == 0)
-                {
-                    // Skip Source Lines
-                    continue;
-                }
+            // Dump Compiler Command If Developer Mode Enabled
+            if (jenova::GlobalStorage::DeveloperModeActivated) jenova::WriteStdStringToFile(jenovaCachePath + "CompilerCommand.txt", compilerArgument);
 
-                // Replace Paths with At Line
-                if (std::regex_search(line, match, pathRegex))
+            // Run Compiler
+            STARTUPINFO si;
+            PROCESS_INFORMATION pi;
+            ZeroMemory(&si, sizeof(si));
+            si.cb = sizeof(si);
+            si.dwFlags |= STARTF_USESTDHANDLES;
+
+            // Create pipes for capturing output
+            HANDLE hStdOutRead, hStdOutWrite;
+            SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+            CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0);
+            SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
+            si.hStdOutput = hStdOutWrite;
+            si.hStdError = hStdOutWrite;
+
+            // Convert command to wide string
+            std::wstring wCompilerArgument(compilerArgument.begin(), compilerArgument.end());
+
+            // Execute the command
+            if (!CreateProcess(NULL, &wCompilerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+            {
+                result.compileResult = false;
+                result.hasError = true;
+                result.compileError = "C667 : Failed to Run Compiler!";
+                return result;
+            }
+
+            // Close write end of the pipe
+            CloseHandle(hStdOutWrite);
+
+            // Read And Filter Output
+            std::vector<char> buffer(jenova::GlobalSettings::BuildOutputBufferSize);
+            DWORD bytesRead;
+            std::string resultOutput, accumulatedOutput;
+            while (ReadFile(hStdOutRead, buffer.data(), buffer.size(), &bytesRead, NULL) && bytesRead > 0)
+            {
+                accumulatedOutput.append(buffer.data(), bytesRead);
+                std::istringstream stream(accumulatedOutput);
+                std::string line;
+                std::regex pathRegex("(.*)\\((\\d+)\\): (.*)");
+                std::smatch match;
+                std::string remainingOutput;
+
+                // Parse Lines
+                while (std::getline(stream, line))
                 {
-                    std::string proxyFileName = std::filesystem::path(match[1].str()).filename().string();
-                    if (buildCacheDatabase["Proxies"].contains(proxyFileName))
+                    // If Incomplete, Save it for Next Read
+                    if (stream.eof() && !line.empty() && accumulatedOutput.back() != '\n')
                     {
-                        std::string actualSourceFile = buildCacheDatabase["Proxies"][proxyFileName].get<std::string>();
-                        std::string newLine = "Script [" + actualSourceFile + "] Line " + match[2].str() + " :: " + match[3].str() + "\n";
-                        resultOutput.append(newLine);
+                        remainingOutput = line;
+                        break;
+                    }
+
+                    // Checks for time() Lines
+                    if (line.find("time(") != std::string::npos) continue;
+
+                    // Check for Source File
+                    if (line.size() >= 6 && line.compare(line.size() - 5, 5, ".cpp\r") == 0)
+                    {
+                        // Skip Source Lines
                         continue;
                     }
+
+                    // Replace Paths with At Line
+                    if (std::regex_search(line, match, pathRegex))
+                    {
+                        std::string proxyFileName = std::filesystem::path(match[1].str()).filename().string();
+                        if (buildCacheDatabase["Proxies"].contains(proxyFileName))
+                        {
+                            std::string actualSourceFile = buildCacheDatabase["Proxies"][proxyFileName].get<std::string>();
+                            std::string newLine = "Script [" + actualSourceFile + "] Line " + match[2].str() + " :: " + match[3].str() + "\n";
+                            resultOutput.append(newLine);
+                            continue;
+                        }
+                    }
+
+                    // Other Lines
+                    resultOutput.append(line + "\n");
                 }
 
-                // Other Lines
-                resultOutput.append(line + "\n");
+                // Save the remaining output for the next read
+                accumulatedOutput = remainingOutput;
             }
+            if (!resultOutput.empty() && resultOutput.back() == '\n') resultOutput.pop_back();
 
-            // Save the remaining output for the next read
-            accumulatedOutput = remainingOutput;
-        }
-        if (!resultOutput.empty() && resultOutput.back() == '\n') resultOutput.pop_back();
+            // Wait for the process to finish
+            WaitForSingleObject(pi.hProcess, INFINITE);
 
-        // Wait for the process to finish
-        WaitForSingleObject(pi.hProcess, INFINITE);
+            // Get the exit code
+            DWORD exitCode;
+            GetExitCodeProcess(pi.hProcess, &exitCode);
 
-        // Get the exit code
-        DWORD exitCode;
-        GetExitCodeProcess(pi.hProcess, &exitCode);
+            // Close handles
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+            CloseHandle(hStdOutRead);
 
-        // Close handles
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-        CloseHandle(hStdOutRead);
+            // Set the compiler result
+            result.compileResult = (exitCode == 0);
+            result.hasError = (exitCode != 0);
+            result.compileError = String(resultOutput.c_str());
+            result.compileVerbose = String(resultOutput.c_str());
 
-        // Set the compiler result
-        result.compileResult = (exitCode == 0);
-        result.hasError = (exitCode != 0);
-        result.compileError = String(resultOutput.c_str());
-        result.compileVerbose = String(resultOutput.c_str());
+            // Yield Engine
+            OS::get_singleton()->delay_msec(1);
+            std::this_thread::yield();
 
-        // Yield Engine
-        OS::get_singleton()->delay_msec(1);
-        std::this_thread::yield();
-
-        // Return Final Result
-        return result;
+            // Return Final Result
+            return result;
+        #else
+            CompileResult result;
+            result.compileResult = false;
+            result.hasError = true;
+            result.compileError = "C000 : Unsupported Platform.";
+            return result;
+        #endif
     }
     BuildResult MicrosoftCompiler::BuildFinalModule(const jenova::ModuleList& scriptModules)
     {
@@ -471,209 +482,219 @@ namespace jenova
     }
     BuildResult MicrosoftCompiler::BuildFinalModuleWithCustomSettings(const jenova::ModuleList& scriptModules, const Dictionary& linkerSettings)
     {
-        // Create Build Result
-        BuildResult result;
+        // MSVC Only Supported On Windows
+        #ifdef TARGET_PLATFORM_WINDOWS
 
-        // Solve Settings [Cache]
-        if (!SolveCompilerSettings(linkerSettings))
-        {
-            result.buildResult = false;
-            result.hasError = true;
-            result.buildError = "L666 : Unable to Solve Linker Settings.";
-            return result;
-        };
+            // Create Build Result
+            BuildResult result;
 
-        // Set Output Directory Path on Build Result
-        result.buildPath = this->jenovaCachePath;
-
-        // Set Compiler Model
-        result.compilerModel = this->GetCompilerModel();
-
-        // Set Debug Information Flag
-        result.hasDebugInformation = bool(linkerSettings["cpp_generate_debug_info"]);
-
-        // Generate Output Module Path
-        std::string outputModule = this->jenovaCachePath + (result.hasDebugInformation ? "Jenova.Module.dll" : AS_STD_STRING((String)linkerSettings["cpp_output_module"]));
-        std::string outputMap = this->jenovaCachePath + AS_STD_STRING((String)linkerSettings["cpp_output_map"]);
-
-        // Utilities
-        auto GenerateLibraries = [](const godot::String& libsSetting) -> std::string 
-        {
-            std::string libs = AS_STD_STRING(libsSetting);
-            if (libs.empty()) return "";
-            if (libs.back() == ';') libs.pop_back();
-            std::vector<std::string> libsArray;
-            size_t start = 0;
-            size_t end = libs.find(';');
-            while (end != std::string::npos) 
+            // Solve Settings [Cache]
+            if (!SolveCompilerSettings(linkerSettings))
             {
-                libsArray.push_back(libs.substr(start, end - start));
-                start = end + 1;
-                end = libs.find(';', start);
-            }
-            libsArray.push_back(libs.substr(start));
-            std::string result;
-            for (const auto& lib : libsArray) result += "\"" + lib + "\" ";
-            return result;
-        };
-        auto GenereateAdditionalLibraryDirectories = [](const godot::String& additionalDirs) -> std::string
-            {
-                std::string dirs = AS_STD_STRING(additionalDirs);
-                if (dirs.empty()) return "";
-                if (dirs.back() == ';') dirs.pop_back();
-                std::vector<std::string> dirArray;
-                size_t start = 0;
-                size_t end = dirs.find(';');
-                while (end != std::string::npos)
-                {
-                    dirArray.push_back(dirs.substr(start, end - start));
-                    start = end + 1;
-                    end = dirs.find(';', start);
-                }
-                dirArray.push_back(dirs.substr(start));
-                std::string result;
-                for (const auto& dir : dirArray) result += "/LIBPATH:\"" + dir + "\" ";
+                result.buildResult = false;
+                result.hasError = true;
+                result.buildError = "L666 : Unable to Solve Linker Settings.";
                 return result;
             };
 
-        // Generate Linker Arguments
-        std::string linkerArgument;
-        linkerArgument += "\"" + this->linkerBinaryPath + "\" ";
-        linkerArgument += "/OUT:\"" + outputModule + "\" ";
-        linkerArgument += "/MAP:\"" + outputMap + "\" ";
-        if (String(linkerSettings["cpp_default_subsystem"]) == "Console") linkerArgument += "/SUBSYSTEM:CONSOLE ";
-        if (String(linkerSettings["cpp_default_subsystem"]) == "GUI") linkerArgument += "/SUBSYSTEM:WINDOWS ";
-        if (String(linkerSettings["cpp_machine_architecture"]) == "Win64") linkerArgument += "/MACHINE:X64 ";
-        if (String(linkerSettings["cpp_machine_architecture"]) == "Win32") linkerArgument += "/MACHINE:X86 ";
-        if (String(linkerSettings["cpp_machine_pe_type"]) == "dll") linkerArgument += "/DLL ";
-        if (String(linkerSettings["cpp_machine_pe_type"]) == "exe") linkerArgument += "/EXE ";
-        if (bool(linkerSettings["cpp_add_manifest"])) linkerArgument += "/MANIFEST ";
-        if (bool(linkerSettings["cpp_dynamic_base"])) linkerArgument += "/DYNAMICBASE ";
-        if (bool(linkerSettings["cpp_debug_symbol"]) && result.hasDebugInformation) linkerArgument += "/DEBUG:FULL ";
-        linkerArgument += GenerateLibraries(linkerSettings["cpp_default_libs"]);
-        linkerArgument += GenerateLibraries(linkerSettings["cpp_native_libs"]);
-        linkerArgument += GenerateLibraries(linkerSettings["cpp_extra_libs"]);
-        linkerArgument += "/LIBPATH:\"./\" ";
-        linkerArgument += "/LIBPATH:\"" + this->libraryPath + "\" ";
-        linkerArgument += "/LIBPATH:\"" + this->jenovaSDKPath + "\" ";
-        linkerArgument += "/LIBPATH:\"" + this->godotSDKPath + "\" ";
+            // Set Output Directory Path on Build Result
+            result.buildPath = this->jenovaCachePath;
 
-        // Add Additional Library Directories
-        linkerArgument += GenereateAdditionalLibraryDirectories(linkerSettings["cpp_extra_library_directories"]);
+            // Set Compiler Model
+            result.compilerModel = this->GetCompilerModel();
 
-        // Disable Logo
-        linkerArgument += "/nologo ";
+            // Set Debug Information Flag
+            result.hasDebugInformation = bool(linkerSettings["cpp_generate_debug_info"]);
 
-        // Ignore Warnings
-        linkerArgument += "/IGNORE:4099 ";
+            // Generate Output Module Path
+            std::string outputModule = this->jenovaCachePath + (result.hasDebugInformation ? "Jenova.Module.dll" : AS_STD_STRING((String)linkerSettings["cpp_output_module"]));
+            std::string outputMap = this->jenovaCachePath + AS_STD_STRING((String)linkerSettings["cpp_output_map"]);
 
-        // Add Object Files
-        for (const auto& scriptModule : scriptModules) linkerArgument += "\"" + AS_STD_STRING(scriptModule.scriptObjectFile) + "\" ";
+            // Utilities
+            auto GenerateLibraries = [](const godot::String& libsSetting) -> std::string 
+            {
+                std::string libs = AS_STD_STRING(libsSetting);
+                if (libs.empty()) return "";
+                if (libs.back() == ';') libs.pop_back();
+                std::vector<std::string> libsArray;
+                size_t start = 0;
+                size_t end = libs.find(';');
+                while (end != std::string::npos) 
+                {
+                    libsArray.push_back(libs.substr(start, end - start));
+                    start = end + 1;
+                    end = libs.find(';', start);
+                }
+                libsArray.push_back(libs.substr(start));
+                std::string result;
+                for (const auto& lib : libsArray) result += "\"" + lib + "\" ";
+                return result;
+            };
+            auto GenereateAdditionalLibraryDirectories = [](const godot::String& additionalDirs) -> std::string
+                {
+                    std::string dirs = AS_STD_STRING(additionalDirs);
+                    if (dirs.empty()) return "";
+                    if (dirs.back() == ';') dirs.pop_back();
+                    std::vector<std::string> dirArray;
+                    size_t start = 0;
+                    size_t end = dirs.find(';');
+                    while (end != std::string::npos)
+                    {
+                        dirArray.push_back(dirs.substr(start, end - start));
+                        start = end + 1;
+                        end = dirs.find(';', start);
+                    }
+                    dirArray.push_back(dirs.substr(start));
+                    std::string result;
+                    for (const auto& dir : dirArray) result += "/LIBPATH:\"" + dir + "\" ";
+                    return result;
+                };
 
-        // Add Extra Options
-        linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_extra_linker"])) + " ";
+            // Generate Linker Arguments
+            std::string linkerArgument;
+            linkerArgument += "\"" + this->linkerBinaryPath + "\" ";
+            linkerArgument += "/OUT:\"" + outputModule + "\" ";
+            linkerArgument += "/MAP:\"" + outputMap + "\" ";
+            if (String(linkerSettings["cpp_default_subsystem"]) == "Console") linkerArgument += "/SUBSYSTEM:CONSOLE ";
+            if (String(linkerSettings["cpp_default_subsystem"]) == "GUI") linkerArgument += "/SUBSYSTEM:WINDOWS ";
+            if (String(linkerSettings["cpp_machine_architecture"]) == "Win64") linkerArgument += "/MACHINE:X64 ";
+            if (String(linkerSettings["cpp_machine_architecture"]) == "Win32") linkerArgument += "/MACHINE:X86 ";
+            if (String(linkerSettings["cpp_machine_pe_type"]) == "dll") linkerArgument += "/DLL ";
+            if (String(linkerSettings["cpp_machine_pe_type"]) == "exe") linkerArgument += "/EXE ";
+            if (bool(linkerSettings["cpp_add_manifest"])) linkerArgument += "/MANIFEST ";
+            if (bool(linkerSettings["cpp_dynamic_base"])) linkerArgument += "/DYNAMICBASE ";
+            if (bool(linkerSettings["cpp_debug_symbol"]) && result.hasDebugInformation) linkerArgument += "/DEBUG:FULL ";
+            linkerArgument += GenerateLibraries(linkerSettings["cpp_default_libs"]);
+            linkerArgument += GenerateLibraries(linkerSettings["cpp_native_libs"]);
+            linkerArgument += GenerateLibraries(linkerSettings["cpp_extra_libs"]);
+            linkerArgument += "/LIBPATH:\"./\" ";
+            linkerArgument += "/LIBPATH:\"" + this->libraryPath + "\" ";
+            linkerArgument += "/LIBPATH:\"" + this->jenovaSDKPath + "\" ";
+            linkerArgument += "/LIBPATH:\"" + this->godotSDKPath + "\" ";
 
-        // Add Delayed DLLs
-        linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_delayed_dll"])) + " ";
+            // Add Additional Library Directories
+            linkerArgument += GenereateAdditionalLibraryDirectories(linkerSettings["cpp_extra_library_directories"]);
 
-        // Dump Compiler Command If Developer Mode Enabled
-        if (jenova::GlobalStorage::DeveloperModeActivated) jenova::WriteStdStringToFile(jenovaCachePath + "LinkerCommand.txt", linkerArgument);
+            // Disable Logo
+            linkerArgument += "/nologo ";
 
-        // Run Linker
-        STARTUPINFO si;
-        PROCESS_INFORMATION pi;
-        ZeroMemory(&si, sizeof(si));
-        si.cb = sizeof(si);
-        si.dwFlags |= STARTF_USESTDHANDLES;
+            // Ignore Warnings
+            linkerArgument += "/IGNORE:4099 ";
 
-        // Create pipes for capturing output
-        HANDLE hStdOutRead, hStdOutWrite;
-        SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
-        CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0);
-        SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
-        si.hStdOutput = hStdOutWrite;
-        si.hStdError = hStdOutWrite;
+            // Add Object Files
+            for (const auto& scriptModule : scriptModules) linkerArgument += "\"" + AS_STD_STRING(scriptModule.scriptObjectFile) + "\" ";
 
-        // Convert linker command to wide string
-        std::wstring wLinkerArgument(linkerArgument.begin(), linkerArgument.end());
+            // Add Extra Options
+            linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_extra_linker"])) + " ";
 
-        // Execute the linker command
-        if (!CreateProcess(NULL, &wLinkerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
-        {
+            // Add Delayed DLLs
+            linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_delayed_dll"])) + " ";
+
+            // Dump Compiler Command If Developer Mode Enabled
+            if (jenova::GlobalStorage::DeveloperModeActivated) jenova::WriteStdStringToFile(jenovaCachePath + "LinkerCommand.txt", linkerArgument);
+
+            // Run Linker
+            STARTUPINFO si;
+            PROCESS_INFORMATION pi;
+            ZeroMemory(&si, sizeof(si));
+            si.cb = sizeof(si);
+            si.dwFlags |= STARTF_USESTDHANDLES;
+
+            // Create pipes for capturing output
+            HANDLE hStdOutRead, hStdOutWrite;
+            SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+            CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0);
+            SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
+            si.hStdOutput = hStdOutWrite;
+            si.hStdError = hStdOutWrite;
+
+            // Convert linker command to wide string
+            std::wstring wLinkerArgument(linkerArgument.begin(), linkerArgument.end());
+
+            // Execute the linker command
+            if (!CreateProcess(NULL, &wLinkerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+            {
+                result.buildResult = false;
+                result.hasError = true;
+                result.buildError = "L667 : Failed to Run Linker!";
+                return result;
+            }
+
+            // Close the write end of the pipe
+            CloseHandle(hStdOutWrite);
+
+            // Read the linker output
+            std::vector<char> buffer(jenova::GlobalSettings::BuildOutputBufferSize);
+            DWORD bytesRead;
+            std::string resultOutput;
+            while (ReadFile(hStdOutRead, buffer.data(), buffer.size(), &bytesRead, NULL) && bytesRead > 0) resultOutput.append(buffer.data(), bytesRead);
+
+            // Wait for the process to finish
+            WaitForSingleObject(pi.hProcess, INFINITE);
+
+            // Get the exit code of the linker process
+            DWORD exitCode;
+            GetExitCodeProcess(pi.hProcess, &exitCode);
+
+            // Close handles
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+            CloseHandle(hStdOutRead);
+
+            // Set the build result
+            result.buildResult = (exitCode == 0);
+            result.hasError = (exitCode != 0);
+            result.buildError = String(resultOutput.c_str());
+            result.buildVerbose = String(resultOutput.c_str());
+
+            // Return if There's error
+            if (!result.buildResult) return result;
+
+            // Read module to buffer
+            std::ifstream moduleReader(outputModule, std::ios::binary);
+            result.builtModuleData = std::vector<uint8_t>(std::istreambuf_iterator<char>(moduleReader), {});
+
+            // Validate Module Buffer
+            if (result.builtModuleData.size() == 0)
+            {
+                result.buildResult = false;
+                result.hasError = true;
+                result.buildError = "L668 : Invalid Module Data.";
+                return result;
+            }
+
+            // Generate Metadata
+            result.moduleMetaData = JenovaInterpreter::GenerateModuleMetadata(outputMap, scriptModules, result);
+            if (result.moduleMetaData.empty())
+            {
+                result.buildResult = false;
+                result.hasError = true;
+                result.buildError = "L669 : Failed to Generate Module Meta Data.";
+                return result;
+            }
+
+            // Generate Build Cache
+            if (!jenova::CreateBuildCacheDatabase(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile, scriptModules, linkerSettings["CppHeaderFiles"]))
+            {
+                result.buildResult = false;
+                result.hasError = true;
+                result.buildError = "L670 : Failed to Generate Build Cache Database.";
+                return result;
+            }
+
+            // Yield Engine
+            OS::get_singleton()->delay_msec(1);
+            std::this_thread::yield();
+
+            // Return Final Result
+            return result;
+        #else
+            BuildResult result;
             result.buildResult = false;
             result.hasError = true;
-            result.buildError = "L667 : Failed to Run Linker!";
+            result.buildError = "L000 : Unsupported Platform.";
             return result;
-        }
-
-        // Close the write end of the pipe
-        CloseHandle(hStdOutWrite);
-
-        // Read the linker output
-        std::vector<char> buffer(jenova::GlobalSettings::BuildOutputBufferSize);
-        DWORD bytesRead;
-        std::string resultOutput;
-        while (ReadFile(hStdOutRead, buffer.data(), buffer.size(), &bytesRead, NULL) && bytesRead > 0) resultOutput.append(buffer.data(), bytesRead);
-
-        // Wait for the process to finish
-        WaitForSingleObject(pi.hProcess, INFINITE);
-
-        // Get the exit code of the linker process
-        DWORD exitCode;
-        GetExitCodeProcess(pi.hProcess, &exitCode);
-
-        // Close handles
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-        CloseHandle(hStdOutRead);
-
-        // Set the build result
-        result.buildResult = (exitCode == 0);
-        result.hasError = (exitCode != 0);
-        result.buildError = String(resultOutput.c_str());
-        result.buildVerbose = String(resultOutput.c_str());
-
-        // Return if There's error
-        if (!result.buildResult) return result;
-
-        // Read module to buffer
-        std::ifstream moduleReader(outputModule, std::ios::binary);
-        result.builtModuleData = std::vector<uint8_t>(std::istreambuf_iterator<char>(moduleReader), {});
-
-        // Validate Module Buffer
-        if (result.builtModuleData.size() == 0)
-        {
-            result.buildResult = false;
-            result.hasError = true;
-            result.buildError = "L668 : Invalid Module Data.";
-            return result;
-        }
-
-        // Generate Metadata
-        result.moduleMetaData = JenovaInterpreter::GenerateModuleMetadata(outputMap, scriptModules, result);
-        if (result.moduleMetaData.empty())
-        {
-            result.buildResult = false;
-            result.hasError = true;
-            result.buildError = "L669 : Failed to Generate Module Meta Data.";
-            return result;
-        }
-
-        // Generate Build Cache
-        if (!jenova::CreateBuildCacheDatabase(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile, scriptModules, linkerSettings["CppHeaderFiles"]))
-        {
-            result.buildResult = false;
-            result.hasError = true;
-            result.buildError = "L670 : Failed to Generate Build Cache Database.";
-            return result;
-        }
-
-        // Yield Engine
-        OS::get_singleton()->delay_msec(1);
-        std::this_thread::yield();
-
-        // Return Final Result
-        return result;
+        #endif
     }
     bool MicrosoftCompiler::SetCompilerOption(const StringName& optName, const Variant& optValue)
     {

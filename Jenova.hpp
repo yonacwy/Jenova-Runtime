@@ -241,6 +241,7 @@ namespace jenova
 	// Typedefs
 	typedef void* ModuleHandle;
 	typedef void* WindowHandle;
+	typedef void* FileHandle;
 	typedef String ScriptIdentifier;
 	typedef uint32_t CompilerFeatures;
 	typedef std::string RootPath;
@@ -266,6 +267,7 @@ namespace jenova
 	typedef Vector<Ref<Resource>> ResourceCollection;
 	typedef intptr_t FunctionAddress;
 	typedef intptr_t PropertyAddress;
+	typedef FILETIME FileTime;
 
 	// Enumerators
 	enum class TargetPlatform
@@ -454,9 +456,9 @@ namespace jenova
 	struct ScriptFileState
 	{
 		bool isValid = false;
-		FILETIME creationTime;
-		FILETIME accessTime;
-		FILETIME writeTime;
+		FileTime creationTime;
+		FileTime accessTime;
+		FileTime writeTime;
 	};
 	struct CompileResult
 	{
@@ -550,7 +552,7 @@ namespace jenova
 		constexpr size_t FormatBufferSize						= 4096;
 		constexpr size_t ScriptReloadCooldown					= 1000;
 
-		constexpr char* JenovaRuntimeModuleName					= "Jenova.Runtime.Win64.dll";
+		constexpr char* JenovaRuntimeModuleName					= "Jenova.Runtime.Win64";
 		constexpr char* JenovaScriptExtension					= "cpp";
 		constexpr char* JenovaScriptType						= "CPPScript";
 		constexpr char* JenovaHeaderType						= "CPPHeader";

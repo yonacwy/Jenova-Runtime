@@ -3530,13 +3530,16 @@ namespace jenova
 		static bool CheckWrapperInitialization()
 		{
 			std::string currentModuleName = std::filesystem::path(GlobalStorage::CurrentJenovaRuntimeModulePath).filename().string();
-			if (currentModuleName == std::string(GlobalSettings::JenovaRuntimeModuleName)) return false;
+			std::string runtimeModuleName = std::string(GlobalSettings::JenovaRuntimeModuleName);
+			if (QUERY_PLATFORM(Windows)) runtimeModuleName += ".dll";
+			if (currentModuleName == runtimeModuleName) return false;
 			return true;
 		}
 		static GDExtensionBool InitializeAsWrapper(ExtensionInitializerData initializerData)
 		{
 			std::string wrapperDirectory = std::filesystem::path(GlobalStorage::CurrentJenovaRuntimeModulePath).parent_path().string();
 			std::string originalRuntimeModulePath = wrapperDirectory + "\\" + std::string(GlobalSettings::JenovaRuntimeModuleName);
+			if (QUERY_PLATFORM(Windows)) originalRuntimeModulePath += ".dll";
 			if (!std::filesystem::exists(originalRuntimeModulePath)) return false;
 			jenova::ModuleHandle jenovaRuntimeModule = jenova::LoadModule(originalRuntimeModulePath.c_str());
 			if (!jenovaRuntimeModule) return false;
@@ -3570,225 +3573,229 @@ namespace jenova
 		}
 
 		// Deployer (Called to Perform Tasks)
-		#ifdef TARGET_PLATFORM_WINDOWS
-		JENOVA_API void CALLBACK Deploy(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
+		namespace Deployer
 		{
-			// Parse Arguments And Split to Argument Array
-			jenova::ArgumentsArray deployerArguments = jenova::ProcessDeployerArguments(lpszCmdLine);
-			deployerArguments.insert(deployerArguments.begin(), "jenova.exe");
-
-			try
-			{
-				// Create Argument Parser
-				argparse::ArgumentParser program("Jenova Deployer");
-
-				// Add Arguments to Parser
-				program.add_argument("--command").required().help("Deployment Command");
-				program.add_argument("--in").help("Input File Path");
-				program.add_argument("--out").help("Output File Path");
-				program.add_argument("--cache").help("Jenova Cache Directory");
-				program.add_argument("--compiler").help("Jenova Compiler Model");
-				program.add_argument("--identity").help("Script Unique Identity");
-				program.add_argument("--configuration").help("Jenova Build Configuration Data");
-				program.add_argument("--watchdog-invoker").help("Build System Watchdog Invoker Name");
-
-				// Parse Arguments
-				program.parse_args(deployerArguments);
-
-				// Get Parsed Values
-				std::string command = program.get<std::string>("--command");
-
-				// Process Commands
-				if (command == "prepare")
+			// Windows Implementation
+			#ifdef TARGET_PLATFORM_WINDOWS
+				JENOVA_API void CALLBACK Deploy(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 				{
-					// Get Input/Output Values & Files
-					std::string compilerModel = program.get<std::string>("--compiler");
+					// Parse Arguments And Split to Argument Array
+					jenova::ArgumentsArray deployerArguments = jenova::ProcessDeployerArguments(lpszCmdLine);
+					deployerArguments.insert(deployerArguments.begin(), "jenova.exe");
 
-					// Initialize Build Tools
-					if (compilerModel == "msvc")
-					{
-						jenova_log("[Jenova Deployer] Jenova %s (%s) Visual Studio Build Tools Initialized.", APP_VERSION, APP_VERSION_POSTFIX);
-						jenova_log("[Jenova Deployer] Starting Build...");
-						quick_exit(EXIT_SUCCESS);
-					}
-				}
-				if (command == "preprocess")
-				{
-					// Get Input/Output Values & Files
-					std::string inputFile = std::filesystem::absolute(program.get<std::string>("--in")).string();
-					std::string cacheDirectory = std::filesystem::absolute(program.get<std::string>("--cache")).string();
-					std::string compilerModel = program.get<std::string>("--compiler");
-					std::string sourceIdentity = program.get<std::string>("--identity");
-					std::string configuration = program.get<std::string>("--configuration");
-
-					// Create Configuration
-					nlohmann::json jenovaConfiguration;
-
-					// Read And Parse Configuration
 					try
 					{
-						jenovaConfiguration = nlohmann::json::parse(jenova::CreateStdStringFromCompressedBase64(configuration));
-						if (jenovaConfiguration.empty()) throw std::runtime_error("Invalid Jenova Configuration Data.");
-					}
-					catch (const std::exception&)
-					{
-						jenova_log("[Jenova Deployer] Error : Failed to Read or Parse Jenova Configuration Data.");
-						quick_exit(EXIT_FAILURE);
-					}
+						// Create Argument Parser
+						argparse::ArgumentParser program("Jenova Deployer");
 
-					// Preprocess C++ Source
-					{
-						std::string scriptSourceCode = jenova::ReadStdStringFromFile(inputFile);
-						if (scriptSourceCode.empty())
+						// Add Arguments to Parser
+						program.add_argument("--command").required().help("Deployment Command");
+						program.add_argument("--in").help("Input File Path");
+						program.add_argument("--out").help("Output File Path");
+						program.add_argument("--cache").help("Jenova Cache Directory");
+						program.add_argument("--compiler").help("Jenova Compiler Model");
+						program.add_argument("--identity").help("Script Unique Identity");
+						program.add_argument("--configuration").help("Jenova Build Configuration Data");
+						program.add_argument("--watchdog-invoker").help("Build System Watchdog Invoker Name");
+
+						// Parse Arguments
+						program.parse_args(deployerArguments);
+
+						// Get Parsed Values
+						std::string command = program.get<std::string>("--command");
+
+						// Process Commands
+						if (command == "prepare")
 						{
-							jenova_log("[Jenova Deployer] Error :", "Preprocessing Failed, Invalid Input Source.");
+							// Get Input/Output Values & Files
+							std::string compilerModel = program.get<std::string>("--compiler");
+
+							// Initialize Build Tools
+							if (compilerModel == "msvc")
+							{
+								jenova_log("[Jenova Deployer] Jenova %s (%s) Visual Studio Build Tools Initialized.", APP_VERSION, APP_VERSION_POSTFIX);
+								jenova_log("[Jenova Deployer] Starting Build...");
+								quick_exit(EXIT_SUCCESS);
+							}
+						}
+						if (command == "preprocess")
+						{
+							// Get Input/Output Values & Files
+							std::string inputFile = std::filesystem::absolute(program.get<std::string>("--in")).string();
+							std::string cacheDirectory = std::filesystem::absolute(program.get<std::string>("--cache")).string();
+							std::string compilerModel = program.get<std::string>("--compiler");
+							std::string sourceIdentity = program.get<std::string>("--identity");
+							std::string configuration = program.get<std::string>("--configuration");
+
+							// Create Configuration
+							nlohmann::json jenovaConfiguration;
+
+							// Read And Parse Configuration
+							try
+							{
+								jenovaConfiguration = nlohmann::json::parse(jenova::CreateStdStringFromCompressedBase64(configuration));
+								if (jenovaConfiguration.empty()) throw std::runtime_error("Invalid Jenova Configuration Data.");
+							}
+							catch (const std::exception&)
+							{
+								jenova_log("[Jenova Deployer] Error : Failed to Read or Parse Jenova Configuration Data.");
+								quick_exit(EXIT_FAILURE);
+							}
+
+							// Preprocess C++ Source
+							{
+								std::string scriptSourceCode = jenova::ReadStdStringFromFile(inputFile);
+								if (scriptSourceCode.empty())
+								{
+									jenova_log("[Jenova Deployer] Error :", "Preprocessing Failed, Invalid Input Source.");
+									quick_exit(EXIT_FAILURE);
+								}
+
+								// Line Directive
+								std::string referenceSourceFile = inputFile;
+								jenova::ReplaceAllMatchesWithString(referenceSourceFile, "\\", "\\\\");
+								scriptSourceCode = scriptSourceCode.insert(0, jenova::Format("#line 1 \"%s\"\n", referenceSourceFile.c_str()));
+
+								// Process And Extract Properties
+								jenova::SerializedData propertiesMetadata = jenova::ProcessAndExtractPropertiesFromScript(scriptSourceCode, sourceIdentity);
+								if (!propertiesMetadata.empty() && propertiesMetadata != "null")
+								{
+									std::string propFile = cacheDirectory + std::filesystem::path(inputFile).stem().string() + "_" + sourceIdentity + ".props";
+									if (!jenova::WriteStdStringToFile(propFile, propertiesMetadata))
+									{
+										jenova_log("[Jenova Deployer] Error : Failed to Write Property Metadata On Disk.");
+										quick_exit(EXIT_FAILURE);
+									}
+								}
+
+								// Preprocessor Definitions [Header]
+								std::string preprocessorDefinitions = "// Jenova Preprocessor Definitions\n";
+
+								// Preprocessor Definitions [Version]
+								preprocessorDefinitions += jenova::Format("#define JENOVA_VERSION \"%d.%d.%d.%d\"\n",
+									jenova::GlobalSettings::JenovaBuildVersion[0], jenova::GlobalSettings::JenovaBuildVersion[1],
+									jenova::GlobalSettings::JenovaBuildVersion[2], jenova::GlobalSettings::JenovaBuildVersion[3]);
+
+								// Preprocessor Definitions [Compiler]
+								preprocessorDefinitions += "#define JENOVA_COMPILER \"Microsoft Visual C++ Compiler\"\n";
+								preprocessorDefinitions += "#define MSVC_COMPILER\n";
+
+								// Preprocessor Definitions [USER]
+								auto userPreprocessorDefinitions = jenova::SplitStdStringToArguments(jenovaConfiguration["PreprocessorDefinitions"].get<std::string>(), ';');
+								for (const auto& definition : userPreprocessorDefinitions) if (!definition.empty()) preprocessorDefinitions += "#define " + definition + "\n";
+
+								// Add Final Preprocessor Definitions
+								scriptSourceCode = scriptSourceCode.insert(0, preprocessorDefinitions + "\n");
+
+								// Replecements
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, jenova::GlobalSettings::ScriptToolIdentifier, "#define TOOL_SCRIPT");
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, jenova::GlobalSettings::ScriptBlockBeginIdentifier, "namespace JNV_" + sourceIdentity + "{");
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, jenova::GlobalSettings::ScriptBlockEndIdentifier, "}; using namespace JNV_" + sourceIdentity + ";");
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnReady", " _ready");
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnAwake", " _enter_tree");
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnDestroy", " _exit_tree");
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnProcess", " _process");
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnPhysicsProcess", " _physics_process");
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnInput", " _input");
+								jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnUserInterfaceInput", " _gui_input");
+
+								// Write Preprocessed Source
+								std::string outputPath = cacheDirectory + std::filesystem::path(inputFile).stem().string() + "_" + sourceIdentity + ".cpp";
+								if (!jenova::WriteStdStringToFile(outputPath, scriptSourceCode))
+								{
+									jenova_log("[Jenova Deployer] Error : Failed to Write Preprocessed Source On Disk.");
+									quick_exit(EXIT_FAILURE);
+								}
+							}
+
+							// All Good
+							jenova_log("[Jenova Deployer] C++ Source '%s' Preprocessed.", std::filesystem::path(inputFile).filename().string().c_str());
+							quick_exit(EXIT_SUCCESS);
+						}
+						if (command == "create-internal-scripts")
+						{
+							// Get Input/Output Values & Files
+							std::string cacheDirectory = std::filesystem::absolute(program.get<std::string>("--cache")).string();
+
+							// Create Internal Source
+							if (!jenova::CreateFileFromInternalSource(cacheDirectory + "JenovaModuleLoader.cpp", std::string(JENOVA_RESOURCE(JenovaModuleInitializerCPP))))
+							{
+								jenova_log("[Jenova Deployer] Error : %s", "Unable to Create Internal Script 'JenovaModuleLoader'");
+								quick_exit(EXIT_FAILURE);
+							};
+
+							// All Good
+							jenova_log("[Jenova Deployer] Internal Scripts Successfully Generated.");
+							quick_exit(EXIT_SUCCESS);
+						}
+						if (command == "generate-watchdog")
+						{
+							// Get Input/Output Values & Files
+							std::string cacheDirectory = std::filesystem::absolute(program.get<std::string>("--cache")).string();
+							std::string configuration = program.get<std::string>("--configuration");
+							std::string watchdogInvoker = program.get<std::string>("--watchdog-invoker");
+
+							// Create Known Watchdog
+							if (watchdogInvoker == "vs")
+							{
+								// Generate Watchdog Path
+								std::string visualStudioWatchdogFile = cacheDirectory + jenova::GlobalSettings::VisualStudioWatchdogFile;
+
+								// If Watchdog Exists Remove It
+								if (std::filesystem::exists(visualStudioWatchdogFile))
+								{
+									if (!std::filesystem::remove(visualStudioWatchdogFile))
+									{
+										jenova_log("[Jenova Deployer] Error : Could Not Remove Existing Watchdog Cache.");
+										quick_exit(EXIT_FAILURE);
+									}
+								}
+
+								// Decode Jenova Configuration
+								std::string jenovaConfiguration = jenova::CreateStdStringFromCompressedBase64(configuration);
+
+								// Create New Watchdog
+								if (!jenova::WriteStdStringToFile(visualStudioWatchdogFile, jenovaConfiguration))
+								{
+									jenova_log("[Jenova Deployer] Error : Failed to Generate Visual Studio Watchdog Invoker.");
+									quick_exit(EXIT_FAILURE);
+								}
+
+								// All Good
+								jenova_log("[Jenova Deployer] Visual Studio Watchdog Invoked Successfully.");
+								quick_exit(EXIT_SUCCESS);
+							}
+
+							// No Valid Command Executed
+							jenova_log("[Jenova Deployer] Error : Invalid Watchdog Invoker Detected.");
 							quick_exit(EXIT_FAILURE);
 						}
-
-						// Line Directive
-						std::string referenceSourceFile = inputFile;
-						jenova::ReplaceAllMatchesWithString(referenceSourceFile, "\\", "\\\\");
-						scriptSourceCode = scriptSourceCode.insert(0, jenova::Format("#line 1 \"%s\"\n", referenceSourceFile.c_str()));
-
-						// Process And Extract Properties
-						jenova::SerializedData propertiesMetadata = jenova::ProcessAndExtractPropertiesFromScript(scriptSourceCode, sourceIdentity);
-						if (!propertiesMetadata.empty() && propertiesMetadata != "null")
+						if (command == "finalize")
 						{
-							std::string propFile = cacheDirectory + std::filesystem::path(inputFile).stem().string() + "_" + sourceIdentity + ".props";
-							if (!jenova::WriteStdStringToFile(propFile, propertiesMetadata))
+							// Get Input/Output Values & Files
+							std::string compilerModel = program.get<std::string>("--compiler");
+
+							// Finalize Build Tools
+							if (compilerModel == "msvc")
 							{
-								jenova_log("[Jenova Deployer] Error : Failed to Write Property Metadata On Disk.");
-								quick_exit(EXIT_FAILURE);
+								jenova_log("[Jenova Deployer] Build Completed.");
+								quick_exit(EXIT_SUCCESS);
 							}
 						}
 
-						// Preprocessor Definitions [Header]
-						std::string preprocessorDefinitions = "// Jenova Preprocessor Definitions\n";
-
-						// Preprocessor Definitions [Version]
-						preprocessorDefinitions += jenova::Format("#define JENOVA_VERSION \"%d.%d.%d.%d\"\n",
-							jenova::GlobalSettings::JenovaBuildVersion[0], jenova::GlobalSettings::JenovaBuildVersion[1],
-							jenova::GlobalSettings::JenovaBuildVersion[2], jenova::GlobalSettings::JenovaBuildVersion[3]);
-
-						// Preprocessor Definitions [Compiler]
-						preprocessorDefinitions += "#define JENOVA_COMPILER \"Microsoft Visual C++ Compiler\"\n";
-						preprocessorDefinitions += "#define MSVC_COMPILER\n";
-
-						// Preprocessor Definitions [USER]
-						auto userPreprocessorDefinitions = jenova::SplitStdStringToArguments(jenovaConfiguration["PreprocessorDefinitions"].get<std::string>(), ';');
-						for (const auto& definition : userPreprocessorDefinitions) if (!definition.empty()) preprocessorDefinitions += "#define " + definition + "\n";
-
-						// Add Final Preprocessor Definitions
-						scriptSourceCode = scriptSourceCode.insert(0, preprocessorDefinitions + "\n");
-
-						// Replecements
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, jenova::GlobalSettings::ScriptToolIdentifier, "#define TOOL_SCRIPT");
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, jenova::GlobalSettings::ScriptBlockBeginIdentifier, "namespace JNV_" + sourceIdentity + "{");
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, jenova::GlobalSettings::ScriptBlockEndIdentifier, "}; using namespace JNV_" + sourceIdentity + ";");
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnReady", " _ready");
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnAwake", " _enter_tree");
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnDestroy", " _exit_tree");
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnProcess", " _process");
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnPhysicsProcess", " _physics_process");
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnInput", " _input");
-						jenova::ReplaceAllMatchesWithString(scriptSourceCode, " OnUserInterfaceInput", " _gui_input");
-
-						// Write Preprocessed Source
-						std::string outputPath = cacheDirectory + std::filesystem::path(inputFile).stem().string() + "_" + sourceIdentity + ".cpp";
-						if (!jenova::WriteStdStringToFile(outputPath, scriptSourceCode))
-						{
-							jenova_log("[Jenova Deployer] Error : Failed to Write Preprocessed Source On Disk.");
-							quick_exit(EXIT_FAILURE);
-						}
-					}
-
-					// All Good
-					jenova_log("[Jenova Deployer] C++ Source '%s' Preprocessed.", std::filesystem::path(inputFile).filename().string().c_str());
-					quick_exit(EXIT_SUCCESS);
-				}
-				if (command == "create-internal-scripts")
-				{
-					// Get Input/Output Values & Files
-					std::string cacheDirectory = std::filesystem::absolute(program.get<std::string>("--cache")).string();
-
-					// Create Internal Source
-					if (!jenova::CreateFileFromInternalSource(cacheDirectory + "JenovaModuleLoader.cpp", std::string(JENOVA_RESOURCE(JenovaModuleInitializerCPP))))
-					{
-						jenova_log("[Jenova Deployer] Error : %s", "Unable to Create Internal Script 'JenovaModuleLoader'");
+						// No Valid Command Executed
+						jenova_log("[Jenova Deployer] Error : Deployment Command Not Found.");
 						quick_exit(EXIT_FAILURE);
-					};
-
-					// All Good
-					jenova_log("[Jenova Deployer] Internal Scripts Successfully Generated.");
-					quick_exit(EXIT_SUCCESS);
-				}
-				if (command == "generate-watchdog")
-				{
-					// Get Input/Output Values & Files
-					std::string cacheDirectory = std::filesystem::absolute(program.get<std::string>("--cache")).string();
-					std::string configuration = program.get<std::string>("--configuration");
-					std::string watchdogInvoker = program.get<std::string>("--watchdog-invoker");
-
-					// Create Known Watchdog
-					if (watchdogInvoker == "vs")
-					{
-						// Generate Watchdog Path
-						std::string visualStudioWatchdogFile = cacheDirectory + jenova::GlobalSettings::VisualStudioWatchdogFile;
-
-						// If Watchdog Exists Remove It
-						if (std::filesystem::exists(visualStudioWatchdogFile))
-						{
-							if (!std::filesystem::remove(visualStudioWatchdogFile))
-							{
-								jenova_log("[Jenova Deployer] Error : Could Not Remove Existing Watchdog Cache.");
-								quick_exit(EXIT_FAILURE);
-							}
-						}
-
-						// Decode Jenova Configuration
-						std::string jenovaConfiguration = jenova::CreateStdStringFromCompressedBase64(configuration);
-
-						// Create New Watchdog
-						if (!jenova::WriteStdStringToFile(visualStudioWatchdogFile, jenovaConfiguration))
-						{
-							jenova_log("[Jenova Deployer] Error : Failed to Generate Visual Studio Watchdog Invoker.");
-							quick_exit(EXIT_FAILURE);
-						}
-
-						// All Good
-						jenova_log("[Jenova Deployer] Visual Studio Watchdog Invoked Successfully.");
-						quick_exit(EXIT_SUCCESS);
 					}
-
-					// No Valid Command Executed
-					jenova_log("[Jenova Deployer] Error : Invalid Watchdog Invoker Detected.");
-					quick_exit(EXIT_FAILURE);
-				}
-				if (command == "finalize")
-				{
-					// Get Input/Output Values & Files
-					std::string compilerModel = program.get<std::string>("--compiler");
-
-					// Finalize Build Tools
-					if (compilerModel == "msvc")
+					catch (const std::exception& error)
 					{
-						jenova_log("[Jenova Deployer] Build Completed.");
-						quick_exit(EXIT_SUCCESS);
+						// Argument Parse Failed
+						jenova_log("[Jenova Deployer] Error : %s", error.what());
+						quick_exit(EXIT_FAILURE);
 					}
 				}
-
-				// No Valid Command Executed
-				jenova_log("[Jenova Deployer] Error : Deployment Command Not Found.");
-				quick_exit(EXIT_FAILURE);
-			}
-			catch (const std::exception& error)
-			{
-				// Argument Parse Failed
-				jenova_log("[Jenova Deployer] Error : %s", error.what());
-				quick_exit(EXIT_FAILURE);
-			}
+			#endif
 		}
-		#endif
 	}
 
 	// Global Storage
@@ -3822,37 +3829,52 @@ namespace jenova
 	#pragma region JenovaOS
 	jenova::ModuleHandle LoadModule(const char* libPath)
 	{
+		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return LoadLibraryA(libPath);
 		#endif
+
+		// Not Implemented
 		return nullptr;
 	}
 	bool ReleaseModule(jenova::ModuleHandle moduleHandle)
 	{
+		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return FreeLibrary(HMODULE(moduleHandle));
 		#endif
+
+		// Not Implemented
 		return true;
 	}
 	void* GetModuleFunction(jenova::ModuleHandle moduleHandle, const char* functionName)
 	{
+		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return GetProcAddress(HMODULE(moduleHandle), functionName);
 		#endif
+
+		// Not Implemented
 		return nullptr;
 	}
 	bool SetWindowState(jenova::WindowHandle windowHandle, bool windowState)
 	{
+		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return EnableWindow(HWND(windowHandle), windowState);
 		#endif
+
+		// Not Implemented
 		return true;
 	}
 	int ShowMessageBox(const char* msg, const char* title, int flags)
 	{
+		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
-			MessageBoxA(HWND(GetMainWindowNativeHandle()), msg, title, flags);
+			return MessageBoxA(HWND(GetMainWindowNativeHandle()), msg, title, flags);
 		#endif
+
+		// Not Implemented
 		return 0;
 	}
 	#pragma endregion
@@ -4141,7 +4163,7 @@ namespace jenova
 		va_end(args);
 
 		// Show Error Message
-		ShowMessageBox(buffer, title, MB_ICONERROR);
+		jenova::ShowMessageBox(buffer, title, MB_ICONERROR);
 	}
 	std::string ConvertToStdString(const godot::String& gstr)
 	{
@@ -4468,22 +4490,27 @@ namespace jenova
 	}
 	void CopyStdStringToClipboard(const std::string& str)
 	{
-		if (!OpenClipboard(nullptr)) return;
-		EmptyClipboard();
-		HGLOBAL hClipboardData = GlobalAlloc(GMEM_DDESHARE, str.size() + 1);
-		if (!hClipboardData)
-		{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			if (!OpenClipboard(nullptr)) return;
+			EmptyClipboard();
+			HGLOBAL hClipboardData = GlobalAlloc(GMEM_DDESHARE, str.size() + 1);
+			if (!hClipboardData)
+			{
+				CloseClipboard();
+				return;
+			}
+			char* pchData = static_cast<char*>(GlobalLock(hClipboardData));
+			if (pchData != nullptr)
+			{
+				strcpy_s(pchData, str.size() + 1, str.c_str());
+				GlobalUnlock(hClipboardData);
+			}
+			SetClipboardData(CF_TEXT, hClipboardData);
 			CloseClipboard();
-			return;
-		}
-		char* pchData = static_cast<char*>(GlobalLock(hClipboardData));
-		if (pchData != nullptr)
-		{
-			strcpy_s(pchData, str.size() + 1, str.c_str());
-			GlobalUnlock(hClipboardData);
-		}
-		SetClipboardData(CF_TEXT, hClipboardData);
-		CloseClipboard();
+
+		#endif
 	}
 	std::string GetStdStringFromClipboard()
 	{
@@ -4520,67 +4547,91 @@ namespace jenova
 	}
 	std::string GetExecutablePath()
 	{
-		char pathBuffer[MAX_PATH];
-		GetModuleFileNameA(NULL, pathBuffer, MAX_PATH);
-		return std::string(pathBuffer);
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			char pathBuffer[MAX_PATH];
+			GetModuleFileNameA(NULL, pathBuffer, MAX_PATH);
+			return std::string(pathBuffer);
+
+		#endif
+
+		// Not Implemented
+		return std::string();
 	}
 	void ResetCurrentDirectoryToRoot()
 	{
-		char buffer[MAX_PATH];
-		GetModuleFileNameA(nullptr, buffer, MAX_PATH);
-		std::string fullPath(buffer);
-		size_t pos = fullPath.find_last_of("\\/");
-		std::string folder = fullPath.substr(0, pos);
-		SetCurrentDirectoryA(folder.c_str());
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			char buffer[MAX_PATH];
+			GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+			std::string fullPath(buffer);
+			size_t pos = fullPath.find_last_of("\\/");
+			std::string folder = fullPath.substr(0, pos);
+			SetCurrentDirectoryA(folder.c_str());
+
+		#endif
 	}
 	bool GenerateMiniMemoryDump(EXCEPTION_POINTERS* exceptionInfo)
 	{
-		// Create a directory named "MaxFusionCrashData" in the Windows temp directory
-		wchar_t tempPath[MAX_PATH];
-		GetTempPath(MAX_PATH, tempPath);
-		std::wstring crashDir = std::wstring(tempPath) + L"JenovaCrashData\\";
-		CreateDirectory(crashDir.c_str(), NULL);
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
 
-		// Generate a random hash ID for the crash dump file
-		std::string crashHash = GenerateRandomHashString();
-		wchar_t dumpFileName[MAX_PATH];
-		wsprintf(dumpFileName, L"%sJenovaCore_Crash_Dump_%hs.dmp", crashDir.c_str(), crashHash.c_str());
+			// Create a directory named "JenovaCrashData" in the Windows temp directory
+			wchar_t tempPath[MAX_PATH];
+			GetTempPath(MAX_PATH, tempPath);
+			std::wstring crashDir = std::wstring(tempPath) + L"JenovaCrashData\\";
+			CreateDirectory(crashDir.c_str(), NULL);
 
-		// Open the dump file for writing
-		HANDLE hDumpFile = CreateFile(dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (hDumpFile != INVALID_HANDLE_VALUE)
-		{
-			// Set up the MiniDumpWriteDump options
-			MINIDUMP_EXCEPTION_INFORMATION dumpInfo;
-			dumpInfo.ThreadId = GetCurrentThreadId();
-			dumpInfo.ExceptionPointers = exceptionInfo;
-			dumpInfo.ClientPointers = TRUE;
+			// Generate a random hash ID for the crash dump file
+			std::string crashHash = jenova::GenerateRandomHashString();
+			wchar_t dumpFileName[MAX_PATH];
+			wsprintf(dumpFileName, L"%sJenovaCore_Crash_Dump_%hs.dmp", crashDir.c_str(), crashHash.c_str());
 
-			// Write the mini dump file
-			MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hDumpFile, MiniDumpNormal, &dumpInfo, NULL, NULL);
+			// Open the dump file for writing
+			HANDLE dumpFileHandle = CreateFile(dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (dumpFileHandle != INVALID_HANDLE_VALUE)
+			{
+				// Set up the MiniDumpWriteDump options
+				MINIDUMP_EXCEPTION_INFORMATION dumpInfo;
+				dumpInfo.ThreadId = GetCurrentThreadId();
+				dumpInfo.ExceptionPointers = exceptionInfo;
+				dumpInfo.ClientPointers = TRUE;
 
-			// Close the dump file handle
-			CloseHandle(hDumpFile);
+				// Write the mini dump file
+				MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), dumpFileHandle, MiniDumpNormal, &dumpInfo, NULL, NULL);
 
-			// All Good
-			return true;
-		}
+				// Close the dump file handle
+				CloseHandle(dumpFileHandle);
 
-		// Something Went Wrong
-		return false;
+				// All Good
+				return true;
+			}
+
+			// Something Went Wrong
+			return false;
+
+		#endif
 	}
 	void DoApplicationEvents()
 	{
-		MSG msg;
-		while (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE))
-		{
-			if (GetMessage(&msg, NULL, 0, 0))
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			// Simulate Application Loop
+			MSG msg;
+			while (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE))
 			{
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
+				if (GetMessage(&msg, NULL, 0, 0))
+				{
+					TranslateMessage(&msg);
+					DispatchMessage(&msg);
+				}
+				else break;
 			}
-			else break;
-		}
+
+		#endif
 	}
 	bool QueueProjectBuild()
 	{
@@ -4700,8 +4751,11 @@ namespace jenova
 		// Demangled MSVC Function
 		if (compilerModel == jenova::CompilerModel::MicrosoftCompiler)
 		{
-			char demangled_name[1024];
-			if (UnDecorateSymbolName(mangledName.c_str(), demangled_name, sizeof(demangled_name), UNDNAME_COMPLETE)) return std::string(demangled_name);
+			// MSVC Only Supported On Windows
+			#ifdef TARGET_PLATFORM_WINDOWS
+				char demangled_name[1024];
+				if (UnDecorateSymbolName(mangledName.c_str(), demangled_name, sizeof(demangled_name), UNDNAME_COMPLETE)) return std::string(demangled_name);
+			#endif
 		}
 		
 		// Unknown Compiler, Return Empty String
@@ -4783,19 +4837,27 @@ namespace jenova
 	}
 	bool LoadSymbolForModule(HANDLE process, DWORD64 baseAddress, const std::string& pdbPath, size_t dllSize)
 	{
-		// Initialize the symbol handler for the process
-		if (!SymInitialize(process, NULL, FALSE)) return false;
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
 
-		// Load the symbols for the memory-mapped DLL
-		DWORD64 moduleBase = SymLoadModuleEx(process, NULL, pdbPath.c_str(), NULL, baseAddress, dllSize, NULL, 0);
-		if (moduleBase == 0) { SymCleanup(process); return false; }
+			// Initialize the symbol handler for the process
+			if (!SymInitialize(process, NULL, FALSE)) return false;
 
-		// Verbose
-		if (QUERY_ENGINE_MODE(Editor))
-			jenova::Output("Symbol [[color=#db2e59]%p[/color]] Loaded for Jenova Module [[color=#44e376]%p[/color]] at [[color=#44e376]%p[/color]]", pdbPath, baseAddress, moduleBase);
+			// Load the symbols for the memory-mapped DLL
+			DWORD64 moduleBase = SymLoadModuleEx(process, NULL, pdbPath.c_str(), NULL, baseAddress, dllSize, NULL, 0);
+			if (moduleBase == 0) { SymCleanup(process); return false; }
 
-		// All Good
-		return moduleBase == baseAddress;
+			// Verbose
+			if (QUERY_ENGINE_MODE(Editor))
+				jenova::Output("Symbol [[color=#db2e59]%p[/color]] Loaded for Jenova Module [[color=#44e376]%p[/color]] at [[color=#44e376]%p[/color]]", pdbPath, baseAddress, moduleBase);
+
+			// All Good
+			return moduleBase == baseAddress;
+
+		#endif
+
+		// Not Implemented
+		return true;
 	}
 	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase)
 	{
@@ -5350,33 +5412,35 @@ namespace jenova
 	}
 	bool AssignPopUpWindow(const Window* targetWindow)
 	{
+		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
-		HWND windowHandle = HWND(jenova::GetWindowNativeHandle(targetWindow));
-		if (windowHandle)
-		{
-			LONG style = GetWindowLong(windowHandle, GWL_STYLE);
-			style &= ~WS_MINIMIZEBOX;
-			SetWindowLong(windowHandle, GWL_STYLE, style);
-			SetWindowLongPtr(windowHandle, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(jenova::GetMainWindowNativeHandle()));
-			return true;
-		}
-		return false;
+			HWND windowHandle = HWND(jenova::GetWindowNativeHandle(targetWindow));
+			if (windowHandle)
+			{
+				LONG style = GetWindowLong(windowHandle, GWL_STYLE);
+				style &= ~WS_MINIMIZEBOX;
+				SetWindowLong(windowHandle, GWL_STYLE, style);
+				SetWindowLongPtr(windowHandle, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(jenova::GetMainWindowNativeHandle()));
+				return true;
+			}
+			return false;
 		#else
-		return true;
+			return true;
 		#endif
 	}
 	bool ReleasePopUpWindow(const Window* targetWindow)
 	{
+		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
-		HWND windowHandle = HWND(jenova::GetWindowNativeHandle(targetWindow));
-		if (windowHandle)
-		{
-			SetWindowLongPtr(windowHandle, GWLP_HWNDPARENT, NULL);
-			return true;
-		}
-		return false;
+			HWND windowHandle = HWND(jenova::GetWindowNativeHandle(targetWindow));
+			if (windowHandle)
+			{
+				SetWindowLongPtr(windowHandle, GWLP_HWNDPARENT, NULL);
+				return true;
+			}
+			return false;
 		#else
-		return true;
+			return true;
 		#endif
 	}
 	String FormatBytesSize(size_t byteSize)
@@ -6605,22 +6669,37 @@ namespace jenova
 	}
 	jenova::ScriptFileState BackupScriptFileState(const std::string& scriptFilePath)
 	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
 
-		ScriptFileState scriptFileState;
-		HANDLE hFile = CreateFileA(scriptFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (hFile == INVALID_HANDLE_VALUE) return scriptFileState;
-		if (GetFileTime(hFile, &scriptFileState.creationTime, &scriptFileState.accessTime, &scriptFileState.writeTime)) scriptFileState.isValid = true;
-		CloseHandle(hFile);
-		return scriptFileState;
+			ScriptFileState scriptFileState;
+			jenova::FileHandle hFile = CreateFileA(scriptFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (hFile == INVALID_HANDLE_VALUE) return scriptFileState;
+			if (GetFileTime(hFile, &scriptFileState.creationTime, &scriptFileState.accessTime, &scriptFileState.writeTime)) scriptFileState.isValid = true;
+			CloseHandle(hFile);
+			return scriptFileState;
+
+		#endif
+
+		// Not Implemented
+		return ScriptFileState();
 	}
 	bool RestoreScriptFileState(const std::string& scriptFilePath, const jenova::ScriptFileState& scriptFileState)
 	{
-		if (!scriptFileState.isValid) return false;
-		HANDLE hFile = CreateFileA(scriptFilePath.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (hFile == INVALID_HANDLE_VALUE) return false;
-		bool success = SetFileTime(hFile, &scriptFileState.creationTime, &scriptFileState.accessTime, &scriptFileState.writeTime);
-		CloseHandle(hFile);
-		return success;
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			if (!scriptFileState.isValid) return false;
+			jenova::FileHandle hFile = CreateFileA(scriptFilePath.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (hFile == INVALID_HANDLE_VALUE) return false;
+			bool success = SetFileTime(hFile, &scriptFileState.creationTime, &scriptFileState.accessTime, &scriptFileState.writeTime);
+			CloseHandle(hFile);
+			return success;
+
+		#endif
+
+		// Not Implemented
+		return false;
 	}
 	void RandomWait(int minWaitTime, int maxWaitTime)
 	{
