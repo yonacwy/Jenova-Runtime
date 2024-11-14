@@ -20,11 +20,11 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025"
-#define APP_VERSION						"0.3.3.8"
+#define APP_VERSION						"0.3.3.9"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 3, 8
+#define APP_VERSION_DATA				0, 3, 3, 9
 #define APP_VERSION_BUILD				"0"
 #define APP_VERSION_NAME				"Bullet"
 
@@ -239,6 +239,7 @@ namespace jenova
 	struct JenovaPackage;
 
 	// Typedefs
+	typedef void* GenericHandle;
 	typedef void* ModuleHandle;
 	typedef void* WindowHandle;
 	typedef void* FileHandle;
@@ -268,6 +269,7 @@ namespace jenova
 	typedef intptr_t FunctionAddress;
 	typedef intptr_t PropertyAddress;
 	typedef FILETIME FileTime;
+	typedef unsigned __int64 LongWord;
 
 	// Enumerators
 	enum class TargetPlatform
@@ -622,6 +624,8 @@ namespace jenova
 	void* GetModuleFunction(jenova::ModuleHandle moduleHandle, const char* functionName);
 	bool SetWindowState(jenova::WindowHandle windowHandle, bool windowState);
 	int ShowMessageBox(const char* msg, const char* title, int flags);
+	bool RunFile(const char* filePath);
+	bool OpenURL(const char* url);
 	#pragma endregion
 
 	// Utilities & Helpers
@@ -673,7 +677,7 @@ namespace jenova
 	ParameterTypeList ExtractParameterTypesFromSignature(const std::string& functionSignature);
 	std::string ExtractReturnTypeFromSignature(const std::string& functionSignature);
 	std::string ExtractPropertyTypeFromSignature(const std::string& propertySignature);
-	bool LoadSymbolForModule(HANDLE process, DWORD64 baseAddress, const std::string& pdbPath, size_t dllSize);
+	bool LoadSymbolForModule(jenova::GenericHandle process, jenova::LongWord baseAddress, const std::string& pdbPath, size_t dllSize);
 	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase);
 	bool CallModuleEvent(const char* eventFuncName, jenova::ModuleHandle moduleBase);
 	ScriptModule CreateScriptModuleFromInternalSource(const std::string& sourceName, const std::string& sourceCode);

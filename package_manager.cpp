@@ -56,6 +56,10 @@ void JenovaPackageManager::init()
 }
 void JenovaPackageManager::deinit()
 {
+	// Release Packages
+	onlinePackages.clear();
+	installedPackages.clear();
+
     // Release Singleton
     if (singleton) memdelete(singleton);
 }
@@ -242,12 +246,12 @@ bool JenovaPackageManager::OpenPackageManager(const String& packageDatabaseURL)
 			// Open GitHub Repository
 			if (toolID == "OpenRepository")
 			{
-				ShellExecute(0, 0, L"https://github.com/Jenova-Framework/Jenova-Packages", 0, 0, SW_SHOW);
+				jenova::OpenURL("https://github.com/Jenova-Framework/Jenova-Packages");
 			}
 			// Download Package Database
 			if (toolID == "DownloadDatabase")
 			{
-				ShellExecute(0, 0, L"https://raw.githubusercontent.com/Jenova-Framework/Jenova-Packages/refs/heads/main/Jenova.Package.Database.json", 0, 0, SW_SHOW);
+				jenova::OpenURL("https://raw.githubusercontent.com/Jenova-Framework/Jenova-Packages/refs/heads/main/Jenova.Package.Database.json");
 			}
 			// Open GitHub Repository
 			if (toolID == "ReloadDatabase")

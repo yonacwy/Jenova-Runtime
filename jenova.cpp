@@ -1160,10 +1160,10 @@ namespace jenova
 					}
 					break;
 				case jenova::EditorMenuID::Documentation:
-					ShellExecute(0, 0, L"https://jenova-framework.github.io/docs/", 0, 0, SW_SHOW);
+					jenova::OpenURL("https://jenova-framework.github.io/docs/");
 					break;
 				case jenova::EditorMenuID::DiscordServer:
-					ShellExecute(0, 0, L"https://discord.gg/p7zAf6aBPz", 0, 0, SW_SHOW);
+					jenova::OpenURL("https://discord.gg/p7zAf6aBPz");
 					break;
 				case jenova::EditorMenuID::CheckForUpdates:
 					jenova::Error("Jenova Main Menu", "Feature Not Implemented Yet");
@@ -2620,7 +2620,7 @@ namespace jenova
 				std::string projectPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path("res://"));
 				std::string solutionFile = projectPath + jenova::GlobalSettings::VisualStudioSolutionFile;
 				if (!std::filesystem::exists(solutionFile)) return false;
-				ShellExecuteA(0, 0, solutionFile.c_str(), 0, 0, SW_SHOW);
+				jenova::RunFile(solutionFile.c_str());
 				return true;
 			}
 			jenova::SerializedData GetVistualStudioMetadata()
@@ -2904,7 +2904,7 @@ namespace jenova
 				description->set_offset(Side::SIDE_BOTTOM, SCALED(450.0));
 				description->add_theme_color_override("font_color", Color(1, 1, 1, 0.533333));
 				description->set_text(
-					"Projekt J.E.N.O.V.A is an extension library for the Godot 4 Game Engine "
+					"Projekt J.E.N.O.V.A is a series of components for the Godot 4 Game Engine "
 					"that brings fully-featured C++ scripting directly into the Godot Editor. "
 					"It allows the use of modern C++20 standards within the Godot Engine, similar to GDScript.\n\n"
 					"With Projekt J.E.N.O.V.A, there are no limits.\n"
@@ -2993,7 +2993,7 @@ namespace jenova
 					AboutEventManager(Window* _window) : window(_window) { }
 					void OnWebButtonClick()
 					{
-						ShellExecute(0, 0, L"https://jenova-framework.github.io", 0, 0, SW_SHOW);
+						jenova::OpenURL("https://jenova-framework.github.io");
 						window->queue_free();
 						memdelete(this);
 					}
@@ -3538,7 +3538,7 @@ namespace jenova
 		static GDExtensionBool InitializeAsWrapper(ExtensionInitializerData initializerData)
 		{
 			std::string wrapperDirectory = std::filesystem::path(GlobalStorage::CurrentJenovaRuntimeModulePath).parent_path().string();
-			std::string originalRuntimeModulePath = wrapperDirectory + "\\" + std::string(GlobalSettings::JenovaRuntimeModuleName);
+			std::string originalRuntimeModulePath = wrapperDirectory + "/" + std::string(GlobalSettings::JenovaRuntimeModuleName);
 			if (QUERY_PLATFORM(Windows)) originalRuntimeModulePath += ".dll";
 			if (!std::filesystem::exists(originalRuntimeModulePath)) return false;
 			jenova::ModuleHandle jenovaRuntimeModule = jenova::LoadModule(originalRuntimeModulePath.c_str());
@@ -3876,6 +3876,20 @@ namespace jenova
 
 		// Not Implemented
 		return 0;
+	}
+	bool RunFile(const char* filePath)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return ShellExecuteA(0, 0, filePath, 0, 0, SW_SHOW) != 0;
+		#endif
+	}
+	bool OpenURL(const char* url)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return ShellExecuteA(0, 0, url, 0, 0, SW_SHOW) != 0;
+		#endif
 	}
 	#pragma endregion
 
@@ -4835,7 +4849,7 @@ namespace jenova
 		if (std::regex_search(propertySignature, match, propRegex)) return match[1];
 		return std::string();
 	}
-	bool LoadSymbolForModule(HANDLE process, DWORD64 baseAddress, const std::string& pdbPath, size_t dllSize)
+	bool LoadSymbolForModule(jenova::GenericHandle process, jenova::LongWord baseAddress, const std::string& pdbPath, size_t dllSize)
 	{
 		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
