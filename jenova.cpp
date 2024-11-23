@@ -2641,43 +2641,50 @@ namespace jenova
 			}
 			jenova::SerializedData GetVistualStudioMetadata()
 			{
-				// Get Metadata from Visual Studio Locator
-				std::string jsonData = jenova::libraries::GetVisualStudioInstancesMetadata("-format json");
-				if (jsonData.empty()) return jenova::SerializedData();
+				#ifdef TARGET_PLATFORM_WINDOWS
 
-				// Parse Metadata
-				try
-				{
-					// Create Serializer/Deserializer
-					nlohmann::json vsMetadata;
-					nlohmann::json vsInstancesMetadata = nlohmann::json::parse(jsonData);
-					vsMetadata["InstancesNumber"] = vsInstancesMetadata.size();
-					vsMetadata["Instances"] = nlohmann::json::object();
+					// Get Metadata from Visual Studio Locator
+					std::string jsonData = jenova::libraries::GetVisualStudioInstancesMetadata("-format json");
+					if (jsonData.empty()) return jenova::SerializedData();
 
-					// Collect Instances
-					for (const auto& vsInstance : vsInstancesMetadata)
+					// Parse Metadata
+					try
 					{
-						// Get Instance Information
-						std::string instanceID = vsInstance["catalog"]["id"].get<std::string>();
+						// Create Serializer/Deserializer
+						nlohmann::json vsMetadata;
+						nlohmann::json vsInstancesMetadata = nlohmann::json::parse(jsonData);
+						vsMetadata["InstancesNumber"] = vsInstancesMetadata.size();
+						vsMetadata["Instances"] = nlohmann::json::object();
+
+						// Collect Instances
+						for (const auto& vsInstance : vsInstancesMetadata)
+						{
+							// Get Instance Information
+							std::string instanceID = vsInstance["catalog"]["id"].get<std::string>();
 						
-						// Add New Instance From Extracted Information
-						vsMetadata["Instances"][instanceID] = nlohmann::json::object();
-						vsMetadata["Instances"][instanceID]["Name"] = vsInstance["displayName"].get<std::string>();
-						vsMetadata["Instances"][instanceID]["Version"] = vsInstance["catalog"]["buildVersion"].get<std::string>();
-						vsMetadata["Instances"][instanceID]["Product"] = vsInstance["catalog"]["productName"].get<std::string>();
-						vsMetadata["Instances"][instanceID]["Year"] = vsInstance["catalog"]["productLineVersion"].get<std::string>();
+							// Add New Instance From Extracted Information
+							vsMetadata["Instances"][instanceID] = nlohmann::json::object();
+							vsMetadata["Instances"][instanceID]["Name"] = vsInstance["displayName"].get<std::string>();
+							vsMetadata["Instances"][instanceID]["Version"] = vsInstance["catalog"]["buildVersion"].get<std::string>();
+							vsMetadata["Instances"][instanceID]["Product"] = vsInstance["catalog"]["productName"].get<std::string>();
+							vsMetadata["Instances"][instanceID]["Year"] = vsInstance["catalog"]["productLineVersion"].get<std::string>();
+						}
+
+						// Serialize Metadata and Return
+						return vsMetadata.dump(3);
+					}
+					catch (const std::exception& error)
+					{
+						jenova::Error("Jenova Vistual Studio Locator", "Failed to Generate Visual Studio Metadata.");
 					}
 
-					// Serialize Metadata and Return
-					return vsMetadata.dump(3);
-				}
-				catch (const std::exception& error)
-				{
-					jenova::Error("Jenova Vistual Studio Locator", "Failed to Generate Visual Studio Metadata.");
-				}
+					// Failed
+					return jenova::SerializedData();
 
-				// Failed
-				return jenova::SerializedData();
+				#endif
+
+				// Not Supported
+				return "{}";
 			}
 			VisualStudioInstance GetVisualStudioInstance(int instanceIndex)
 			{

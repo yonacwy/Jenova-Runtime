@@ -69,7 +69,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <AdditionalDependencies>.\Libs\GodotSDK\libGodot.x64.lib;.\Libs\MinHook.x64MT.VS2019.lib;.\Libs\AsmJIT.x64MT.VS2019.lib;.\Libs\MemoryModule.x64MT.VS2022.lib;.\Libs\libFastZlib.x64MT.VS2019.lib;.\Libs\libVSWhere.x64MT.VS2022.lib;.\Libs\libArchive.x64MT.VS2022.lib;.\Libs\libCurl.x64MT.VS2022.lib;.\Libs\libTinyCC.x64MT.VS2022.lib;comctl32.lib;Dbghelp.lib;Ws2_32.lib;Wldap32.lib;Crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>dbghelp.dll;Winhttp.dll;Wldap32.dll;Crypt32.dll;bcrypt.dll;ole32.dll;</DelayLoadDLLs>
+      <DelayLoadDLLs>dbghelp.dll;Wldap32.dll;Crypt32.dll;bcrypt.dll;ole32.dll;</DelayLoadDLLs>
       <TreatLinkerWarningAsErrors>
       </TreatLinkerWarningAsErrors>
       <AdditionalOptions>/IGNORE:4098 /IGNORE:4286 /IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>

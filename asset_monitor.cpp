@@ -130,7 +130,7 @@ bool JenovaAssetMonitor::AddFile(const String& filePath)
 }
 bool JenovaAssetMonitor::AddFiles(const PackedStringArray& fileList) 
 {
-	// Fallback to AddDirectory
+	// Fallback to AddFile
 	for (const auto& file : fileList) if (!AddFile(file)) return false;
 
 	// All Good
