@@ -108,11 +108,19 @@ namespace jenova
 		private:
 			// Default Settings
 			const jenova::BuildToolButtonPlacement BuildToolButtonDefaultPlacement = jenova::BuildToolButtonPlacement::AfterRunbar;
-			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::MicrosoftCompiler;
 			const jenova::BuildAndRunMode BuildAndRunDefaultMode = jenova::BuildAndRunMode::DoNothing;
 			const jenova::ChangesTriggerMode ExternalChangesDefaultTriggerMode = jenova::ChangesTriggerMode::DoNothing;
 			const jenova::EditorVerboseOutput EditorVerboseDefaultOutput = jenova::EditorVerboseOutput::JenovaTerminal;
-			const jenova::InterpreterBackend InterpreterBackendDefaultMode = jenova::InterpreterBackend::AsmJIT;
+			const jenova::InterpreterBackend InterpreterBackendDefaultMode = jenova::InterpreterBackend::TinyCC;
+
+			// Default Compiler
+		#if defined(TARGET_PLATFORM_WINDOWS)
+			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::MicrosoftCompiler;
+		#elif defined(TARGET_PLATFORM_LINUX)
+			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::GNUCompiler;
+		#elif defined(TARGET_PLATFORM_UNKNOWN)
+			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::Unspecified;
+		#endif
 
 		private:
 			// Internal Objects
@@ -465,7 +473,7 @@ namespace jenova
 
 						// Compiler Model Property
 						PropertyInfo CompilerModelProperty(Variant::INT, CompilerModelConfigPath, 
-							PropertyHint::PROPERTY_HINT_ENUM, "Microsoft Visual C++ (MSVC),LLVM CLang Toolchain,MinGW Standard",
+							PropertyHint::PROPERTY_HINT_ENUM, "Microsoft Visual C++ (MSVC),GNU Compiler Collection (GCC)",
 							PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED, JenovaEditorSettingsCategory);
 						editor_settings->add_property_info(CompilerModelProperty);
 						editor_settings->set_initial_value(CompilerModelConfigPath, int32_t(CompilerDefaultModel), false);
@@ -1889,15 +1897,23 @@ namespace jenova
 				{
 				case jenova::CompilerModel::MicrosoftCompiler:
 					jenova::Output("Creating Microsoft Visual C++ (MSVC) Compiler...");
+					if (!QUERY_PLATFORM(Windows))
+					{
+						jenova::Error("Jenova Builder", "Microsoft Visual C++ (MSVC) Compiler can only be used on the Windows platform.");
+						jenovaCompiler = nullptr;
+						break;
+					}
 					jenovaCompiler = new jenova::MicrosoftCompiler();
 					jenova::Output("New Microsoft Visual C++ (MSVC) Compiler Implemented at [color=#44e376]%p[/color]", jenovaCompiler);
 					break;
-				case jenova::CompilerModel::ClangCompiler:
-					jenova::Output("Creating LLVM CLang Compiler...");
-					jenovaCompiler = nullptr; // Not Implemented Yet
-					break;
-				case jenova::CompilerModel::MinGWCompiler:
-					jenova::Output("Creating MinGW Compiler...");
+				case jenova::CompilerModel::GNUCompiler:
+					jenova::Output("Creating Linux GNU (GCC) Compiler...");
+					if (!QUERY_PLATFORM(Linux))
+					{
+						jenova::Error("Jenova Builder", "Microsoft Visual C++ (MSVC) Compiler can only be used on the Windows platform.");
+						jenovaCompiler = nullptr;
+						break;
+					}
 					jenovaCompiler = nullptr; // Not Implemented Yet
 					break;
 				default:
@@ -3883,6 +3899,9 @@ namespace jenova
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return ShellExecuteA(0, 0, filePath, 0, 0, SW_SHOW) != 0;
 		#endif
+
+		// Not Implemented
+		return false;
 	}
 	bool OpenURL(const char* url)
 	{
@@ -3890,6 +3909,9 @@ namespace jenova
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return ShellExecuteA(0, 0, url, 0, 0, SW_SHOW) != 0;
 		#endif
+
+		// Not Implemented
+		return false;
 	}
 	#pragma endregion
 

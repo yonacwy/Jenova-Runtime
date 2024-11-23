@@ -15,9 +15,6 @@
 // Jenova SDK
 #include "Jenova.hpp"
 
-// Windows HTTP SDK
-#include <winhttp.h>
-
 // Archive SDK
 #include "Archive/archive.h"
 #include "Archive/archive_entry.h"
@@ -492,63 +489,45 @@ bool JenovaPackageManager::FetchOnlinePackages(const String& packageDatabaseURL)
 	// Verbose
 	jenova::VerboseByID(__LINE__, "Downloading [%s%s]", AS_C_STRING(packageDatabaseURL), packageDatabaseFileURL);
 
+	// Initialize cURL
+	CURL* curl = curl_easy_init();
+	if (!curl) { return false; }
+
 	// Prepare URLs
-	std::wstring hostURL = AS_STD_WSTRING(packageDatabaseURL);
-	std::wstring fileAddress = AS_STD_WSTRING(String(packageDatabaseFileURL));
+	std::string fullURL = AS_C_STRING(packageDatabaseURL) + std::string(packageDatabaseFileURL);
 
-	// Download Package Database
-	HINTERNET hSession = WinHttpOpen(L"Jenova Package Manager/1.0", WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-	if (!hSession) { LINE_CHECK return false; }
-	HINTERNET hConnect = WinHttpConnect(hSession, L"raw.githubusercontent.com", INTERNET_DEFAULT_HTTPS_PORT, 0);
-	if (!hConnect) { LINE_CHECK WinHttpCloseHandle(hSession); return false; }
-	HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", L"Jenova-Framework/Jenova-Packages/refs/heads/main/Jenova.Package.Database.json", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
-	if (!hRequest) { LINE_CHECK WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false; }
-	bool requestSent = WinHttpSendRequest(hRequest, L"Content-Type: application/json\r\nUser-Agent: JenovaPackageManager/1.0", 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) && WinHttpReceiveResponse(hRequest, NULL);
-	if (!requestSent) { LINE_CHECK WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false; }
-
-	// Read Package Database
-	DWORD dataSize = 0;
-	DWORD downloaded = 0;
+	// Response Buffer
 	std::string responseData;
-	do 
-	{
-		if (!WinHttpQueryDataAvailable(hRequest, &dataSize))
-		{
-			WinHttpCloseHandle(hRequest);
-			WinHttpCloseHandle(hConnect);
-			WinHttpCloseHandle(hSession);
-			return false;
-		}
-		if (dataSize > 0) 
-		{
-			char* buffer = new char[dataSize + 1];
-			ZeroMemory(buffer, dataSize + 1);
-			if (!WinHttpReadData(hRequest, (LPVOID)buffer, dataSize, &downloaded))
-			{
-				delete[] buffer;
-				WinHttpCloseHandle(hRequest);
-				WinHttpCloseHandle(hConnect);
-				WinHttpCloseHandle(hSession);
-				return false;
-			}
-			responseData.append(buffer, downloaded);
-			delete[] buffer;
-		}
-	} while (dataSize > 0);
 
-	// Cleanup
-	WinHttpCloseHandle(hRequest);
-	WinHttpCloseHandle(hConnect);
-	WinHttpCloseHandle(hSession);
+	// Configure cURL
+	curl_easy_setopt(curl, CURLOPT_URL, fullURL.c_str());
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "JenovaPackageManager/1.0");
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, JenovaPackageManager::OnFetchBufferWrite);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
+
+	// Perform the Request
+	CURLcode res = curl_easy_perform(curl);
+	if (res != CURLE_OK) 
+	{
+		jenova::Error("Jenova Package Manager", "Package List Fetch Request Failed : %s", curl_easy_strerror(res));
+		curl_easy_cleanup(curl);
+		return false;
+	}
+
+	// Cleanup cURL
+	curl_easy_cleanup(curl);
 
 	// Parse Package Database
-	try
+	try 
 	{
 		// Parse JSON Database
 		nlohmann::json packageDatabase = nlohmann::json::parse(responseData);
 
 		// Iterate Over Packages
-		for (const auto& packageItem : packageDatabase["packages"])
+		for (const auto& packageItem : packageDatabase["packages"]) 
 		{
 			// Create Package
 			jenova::JenovaPackage newPackage;
@@ -575,9 +554,9 @@ bool JenovaPackageManager::FetchOnlinePackages(const String& packageDatabaseURL)
 		// All Good
 		return true;
 	}
-	catch (const std::exception&)
+	catch (const std::exception& e) 
 	{
-		// Failed
+		jenova::VerboseByID(__LINE__, "JSON Parsing failed: %s", e.what());
 		return false;
 	}
 }
@@ -857,7 +836,7 @@ bool JenovaPackageManager::DownloadPackage(const String& packageFileURL, const S
 		return false;
 	}
 
-	// Clean up
+	// Clean Up CURL
 	outFile.close();
 	curl_easy_cleanup(curlHandle);
 	curl_global_cleanup();
@@ -1203,4 +1182,10 @@ int JenovaPackageManager::OnDownloadProgress(void* clientPtr, size_t downloadTot
 			percentage, downloadNow, downloadTotal, speedString.c_str());
 	}
 	return 0;
+}
+size_t JenovaPackageManager::OnFetchBufferWrite(void* contents, size_t size, size_t nmemb, std::string* buffer) 
+{
+	size_t totalSize = size * nmemb;
+	buffer->append((char*)contents, totalSize);
+	return totalSize;
 }

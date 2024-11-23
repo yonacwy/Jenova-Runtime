@@ -73,6 +73,7 @@ private:
 private:
 	static size_t OnDownloadBufferWrite(void* bufferPtr, size_t bufferSize, size_t newBufferSize, void* streamPtr);
 	static int OnDownloadProgress(void* clientPtr, size_t downloadTotal, size_t downloadNow, size_t uploadTotal, size_t uploadNow);
+	static size_t OnFetchBufferWrite(void* contents, size_t size, size_t nmemb, std::string* buffer);
 
 private:
 	static inline void* curlHandle = nullptr;

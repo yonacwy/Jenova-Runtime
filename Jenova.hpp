@@ -314,8 +314,7 @@ namespace jenova
 	enum class CompilerModel
 	{
 		MicrosoftCompiler,
-		ClangCompiler,
-		MinGWCompiler,
+		GNUCompiler,
 		Unspecified
 	};
 	enum class InterpreterBackend
