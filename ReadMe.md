@@ -32,7 +32,7 @@ Jenova Core has following dependencies :
 - [AsmJIT](https://github.com/asmjit/asmjit)
 - [LibArchive](https://github.com/libarchive/libarchive)
 - [LibCurl](https://github.com/curl/curl)
-- [LibFastZLib](https://github.com/timotejroiko/fast-zlib)
+- [LibFastZLib](https://github.com/gildor2/fast_zlib)
 - [LibTinyCC](http://download.savannah.gnu.org/releases/tinycc/)
 - [LibVSWhere](https://github.com/TheAenema/libvswhere/tree/jenova-edition)
 - [MemoryModule++](https://github.com/bb107/MemoryModulePP)
