@@ -57,6 +57,15 @@
 #define TARGET_PLATFORM_CURRENT TargetPlatform::Unknown
 #endif
 
+// Jenova API Import/Export
+#ifdef _WIN64
+#define JENOVA_API_EXPORT _declspec(dllexport)
+#define JENOVA_API_IMPORT _declspec(dllimport)
+#else
+#define JENOVA_API_EXPORT __attribute__((visibility("default")))
+#define JENOVA_API_IMPORT 
+#endif
+
 // Windows SDK
 #ifdef TARGET_PLATFORM_WINDOWS
 #include <Windows.h>
@@ -64,6 +73,8 @@
 #endif
 
 // C++ SDK
+#include <stddef.h>
+#include <stdarg.h>
 #include <iostream>
 #include <regex>
 #include <string>
@@ -123,6 +134,7 @@
 #include <godot_cpp/classes/editor_file_system.hpp>
 #include <godot_cpp/classes/editor_interface.hpp>
 #include <godot_cpp/classes/editor_settings.hpp>
+#include <godot_cpp/classes/editor_selection.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
 #include <godot_cpp/classes/editor_plugin_registration.hpp>
 #include <godot_cpp/classes/editor_export_platform.hpp>
@@ -186,6 +198,7 @@
 #include <godot_cpp/classes/texture.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/placeholder_texture2d.hpp>
+#include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/classes/theme.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
@@ -199,6 +212,7 @@
 #include <godot_cpp/classes/confirmation_dialog.hpp>
 #include <godot_cpp/classes/worker_thread_pool.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
+
 
 // Shared Third-Party
 #include <Parsers/json.hpp>
@@ -268,8 +282,8 @@ namespace jenova
 	typedef Vector<Ref<Resource>> ResourceCollection;
 	typedef intptr_t FunctionAddress;
 	typedef intptr_t PropertyAddress;
-	typedef FILETIME FileTime;
-	typedef unsigned __int64 LongWord;
+	typedef uint64_t LongWord;
+	typedef struct { uint32_t LowDateTime, HighDateTime; } FileTime;
 
 	// Enumerators
 	enum class TargetPlatform
@@ -625,6 +639,8 @@ namespace jenova
 	int ShowMessageBox(const char* msg, const char* title, int flags);
 	bool RunFile(const char* filePath);
 	bool OpenURL(const char* url);
+	void* AllocateMemory(size_t memorySize);
+	bool FreeMemory(void* memoryPtr);
 	#pragma endregion
 
 	// Utilities & Helpers
@@ -649,10 +665,10 @@ namespace jenova
 	std::string GenerateTerminalLogTime();
 	jenova::EngineMode GetCurrentEngineInstanceMode();
 	String GetCurrentEngineInstanceModeAsString();
-	Ref<ImageTexture> CreateImageTextureFromByteArray(const ::byte* imageDataPtr, size_t imageDataSize, ImageCreationFormat imageFormat = ImageCreationFormat::PNG);
-	Ref<ImageTexture> CreateImageTextureFromByteArrayEx(const ::byte* imageDataPtr, size_t imageDataSize, const Vector2i& imageSize = Vector2i(), ImageCreationFormat imageFormat = ImageCreationFormat::PNG);
-	Ref<ImageTexture> CreateMenuItemIconFromByteArray(const ::byte* imageDataPtr, size_t imageDataSize, ImageCreationFormat imageFormat = ImageCreationFormat::PNG);
-	Ref<FontFile> CreateFontFileFromByteArray(const ::byte* fontDataPtr, size_t fontDataSize);
+	Ref<ImageTexture> CreateImageTextureFromByteArray(const uint8_t* imageDataPtr, size_t imageDataSize, ImageCreationFormat imageFormat = ImageCreationFormat::PNG);
+	Ref<ImageTexture> CreateImageTextureFromByteArrayEx(const uint8_t* imageDataPtr, size_t imageDataSize, const Vector2i& imageSize = Vector2i(), ImageCreationFormat imageFormat = ImageCreationFormat::PNG);
+	Ref<ImageTexture> CreateMenuItemIconFromByteArray(const uint8_t* imageDataPtr, size_t imageDataSize, ImageCreationFormat imageFormat = ImageCreationFormat::PNG);
+	Ref<FontFile> CreateFontFileFromByteArray(const uint8_t* fontDataPtr, size_t fontDataSize);
 	bool CollectResourcesFromFileSystem(const String& rootPath, const String& extensions, jenova::ResourceCollection& collectedResources, bool respectGDIgnore = true);
 	bool CollectScriptsFromFileSystemAndScenes(const String& rootPath, const String& extension, jenova::ResourceCollection& collectedResources, bool respectGDIgnore = true);
 	void RegisterDocumentationFromByteArray(const char* xmlDataPtr, size_t xmlDataSize);
@@ -663,7 +679,6 @@ namespace jenova
 	ArgumentsArray CreateArgumentsArrayFromString(const std::string& str, char delimiter);
 	std::string GetExecutablePath();
 	void ResetCurrentDirectoryToRoot();
-	bool GenerateMiniMemoryDump(EXCEPTION_POINTERS* exceptionInfo);
 	void DoApplicationEvents();
 	bool QueueProjectBuild();
 	bool UpdateGlobalStorageFromEditorSettings();
@@ -682,7 +697,7 @@ namespace jenova
 	ScriptModule CreateScriptModuleFromInternalSource(const std::string& sourceName, const std::string& sourceCode);
 	bool CreateFileFromInternalSource(const std::string& sourceFile, const std::string& sourceCode);
 	bool CreateBuildCacheDatabase(const std::string& cacheFile, const ModuleList& scriptModules, const jenova::HeaderList& scriptHeaders, bool skipHashes = false);
-	std::string GetLoadedModulePath(HINSTANCE hInstance);
+	std::string GetLoadedModulePath(jenova::ModuleHandle moduleHandle);
 	MemoryBuffer CompressBuffer(void* bufferPtr, size_t bufferSize);
 	MemoryBuffer DecompressBuffer(void* bufferPtr, size_t bufferSize);
 	float CalculateCompressionRatio(size_t baseSize, size_t compressedSize);

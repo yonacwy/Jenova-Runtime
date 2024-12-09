@@ -18,10 +18,17 @@
 #define JENOVA_SDK
 
 // Jenova API Import/Export
-#ifdef JENOVA_SDK_BUILD
-	#define JENOVA_API _declspec(dllexport)
+#ifdef _WIN64
+	#define JENOVA_API_EXPORT _declspec(dllexport)
+	#define JENOVA_API_IMPORT _declspec(dllimport)
 #else
-	#define JENOVA_API _declspec(dllimport)
+	#define JENOVA_API_EXPORT __attribute__((visibility("default")))
+	#define JENOVA_API_IMPORT 
+#endif
+#ifdef JENOVA_SDK_BUILD
+	#define JENOVA_API JENOVA_API_EXPORT
+#else
+	#define JENOVA_API JENOVA_API_IMPORT
 #endif
 
 // Jenova Definitions
@@ -34,7 +41,7 @@
 #endif
 
 // Jenova Utilities
-#define JENOVA_EXPORT extern "C" _declspec(dllexport)
+#define JENOVA_EXPORT extern "C" JENOVA_API_EXPORT
 #define JENOVA_CALLBACK static_cast<void(*)(void)>([]()
 
 // Jenova Godot SDK

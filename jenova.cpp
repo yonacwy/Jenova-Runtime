@@ -3920,6 +3920,27 @@ namespace jenova
 		// Not Implemented
 		return false;
 	}
+	void* AllocateMemory(size_t memorySize)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, memorySize);
+		#endif
+
+		// Not Implemented
+		return malloc(memorySize);
+	}
+	bool FreeMemory(void* memoryPtr)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return HeapFree(GetProcessHeap(), 0, memoryPtr);
+		#endif
+
+		// Not Implemented
+		if (memoryPtr) free(memoryPtr);
+		return false;
+	}
 	#pragma endregion
 
 	// Utilities & Helpers
@@ -4283,11 +4304,11 @@ namespace jenova
 			return "Unknown";
 		}
 	}
-	Ref<ImageTexture> CreateImageTextureFromByteArray(const ::byte* imageDataPtr, size_t imageDataSize, ImageCreationFormat imageFormat)
+	Ref<ImageTexture> CreateImageTextureFromByteArray(const uint8_t* imageDataPtr, size_t imageDataSize, ImageCreationFormat imageFormat)
 	{
 		return CreateImageTextureFromByteArrayEx(imageDataPtr, imageDataSize, Vector2i(), imageFormat);
 	}
-	Ref<ImageTexture> CreateImageTextureFromByteArrayEx(const ::byte* imageDataPtr, size_t imageDataSize, const Vector2i& imageSize, jenova::ImageCreationFormat imageFormat)
+	Ref<ImageTexture> CreateImageTextureFromByteArrayEx(const uint8_t* imageDataPtr, size_t imageDataSize, const Vector2i& imageSize, jenova::ImageCreationFormat imageFormat)
 	{
 		PackedByteArray imageDataPackedBytes;
 		imageDataPackedBytes.resize(imageDataSize);
@@ -4322,7 +4343,7 @@ namespace jenova
 		}
 		return nullptr;
 	}
-	Ref<ImageTexture> CreateMenuItemIconFromByteArray(const ::byte* imageDataPtr, size_t imageDataSize, jenova::ImageCreationFormat imageFormat)
+	Ref<ImageTexture> CreateMenuItemIconFromByteArray(const uint8_t* imageDataPtr, size_t imageDataSize, jenova::ImageCreationFormat imageFormat)
 	{
 		PackedByteArray imageDataPackedBytes;
 		imageDataPackedBytes.resize(imageDataSize);
@@ -4358,7 +4379,7 @@ namespace jenova
 		}
 		return nullptr;
 	}
-	Ref<FontFile> CreateFontFileFromByteArray(const ::byte* fontDataPtr, size_t fontDataSize)
+	Ref<FontFile> CreateFontFileFromByteArray(const uint8_t* fontDataPtr, size_t fontDataSize)
 	{
 		// Create Byte Array
 		PackedByteArray fontDataPackedBytes;
@@ -4613,47 +4634,6 @@ namespace jenova
 			size_t pos = fullPath.find_last_of("\\/");
 			std::string folder = fullPath.substr(0, pos);
 			SetCurrentDirectoryA(folder.c_str());
-
-		#endif
-	}
-	bool GenerateMiniMemoryDump(EXCEPTION_POINTERS* exceptionInfo)
-	{
-		// Windows Implementation
-		#ifdef TARGET_PLATFORM_WINDOWS
-
-			// Create a directory named "JenovaCrashData" in the Windows temp directory
-			wchar_t tempPath[MAX_PATH];
-			GetTempPath(MAX_PATH, tempPath);
-			std::wstring crashDir = std::wstring(tempPath) + L"JenovaCrashData\\";
-			CreateDirectory(crashDir.c_str(), NULL);
-
-			// Generate a random hash ID for the crash dump file
-			std::string crashHash = jenova::GenerateRandomHashString();
-			wchar_t dumpFileName[MAX_PATH];
-			wsprintf(dumpFileName, L"%sJenovaCore_Crash_Dump_%hs.dmp", crashDir.c_str(), crashHash.c_str());
-
-			// Open the dump file for writing
-			HANDLE dumpFileHandle = CreateFile(dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-			if (dumpFileHandle != INVALID_HANDLE_VALUE)
-			{
-				// Set up the MiniDumpWriteDump options
-				MINIDUMP_EXCEPTION_INFORMATION dumpInfo;
-				dumpInfo.ThreadId = GetCurrentThreadId();
-				dumpInfo.ExceptionPointers = exceptionInfo;
-				dumpInfo.ClientPointers = TRUE;
-
-				// Write the mini dump file
-				MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), dumpFileHandle, MiniDumpNormal, &dumpInfo, NULL, NULL);
-
-				// Close the dump file handle
-				CloseHandle(dumpFileHandle);
-
-				// All Good
-				return true;
-			}
-
-			// Something Went Wrong
-			return false;
 
 		#endif
 	}
@@ -5020,11 +5000,16 @@ namespace jenova
 			return false;
 		}
 	}
-	std::string GetLoadedModulePath(HINSTANCE hInstance)
+	std::string GetLoadedModulePath(jenova::ModuleHandle moduleHandle)
 	{
-		char dllPath[MAX_PATH];
-		GetModuleFileNameA(hInstance, dllPath, MAX_PATH);
-		return std::string(dllPath);
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			char dllPath[MAX_PATH];
+			GetModuleFileNameA(HINSTANCE(moduleHandle), dllPath, MAX_PATH);
+			return std::string(dllPath);
+		#else
+			return std::string("Unsupported");
+		#endif
 	}
 	jenova::MemoryBuffer CompressBuffer(void* bufferPtr, size_t bufferSize)
 	{
@@ -6718,7 +6703,7 @@ namespace jenova
 			ScriptFileState scriptFileState;
 			jenova::FileHandle hFile = CreateFileA(scriptFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 			if (hFile == INVALID_HANDLE_VALUE) return scriptFileState;
-			if (GetFileTime(hFile, &scriptFileState.creationTime, &scriptFileState.accessTime, &scriptFileState.writeTime)) scriptFileState.isValid = true;
+			if (GetFileTime(hFile, (FILETIME*)&scriptFileState.creationTime, (FILETIME*)&scriptFileState.accessTime, (FILETIME*)&scriptFileState.writeTime)) scriptFileState.isValid = true;
 			CloseHandle(hFile);
 			return scriptFileState;
 
@@ -6735,7 +6720,7 @@ namespace jenova
 			if (!scriptFileState.isValid) return false;
 			jenova::FileHandle hFile = CreateFileA(scriptFilePath.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 			if (hFile == INVALID_HANDLE_VALUE) return false;
-			bool success = SetFileTime(hFile, &scriptFileState.creationTime, &scriptFileState.accessTime, &scriptFileState.writeTime);
+			bool success = SetFileTime(hFile, (FILETIME*)&scriptFileState.creationTime, (FILETIME*)&scriptFileState.accessTime, (FILETIME*)&scriptFileState.writeTime);
 			CloseHandle(hFile);
 			return success;
 
@@ -6778,8 +6763,35 @@ namespace jenova
 	#ifdef TARGET_PLATFORM_WINDOWS
 	LONG WINAPI JenovaCrashHandler(EXCEPTION_POINTERS* exceptionInfo)
 	{
-		// Generate Crash Dump
-		jenova::GenerateMiniMemoryDump(exceptionInfo);
+		//// Generate Crash Dump [Windows Only] ////
+		
+		// Create a Directory Named "JenovaCrashData" in the Windows Temp Directory
+		wchar_t tempPath[MAX_PATH];
+		GetTempPath(MAX_PATH, tempPath);
+		std::wstring crashDir = std::wstring(tempPath) + L"JenovaCrashData\\";
+		CreateDirectory(crashDir.c_str(), NULL);
+
+		// Generate A Random Hash ID for the Crash Dump File
+		std::string crashHash = jenova::GenerateRandomHashString();
+		wchar_t dumpFileName[MAX_PATH];
+		wsprintf(dumpFileName, L"%sJenovaCore_Crash_Dump_%hs.dmp", crashDir.c_str(), crashHash.c_str());
+
+		// Open the Dump File for Writing
+		HANDLE dumpFileHandle = CreateFile(dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (dumpFileHandle != INVALID_HANDLE_VALUE)
+		{
+			// Set Up the MiniDumpWriteDump Options
+			MINIDUMP_EXCEPTION_INFORMATION dumpInfo;
+			dumpInfo.ThreadId = GetCurrentThreadId();
+			dumpInfo.ExceptionPointers = exceptionInfo;
+			dumpInfo.ClientPointers = TRUE;
+
+			// Write the Mini Dump File
+			MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), dumpFileHandle, MiniDumpNormal, &dumpInfo, NULL, NULL);
+
+			// Close the Dump File Handle
+			CloseHandle(dumpFileHandle);
+		}
 
 		// Show Crash Dialog
 		MessageBoxA(0, "Jenova™ Core Crashed! Sorry about that... Hmm...\nNot really, Coding is hard man! :)", "Jenova :: Fatal Error", MB_ICONERROR);

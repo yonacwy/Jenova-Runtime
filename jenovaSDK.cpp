@@ -12,8 +12,13 @@
 |                                                              |
 +-------------------------------------------------------------*/
 
-// Widnows SDK
+// Windows SDK
+#ifdef _WIN64
 #include <Windows.h>
+#endif
+
+// C++ SDK
+#include <stdarg.h>
 #include <iostream>
 
 // Godot SDK
@@ -279,48 +284,6 @@ namespace jenova::sdk
 			godot::internal::gdextension_interface_classdb_unregister_extension_class(godot::internal::library, classNameStr._native_ptr());
 		}
 	}
-
-	// Memory Management Utilities (Anzen)
-	void* GetGlobalPointer(MemoryID id)
-	{
-		auto it = globalMemoryMap.find(id);
-		if (it != globalMemoryMap.end()) return it->second;
-		return nullptr;
-	}
-	void* SetGlobalPointer(MemoryID id, void* ptr)
-	{
-		auto it = globalMemoryMap.find(id);
-		if (it != globalMemoryMap.end()) 
-		{
-			void* oldPtr = it->second;
-			it->second = ptr;
-			return oldPtr;
-		}
-		else {
-			globalMemoryMap[id] = ptr;
-			return ptr;
-		}
-	}
-	void DeleteGlobalPointer(MemoryID id)
-	{
-		globalMemoryMap.erase(id);
-	}
-	void* AllocateGlobalMemory(MemoryID id, size_t size)
-	{
-		void* mem = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size);
-		if (!mem) return nullptr;
-		globalMemoryMap[id] = mem;
-		return mem;
-	}
-	void FreeGlobalMemory(MemoryID id)
-	{
-		auto it = globalMemoryMap.find(id);
-		if (it != globalMemoryMap.end())
-		{
-			HeapFree(GetProcessHeap(), 0, it->second);
-			globalMemoryMap.erase(it);
-		}
-	}
 }
 
 // Jenova Runtime SDK
@@ -387,5 +350,47 @@ namespace jenova::sdk
 	double GetCheckpointTimeAndDispose(const godot::String& checkPointName)
 	{
 		return JenovaTinyProfiler::GetCheckpointTimeAndDispose(AS_STD_STRING(checkPointName));
+	}
+
+	// Memory Management Utilities (Anzen)
+	void* GetGlobalPointer(MemoryID id)
+	{
+		auto it = globalMemoryMap.find(id);
+		if (it != globalMemoryMap.end()) return it->second;
+		return nullptr;
+	}
+	void* SetGlobalPointer(MemoryID id, void* ptr)
+	{
+		auto it = globalMemoryMap.find(id);
+		if (it != globalMemoryMap.end())
+		{
+			void* oldPtr = it->second;
+			it->second = ptr;
+			return oldPtr;
+		}
+		else {
+			globalMemoryMap[id] = ptr;
+			return ptr;
+		}
+	}
+	void DeleteGlobalPointer(MemoryID id)
+	{
+		globalMemoryMap.erase(id);
+	}
+	void* AllocateGlobalMemory(MemoryID id, size_t size)
+	{
+		void* mem = jenova::AllocateMemory(size);
+		if (!mem) return nullptr;
+		globalMemoryMap[id] = mem;
+		return mem;
+	}
+	void FreeGlobalMemory(MemoryID id)
+	{
+		auto it = globalMemoryMap.find(id);
+		if (it != globalMemoryMap.end())
+		{
+			jenova::FreeMemory(it->second);
+			globalMemoryMap.erase(it);
+		}
 	}
 }
