@@ -56,8 +56,6 @@
 					<Add option="-static-libgcc" />
 					<Add option="-static" />
 					<Add option="-pthread" />
-					<Add library="Libs/libcrypto-static-gcc-x86_64.a" />
-					<Add library="Libs/libssl-static-gcc-x86_64.a" />
 					<Add library="Libs/libzlib-static-gcc-x86_64.a" />
 					<Add library="Libs/libtcc-static-gcc-x86_64.a" />
 					<Add library="Libs/libgodotcpp-static-gcc-x86_64.a" />
