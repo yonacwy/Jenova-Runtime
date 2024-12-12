@@ -23,7 +23,7 @@ Vector<Dictionary> globalTemplates;
 Vector<Dictionary> classTemplates;
 
 // Singleton Instance
-JenovaTemplateManager* singleton = nullptr;
+JenovaTemplateManager* jnvtm_singleton = nullptr;
 
 // Initializer/Deinitializer
 void JenovaTemplateManager::init()
@@ -32,7 +32,7 @@ void JenovaTemplateManager::init()
 	ClassDB::register_internal_class<JenovaTemplateManager>();
 
 	// Initialize Singleton
-	singleton = memnew(JenovaTemplateManager);
+	jnvtm_singleton = memnew(JenovaTemplateManager);
 
 	// Verbose
 	jenova::Output("Jenova Template Manager Initialized.");
@@ -40,7 +40,7 @@ void JenovaTemplateManager::init()
 void JenovaTemplateManager::deinit()
 {
 	// Release Singleton
-	if (singleton) memdelete(singleton);
+	if (jnvtm_singleton) memdelete(jnvtm_singleton);
 }
 
 // Bindings
@@ -51,7 +51,7 @@ void JenovaTemplateManager::_bind_methods()
 // Singleton Handling
 JenovaTemplateManager* JenovaTemplateManager::get_singleton()
 {
-	return singleton;
+	return jnvtm_singleton;
 }
 
 // Jenova Script Template Implementation

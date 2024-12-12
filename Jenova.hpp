@@ -58,7 +58,7 @@
 #endif
 
 // Jenova API Import/Export
-#ifdef _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 #define JENOVA_API_EXPORT _declspec(dllexport)
 #define JENOVA_API_IMPORT _declspec(dllimport)
 #else
@@ -76,6 +76,8 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <iostream>
+#include <time.h>
+#include <thread>
 #include <regex>
 #include <string>
 #include <vector>
@@ -225,7 +227,7 @@ using namespace godot;
 #define jenova_log(fmt,...)					printf(fmt "\n",__VA_ARGS__);
 
 // Helper Macros
-#define JENOVA_API							extern "C" _declspec(dllexport)
+#define JENOVA_API							extern "C" JENOVA_API_EXPORT
 #define FUNCTION_CHECK						jenova::Output("%s | %p", __FUNCSIG__, this);
 #define LINE_CHECK							jenova::Output("%d", __LINE__);
 #define LINE_CHECK_THIS						jenova::Output("%d | %p", __LINE__, this);
@@ -244,6 +246,10 @@ using namespace godot;
 #define QUERY_ENGINE_MODE(mode)				(jenova::GlobalStorage::CurrentEngineMode == jenova::EngineMode::mode)
 #define QUERY_PLATFORM(platform)			(TARGET_PLATFORM_CURRENT == jenova::TargetPlatform::platform)
 #define SCALED(value)						(value * scaleFactor)
+
+// Helper Markers
+#define InParam
+#define OutParam
 
 // Jenova Namespace
 namespace jenova
@@ -284,6 +290,7 @@ namespace jenova
 	typedef intptr_t PropertyAddress;
 	typedef uint64_t LongWord;
 	typedef struct { uint32_t LowDateTime, HighDateTime; } FileTime;
+	typedef void(*VoidFunc_t)();
 
 	// Enumerators
 	enum class TargetPlatform
@@ -430,14 +437,10 @@ namespace jenova
 	};
 	struct ScriptModuleContainer
 	{
-		const ScriptModule& scriptModule;
-		const ModuleList& scriptModules;
-		ScriptModuleContainer(const ScriptModule& _scriptModule, const ModuleList& _scriptModules) : scriptModule(_scriptModule), scriptModules(_scriptModules)
-		{
-		}
-		ScriptModuleContainer(const ModuleList& _scriptModules) : scriptModules(_scriptModules), scriptModule(ScriptModule())
-		{
-		}
+		ScriptModule scriptModule;
+		ModuleList scriptModules;
+		ScriptModuleContainer(const ScriptModule& _scriptModule, const ModuleList& _scriptModules) : scriptModule(_scriptModule), scriptModules(_scriptModules) {}
+		ScriptModuleContainer(const ModuleList& _scriptModules) : scriptModules(_scriptModules), scriptModule() {}
 	};
 	struct ScriptEntityContainer
 	{
@@ -641,6 +644,9 @@ namespace jenova
 	bool OpenURL(const char* url);
 	void* AllocateMemory(size_t memorySize);
 	bool FreeMemory(void* memoryPtr);
+	int GetEnvironmentEntity(const char* entityName, char* bufferPtr, size_t bufferSize);
+	bool SetEnvironmentEntity(const char* entityName, const char* entityValue);
+	jenova::GenericHandle GetCurrentProcessHandle();
 	#pragma endregion
 
 	// Utilities & Helpers
@@ -655,9 +661,9 @@ namespace jenova
 	void Error(const char* stageName, const char* fmt, ...);
 	void Warning(const char* stageName, const char* fmt, ...);
 	void ErrorMessage(const char* title, const char* fmt, ...);
-	std::string ConvertToStdString(const godot::String& gstr);
-	std::string ConvertToStdString(const godot::StringName& gstr);
-	std::wstring ConvertToWideStdString(const godot::String& gstr);
+	std::string& ConvertToStdString(const godot::String& gstr);
+	std::string& ConvertToStdString(const godot::StringName& gstr);
+	std::wstring& ConvertToWideStdString(const godot::String& gstr);
 	std::string GetNameFromPath(godot::String gstr);
 	String GenerateStandardUIDFromPath(String resourcePath);
 	String GenerateStandardUIDFromPath(Resource* resourcePtr);
@@ -710,7 +716,7 @@ namespace jenova
 	std::string ReadStdStringFromFile(const std::string& filePath);
 	void ReplaceAllMatchesWithString(std::string& targetString, const std::string& from, const std::string& to);
 	std::string ReplaceAllMatchesWithStringAndReturn(std::string targetString, const std::string& from, const std::string& to);
-	ArgumentsArray SplitStdStringToArguments(std::string& str, char delimiter = ';');
+	ArgumentsArray SplitStdStringToArguments(const std::string& str, char delimiter = ';');
 	ScriptEntityContainer CreateScriptEntityContainer(const String& rootPath);
 	std::string GenerateFilterUniqueIdentifier(std::string& filterName, bool addBrackets = false);
 	bool CompareFilePaths(const std::string& sourcePath, const std::string& destinationPath);
@@ -738,8 +744,8 @@ namespace jenova
 	std::string ResolveReturnTypeForJIT(const std::string& returnType);
 	Variant* MakeVariantFromReturnType(Variant* variantPtr, const char* returnType);
 	uint32_t GetPropertyEnumFlagFromString(const std::string enumFlagStr);
-	jenova::SerializedData ProcessAndExtractPropertiesFromScript(OUT std::string& scriptSource, const std::string& scriptUID);
-	jenova::SerializedData ProcessAndExtractPropertiesFromScript(OUT String& scriptSource, const String& scriptUID);
+	jenova::SerializedData ProcessAndExtractPropertiesFromScript(OutParam std::string& scriptSource, const std::string& scriptUID);
+	jenova::SerializedData ProcessAndExtractPropertiesFromScript(OutParam String& scriptSource, const String& scriptUID);
 	Variant::Type GetVariantTypeFromStdString(const std::string& typeName);
 	jenova::ScriptPropertyContainer CreatePropertyContainerFromMetadata(const jenova::SerializedData& propertyMetadata, const std::string& scriptUID);
 	void* AllocateVariantBasedProperty(const std::string& typeName);

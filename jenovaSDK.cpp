@@ -13,7 +13,7 @@
 +-------------------------------------------------------------*/
 
 // Windows SDK
-#ifdef _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 #endif
 
@@ -150,7 +150,13 @@ namespace jenova::sdk
 	{
 		std::string str((char*)godotStr.utf8().ptr(), godotStr.utf8().size());
 		if (!str.empty() && str.back() == '\0') str.pop_back();
-		return _strdup(str.c_str());
+
+		// Bad Approach, Needs Improvement
+		#if defined(_WIN32) || defined(_WIN64)
+			return _strdup(str.c_str());
+		#else
+			return strdup(str.c_str());
+		#endif
 	}
 	bool SetClassIcon(const godot::String& className, const godot::Ref<godot::Texture2D> iconImage)
 	{

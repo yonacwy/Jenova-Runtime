@@ -62,7 +62,7 @@ bool JenovaInterpreter::InitializeInterpreter()
     if (isInitialized) return true;
     
     // Initialize Memory Module Loader
-    if (!NT_SUCCESS(InitializeMemoryModuleLoader())) return false;
+    if (!JenovaLoader::Initialize()) return false;
 
     // Initialize Mutex
     interpreterMutex.instantiate();
@@ -81,7 +81,7 @@ bool JenovaInterpreter::ReleaseInterpreter()
     if (!isInitialized) return false;
 
     // Initialize Memory Module Loader
-    if (!NT_SUCCESS(ReleaseMemoryModuleLoader())) return false;
+    if (!JenovaLoader::Release()) return false;
 
     // Release Mutex
     interpreterMutex.unref();
@@ -106,12 +106,12 @@ bool JenovaInterpreter::LoadModule(const uint8_t* moduleDataPtr, const size_t mo
     // Load And Map Module to Memory
     if (hasDebugInformation)
     {
-        moduleHandle = LoadLibraryMemoryExA((void*)moduleDataPtr, moduleSize, "Jenova.Module.dll", moduleDiskPath.c_str(), LOAD_FLAGS_USE_DLL_NAME);
-        jenova::LoadSymbolForModule(GetCurrentProcess(), DWORD64(moduleHandle), moduleDiskPath + "\\Jenova.Module.pdb", moduleSize);
+        moduleHandle = JenovaLoader::LoadModuleAsVirtual((void*)moduleDataPtr, moduleSize, "Jenova.Module.dll", moduleDiskPath.c_str(), 0);
+        jenova::LoadSymbolForModule(jenova::GetCurrentProcessHandle(), jenova::LongWord(moduleHandle), moduleDiskPath + "\\Jenova.Module.pdb", moduleSize);
     }
     else
     {
-        moduleHandle = LoadLibraryMemory((void*)moduleDataPtr);
+        moduleHandle = JenovaLoader::LoadModule((void*)moduleDataPtr, moduleSize, 0);
     }
     if (!moduleHandle) return false;
     moduleBaseAddress = intptr_t(moduleHandle);
@@ -159,7 +159,7 @@ bool JenovaInterpreter::ReloadModule(const jenova::BuildResult& buildResult)
 bool JenovaInterpreter::UnloadModule()
 {
     // Adjust Agressive Mode [Disable For All For Now]
-    SetAgressiveReleaseMode(!(QUERY_ENGINE_MODE(Editor) || QUERY_ENGINE_MODE(Debug) || QUERY_ENGINE_MODE(Runtime)));
+    JenovaLoader::SetAgressiveMode(!(QUERY_ENGINE_MODE(Editor) || QUERY_ENGINE_MODE(Debug) || QUERY_ENGINE_MODE(Runtime)));
 
     // Flush Property Storage
     if (!JenovaInterpreter::FlushPropertyStorage())
@@ -177,7 +177,7 @@ bool JenovaInterpreter::UnloadModule()
     // Unload Module
 	if (!moduleHandle) return false;
 	if (!moduleBaseAddress) return false;
-    if (!FreeLibraryMemory(HMEMORYMODULE(moduleHandle))) return false;
+    if (!JenovaLoader::ReleaseModule(moduleHandle)) return false;
     moduleHandle = nullptr;
 	moduleBaseAddress = 0;
     moduleMetaData = "{}";
@@ -187,7 +187,7 @@ bool JenovaInterpreter::UnloadModule()
 }
 bool JenovaInterpreter::LoadDebugSymbol(const std::string symbolFilePath)
 {
-    return jenova::LoadSymbolForModule(GetCurrentProcess(), moduleBaseAddress, symbolFilePath.c_str(), moduleBinarySize);
+    return jenova::LoadSymbolForModule(jenova::GetCurrentProcessHandle(), moduleBaseAddress, symbolFilePath.c_str(), moduleBinarySize);
 }
 intptr_t JenovaInterpreter::GetModuleBaseAddress()
 {
@@ -534,8 +534,8 @@ Variant JenovaInterpreter::CallFunction(const godot::Object* objectPtr, const st
         tcc_set_options(tcc, "-nostdlib");
 
         // Add Symbols
-        tcc_add_symbol(tcc, "memmove", &jenova::CoreMemoryMove);
-        tcc_add_symbol(tcc, "MakeVariant", &jenova::MakeVariantFromReturnType);
+        tcc_add_symbol(tcc, "memmove", reinterpret_cast<const void*>(&jenova::CoreMemoryMove));
+        tcc_add_symbol(tcc, "MakeVariant", reinterpret_cast<const void*>(&jenova::MakeVariantFromReturnType));
 
         // Compile Generated Code
         if (tcc_compile_string(tcc, interpreterCallerCode.c_str()) == -1) 

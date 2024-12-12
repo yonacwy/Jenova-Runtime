@@ -6,3 +6,5 @@ reloadable = false
 [libraries]
 windows.debug.x86_64 = "res://Jenova/Jenova.Runtime.Win64.dll"
 windows.release.x86_64 = "res://Jenova/Jenova.Runtime.Win64.dll"
+linux.debug.x86_64 = "res://Jenova/Jenova.Runtime.Linux64.so"
+linux.release.x86_64 = "res://Jenova/Jenova.Runtime.Linux64.so"

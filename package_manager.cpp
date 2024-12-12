@@ -37,7 +37,7 @@ static jenova::PackageList	onlinePackages;
 static jenova::PackageList	installedPackages;
 
 // Singleton Instance
-JenovaPackageManager* singleton = nullptr;
+JenovaPackageManager* jnvpm_singleton = nullptr;
 
 // Initializer/Deinitializer
 void JenovaPackageManager::init()
@@ -46,7 +46,7 @@ void JenovaPackageManager::init()
     ClassDB::register_internal_class<JenovaPackageManager>();
 
     // Initialize Singleton
-    singleton = memnew(JenovaPackageManager);
+	jnvpm_singleton = memnew(JenovaPackageManager);
 
     // Verbose
     jenova::Output("Jenova Package Manager Initialized.");
@@ -58,7 +58,7 @@ void JenovaPackageManager::deinit()
 	installedPackages.clear();
 
     // Release Singleton
-    if (singleton) memdelete(singleton);
+    if (jnvpm_singleton) memdelete(jnvpm_singleton);
 }
 
 // Bindings
@@ -73,7 +73,7 @@ void JenovaPackageManager::_bind_methods()
 // Singleton Handling
 JenovaPackageManager* JenovaPackageManager::get_singleton()
 {
-    return singleton;
+    return jnvpm_singleton;
 }
 
 // Jenova Package Manager Implementation
@@ -545,7 +545,7 @@ bool JenovaPackageManager::FetchOnlinePackages(const String& packageDatabaseURL)
 			double scaleFactor = EditorInterface::get_singleton()->get_editor_scale();
 			Vector2 packageIconSize(SCALED(64), SCALED(64));
 			std::string packageIconBuffer = base64::base64_decode(packageItem["pkgImage"].get<std::string>());
-			newPackage.pkgImage = jenova::CreateImageTextureFromByteArrayEx((byte*)packageIconBuffer.data(), packageIconBuffer.size(), packageIconSize);
+			newPackage.pkgImage = jenova::CreateImageTextureFromByteArrayEx((uint8_t*)packageIconBuffer.data(), packageIconBuffer.size(), packageIconSize);
 
 			// Add Package
 			onlinePackages.push_back(newPackage);
@@ -565,7 +565,7 @@ bool JenovaPackageManager::ObtainInstalledPackages()
 	// Clear Current List
 	installedPackages.clear();
 
-	// Create Installed Package File Path [Maybe Using FileAccess + Asset Path? ]
+	// Create Installed Package File Path [Maybe Using FileAccess + Asset Path?]
 	String projectPath = ProjectSettings::get_singleton()->globalize_path("res://");
 	String installedPackageFile = projectPath + "Jenova/" + jenova::GlobalSettings::JenovaInstalledPackagesFile;
 

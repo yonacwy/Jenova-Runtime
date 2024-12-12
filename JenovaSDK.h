@@ -18,7 +18,7 @@
 #define JENOVA_SDK
 
 // Jenova API Import/Export
-#ifdef _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 	#define JENOVA_API_EXPORT _declspec(dllexport)
 	#define JENOVA_API_IMPORT _declspec(dllimport)
 #else

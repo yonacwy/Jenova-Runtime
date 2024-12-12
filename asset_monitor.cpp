@@ -48,7 +48,7 @@ Vector<jenova::AssetMonitor::AssetMonitorCallback> monitorCallbacks;
 std::unordered_map<std::string, std::chrono::system_clock::time_point> lastRead;
 
 // Singleton Instance
-JenovaAssetMonitor* singleton = nullptr;
+JenovaAssetMonitor* jnvam_singleton = nullptr;
 
 // Initializer/Deinitializer
 void JenovaAssetMonitor::init()
@@ -57,7 +57,7 @@ void JenovaAssetMonitor::init()
     ClassDB::register_internal_class<JenovaAssetMonitor>();
 
     // Initialize Singleton
-    singleton = memnew(JenovaAssetMonitor);
+	jnvam_singleton = memnew(JenovaAssetMonitor);
 
     // Verbose
     jenova::Output("Jenova Asset Monitor Initialized.");
@@ -65,7 +65,7 @@ void JenovaAssetMonitor::init()
 void JenovaAssetMonitor::deinit()
 {
     // Release Singleton
-    if (singleton) memdelete(singleton);
+    if (jnvam_singleton) memdelete(jnvam_singleton);
 }
 
 // Bindings
@@ -82,13 +82,14 @@ void JenovaAssetMonitor::_bind_methods()
 // Singleton Handling
 JenovaAssetMonitor* JenovaAssetMonitor::get_singleton()
 {
-    return singleton;
+    return jnvam_singleton;
 }
 
 // Jenova Asset Monitor Implementation
 bool JenovaAssetMonitor::AddDirectory(const String& directoryPath) 
 {
 	// Create New Asset Monitor
+	#ifdef _MSC_VER
 	auto assetMonitor = new filewatch::FileWatch<std::string>(AS_STD_STRING(directoryPath), [](const std::string& path, const filewatch::Event change_type)
 	{
 		if (change_type == filewatch::Event::modified)
@@ -108,6 +109,35 @@ bool JenovaAssetMonitor::AddDirectory(const String& directoryPath)
 			JenovaAssetMonitor::get_singleton()->emit_signal("callback", String(path.c_str()), GetCallbackEventStringName(jenova::AssetMonitor::CallbackEvent(change_type)));
 		}
 	});
+	#else
+	auto assetMonitor = new filewatch::FileWatch<std::string>(AS_STD_STRING(directoryPath), [](const std::string& path, const filewatch::Event change_type)
+	{
+		if (change_type == filewatch::Event::modified)
+		{
+			auto lastWriteTime = std::chrono::system_clock::time_point(
+				std::chrono::duration_cast<std::chrono::system_clock::duration>(std::filesystem::last_write_time(path).time_since_epoch()
+				)
+			);
+
+			if (lastRead.find(path) == lastRead.end() ||
+				std::chrono::duration_cast<std::chrono::milliseconds>(lastWriteTime - lastRead[path]).count() > 100)
+			{
+				lastRead[path] = lastWriteTime;
+				for (const auto& callback : monitorCallbacks)
+					callback(String(path.c_str()), jenova::AssetMonitor::CallbackEvent(change_type));
+				JenovaAssetMonitor::get_singleton()->emit_signal("callback", String(path.c_str()),
+					GetCallbackEventStringName(jenova::AssetMonitor::CallbackEvent(change_type)));
+			}
+		}
+		else
+		{
+			for (const auto& callback : monitorCallbacks)
+				callback(String(path.c_str()), jenova::AssetMonitor::CallbackEvent(change_type));
+			JenovaAssetMonitor::get_singleton()->emit_signal("callback", String(path.c_str()),
+				GetCallbackEventStringName(jenova::AssetMonitor::CallbackEvent(change_type)));
+		}
+	});
+	#endif
 
 	// Add to Monitors
 	assetMonitors.push_back(assetMonitor);

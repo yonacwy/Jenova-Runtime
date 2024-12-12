@@ -25,7 +25,7 @@ protected:
     static void _bind_methods();
     std::vector<CPPScript*> scriptObjects;
     std::vector<CPPScriptInstance*> scriptInstances;
-    std::vector<void*> runtimeStartEvents;
+    std::vector<jenova::VoidFunc_t> runtimeStartEvents;
 
 public:
     JenovaScriptManager();
@@ -40,7 +40,7 @@ public:
     bool remove_script_instance(CPPScriptInstance* scriptInstance);
     size_t get_script_instance_count();
     CPPScriptInstance* get_script_instance(size_t index);
-    bool register_runtime_start_event(void* callbackPtr);
+    bool register_runtime_start_event(jenova::VoidFunc_t callbackPtr);
 
 public:
     static void init();

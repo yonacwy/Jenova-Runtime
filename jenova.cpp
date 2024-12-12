@@ -63,6 +63,16 @@ using namespace std;
 
 #endif
 
+// Linux Routine
+#ifdef TARGET_PLATFORM_LINUX
+
+	// Linux Entrypoint
+	extern "C" void _start() 
+	{
+	}
+
+#endif
+
 // Jenova Core Implementations
 namespace jenova
 {
@@ -114,13 +124,13 @@ namespace jenova
 			const jenova::InterpreterBackend InterpreterBackendDefaultMode = jenova::InterpreterBackend::TinyCC;
 
 			// Default Compiler
-		#if defined(TARGET_PLATFORM_WINDOWS)
+			#if defined(TARGET_PLATFORM_WINDOWS)
 			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::MicrosoftCompiler;
-		#elif defined(TARGET_PLATFORM_LINUX)
+			#elif defined(TARGET_PLATFORM_LINUX)
 			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::GNUCompiler;
-		#elif defined(TARGET_PLATFORM_UNKNOWN)
+			#elif defined(TARGET_PLATFORM_UNKNOWN)
 			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::Unspecified;
-		#endif
+			#endif
 
 		private:
 			// Internal Objects
@@ -286,13 +296,13 @@ namespace jenova
 			bool _build() override
 			{
 				// Reset Environment Flag
-				SetEnvironmentVariableA("JENOVA_PRE_LAUNCH_ERROR", "NO_ERROR");
+				jenova::SetEnvironmentEntity("JENOVA_PRE_LAUNCH_ERROR", "NO_ERROR");
 
 				// Update Settings
 				if (!UpdateStorageConfigurations())
 				{
 					// Set Environment Flag
-					SetEnvironmentVariableA("JENOVA_PRE_LAUNCH_ERROR", "WRONG_CONFIGURATIONS");
+					jenova::SetEnvironmentEntity("JENOVA_PRE_LAUNCH_ERROR", "WRONG_CONFIGURATIONS");
 
 					// Always Return True, We Handle It Using Environment Value
 					return true;
@@ -304,7 +314,7 @@ namespace jenova
 					if (!BuildProject())
 					{
 						// Set Environment Flag
-						SetEnvironmentVariableA("JENOVA_PRE_LAUNCH_ERROR", "BUILD_FAILED");
+						jenova::SetEnvironmentEntity("JENOVA_PRE_LAUNCH_ERROR", "BUILD_FAILED");
 
 						// Always Return True, We Handle It Using Environment Value
 						return true;
@@ -2641,6 +2651,7 @@ namespace jenova
 			}
 			jenova::SerializedData GetVistualStudioMetadata()
 			{
+				// Windows Implementation
 				#ifdef TARGET_PLATFORM_WINDOWS
 
 					// Get Metadata from Visual Studio Locator
@@ -2686,7 +2697,7 @@ namespace jenova
 				// Not Supported
 				return "{}";
 			}
-			VisualStudioInstance GetVisualStudioInstance(int instanceIndex)
+			VisualStudioInstance& GetVisualStudioInstance(int instanceIndex)
 			{
 				return vsInstances[instanceIndex];
 			}
@@ -3407,8 +3418,7 @@ namespace jenova
 
 				// Get Environment Value & Process
 				char buffer[256];
-				DWORD result = GetEnvironmentVariableA("JENOVA_PRE_LAUNCH_ERROR", buffer, 256);
-				if (result == 0) return;
+				if (jenova::GetEnvironmentEntity("JENOVA_PRE_LAUNCH_ERROR", buffer, 256) == 0) return;
 				if (strcmp(buffer, "WRONG_CONFIGURATIONS") == 0) 
 				{
 					ERR_PRINT("[ Jenova Runtime ] ::> Corrupted Configuration Detected, Launch Aborted.");
@@ -3941,6 +3951,36 @@ namespace jenova
 		if (memoryPtr) free(memoryPtr);
 		return false;
 	}
+	int GetEnvironmentEntity(const char* entityName, char* bufferPtr, size_t bufferSize)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return GetEnvironmentVariableA(entityName, bufferPtr, bufferSize);
+		#endif
+
+		// Not Implemented
+		return 0;
+	}
+	bool SetEnvironmentEntity(const char* entityName, const char* entityValue)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return SetEnvironmentVariableA(entityName, entityValue);
+		#endif
+
+		// Not Implemented
+		return true;
+	}
+	jenova::GenericHandle GetCurrentProcessHandle()
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return jenova::GenericHandle(GetCurrentProcess());
+		#endif
+
+		// Not Implemented
+		return 0;
+	}
 	#pragma endregion
 
 	// Utilities & Helpers
@@ -4227,25 +4267,30 @@ namespace jenova
 		va_end(args);
 
 		// Show Error Message
-		jenova::ShowMessageBox(buffer, title, MB_ICONERROR);
+		#ifdef TARGET_PLATFORM_WINDOWS
+			jenova::ShowMessageBox(buffer, title, MB_ICONERROR);
+		#else
+			jenova::ShowMessageBox(buffer, title, 0x02 /* Error */);
+		#endif
 	}
-	std::string ConvertToStdString(const godot::String& gstr)
+	std::string& ConvertToStdString(const godot::String& gstr)
 	{
 		std::string str((char*)gstr.utf8().ptr(), gstr.utf8().size());
 		if (!str.empty() && str.back() == '\0') str.pop_back();
 		return str;
 	}
-	std::string ConvertToStdString(const godot::StringName& gstr)
+	std::string& ConvertToStdString(const godot::StringName& gstr)
 	{
 		std::string str((char*)gstr.to_utf8_buffer().ptr(), gstr.to_utf8_buffer().size());
 		if (!str.empty() && str.back() == '\0') str.pop_back();
 		return str;
 	}
-	std::wstring ConvertToWideStdString(const godot::String& gstr)
+	std::wstring& ConvertToWideStdString(const godot::String& gstr)
 	{
 		std::string str((char*)gstr.utf8().ptr(), gstr.utf8().size());
 		if (!str.empty() && str.back() == '\0') str.pop_back();
-		return std::wstring (str.begin(), str.end());
+		std::wstring wstr(str.begin(), str.end());
+		return wstr;
 	}
 	std::string GetNameFromPath(godot::String gstr)
 	{
@@ -4278,7 +4323,14 @@ namespace jenova
 		auto now = std::chrono::system_clock::now();
 		auto now_time_t = std::chrono::system_clock::to_time_t(now);
 		auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-		std::tm now_tm; localtime_s(&now_tm, &now_time_t);
+
+		std::tm now_tm;
+		#if defined(_WIN32) || defined(_WIN64)
+			localtime_s(&now_tm, &now_time_t);
+		#else
+			localtime_r(&now_time_t, &now_tm);
+		#endif
+
 		std::ostringstream oss;
 		oss << std::setfill('0') << std::setw(2) << now_tm.tm_hour << ":"
 			<< std::setw(2) << now_tm.tm_min << ":"
@@ -4871,8 +4923,7 @@ namespace jenova
 			if (moduleBase == 0) { SymCleanup(process); return false; }
 
 			// Verbose
-			if (QUERY_ENGINE_MODE(Editor))
-				jenova::Output("Symbol [[color=#db2e59]%p[/color]] Loaded for Jenova Module [[color=#44e376]%p[/color]] at [[color=#44e376]%p[/color]]", pdbPath, baseAddress, moduleBase);
+			if (QUERY_ENGINE_MODE(Editor)) jenova::Output("Symbol [[color=#db2e59]%p[/color]] Loaded for Jenova Module [[color=#44e376]%p[/color]] at [[color=#44e376]%p[/color]]", pdbPath.c_str(), baseAddress, moduleBase);
 
 			// All Good
 			return moduleBase == baseAddress;
@@ -4985,7 +5036,7 @@ namespace jenova
 				handle->close();
 
 				// Verbose
-				jenova::VerboseByID(__LINE__, "Build Cache Database Saved At (%s)", cacheFile);
+				jenova::VerboseByID(__LINE__, "Build Cache Database Saved At (%s)", cacheFile.c_str());
 
 				// All Good
 				return true;
@@ -5218,7 +5269,7 @@ namespace jenova
 		ReplaceAllMatchesWithString(targetString, from, to);
 		return targetString;
 	}
-	jenova::ArgumentsArray SplitStdStringToArguments(std::string& str, char delimiter)
+	jenova::ArgumentsArray SplitStdStringToArguments(const std::string& str, char delimiter)
 	{
 		ArgumentsArray arguments;
 		std::stringstream ss(str);
@@ -6121,7 +6172,7 @@ namespace jenova
 		// Invalid/Unsupported
 		return 0;
 	}
-	jenova::SerializedData ProcessAndExtractPropertiesFromScript(OUT std::string& scriptSource, const std::string& scriptUID)
+	jenova::SerializedData ProcessAndExtractPropertiesFromScript(std::string& scriptSource, const std::string& scriptUID)
 	{
 		// Property Metadata Serializer
 		nlohmann::json propertiesMetadata;
@@ -6291,7 +6342,7 @@ namespace jenova
 		// Return Metadata
 		return propertiesMetadata.dump();
 	}
-	jenova::SerializedData ProcessAndExtractPropertiesFromScript(OUT String& scriptSource, const String& scriptUID)
+	jenova::SerializedData ProcessAndExtractPropertiesFromScript(String& scriptSource, const String& scriptUID)
 	{
 		std::string sourceStdStr = AS_STD_STRING(scriptSource);
 		jenova::SerializedData propertiesMetadata = ProcessAndExtractPropertiesFromScript(sourceStdStr, AS_STD_STRING(scriptUID));
@@ -6374,9 +6425,9 @@ namespace jenova
 				scriptProp.propertyName = String(scriptProperty["PropertyName"].get<std::string>().c_str());
 				scriptProp.propertyInfo.type = jenova::GetVariantTypeFromStdString(scriptProperty["PropertyType"].get<std::string>());
 				scriptProp.defaultValue = UtilityFunctions::str_to_var(String(scriptProperty["PropertyDefault"].get<std::string>().c_str()));
-				scriptProp.propertyInfo.name = scriptProperty.contains("PropertyGroup") ? 
-					String(scriptProperty["PropertyGroup"].get<std::string>().c_str()) + "/" + String(scriptProperty["PropertyName"].get<std::string>().c_str()) :
-					StringName(scriptProperty["PropertyName"].get<std::string>().c_str());
+				scriptProp.propertyInfo.name = bool(scriptProperty.contains("PropertyGroup")) ?
+					StringName(String(scriptProperty["PropertyGroup"].get<std::string>().c_str()) + "/" + String(scriptProperty["PropertyName"].get<std::string>().c_str())) :
+					StringName(String(scriptProperty["PropertyName"].get<std::string>().c_str()));
 				if (scriptProperty.contains("PropertyHint")) scriptProp.propertyInfo.hint = jenova::GetPropertyEnumFlagFromString(scriptProperty["PropertyHint"].get<std::string>());
 				else scriptProp.propertyInfo.hint = godot::PropertyHint::PROPERTY_HINT_NONE;
 				if (scriptProperty.contains("PropertyHintString")) scriptProp.propertyInfo.hint_string = String(scriptProperty["PropertyHintString"].get<std::string>().c_str());

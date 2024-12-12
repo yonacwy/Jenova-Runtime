@@ -1,4 +1,8 @@
 #pragma once
+
+// Windows Module Loader
+#ifdef TARGET_PLATFORM_WINDOWS
+
 #include <Windows.h>
 
 typedef HMODULE HMEMORYMODULE;
@@ -58,3 +62,71 @@ VOID SetAgressiveReleaseMode(bool arState);
 #define LoadLibraryMemoryEx LoadLibraryMemoryExA
 #endif
 #define NtLoadDllMemoryEx LdrLoadDllMemoryEx
+
+// Loader Interface [Windows]
+class JenovaLoader
+{
+public:
+	static bool Initialize()
+	{
+		return NT_SUCCESS(InitializeMemoryModuleLoader());
+	}
+	static bool Release()
+	{
+		return NT_SUCCESS(ReleaseMemoryModuleLoader());
+	}
+	static bool SetAgressiveMode(bool arState)
+	{
+		SetAgressiveReleaseMode(arState);
+		return true;
+	}
+	static jenova::ModuleHandle LoadModule(void* bufferPtr, size_t bufferSize, int flags = 0)
+	{
+		return LoadLibraryMemory(bufferPtr);
+	}
+	static jenova::ModuleHandle LoadModuleAsVirtual(void* bufferPtr, size_t bufferSize, const char* moduleName, const char* modulePath, int flags)
+	{
+		return LoadLibraryMemoryExA(bufferPtr, bufferSize, moduleName, modulePath, LOAD_FLAGS_USE_DLL_NAME);
+	}
+	static bool ReleaseModule(jenova::ModuleHandle moduleHandle)
+	{
+		return FreeLibraryMemory(HMEMORYMODULE(moduleHandle));
+	}
+};
+
+#endif
+
+// Linux Module Loader
+#ifdef TARGET_PLATFORM_LINUX
+
+// Loader Interface [Linux]
+class JenovaLoader
+{
+public:
+	static bool Initialize()
+	{
+		return false;
+	}
+	static bool Release()
+	{
+		return false;
+	}
+	static bool SetAgressiveMode(bool arState)
+	{
+		return false;
+	}
+	static jenova::ModuleHandle LoadModule(void* bufferPtr, size_t bufferSize, int flags = 0)
+	{
+		return 0;
+	}
+	static jenova::ModuleHandle LoadModuleAsVirtual(void* bufferPtr, size_t bufferSize, const char* moduleName, const char* modulePath, int flags)
+	{
+		return 0;
+	}
+	static bool ReleaseModule(jenova::ModuleHandle moduleHandle)
+	{
+		return false;
+	}
+};
+
+#endif

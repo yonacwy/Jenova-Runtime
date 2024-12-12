@@ -96,7 +96,7 @@ CPPScriptInstance* JenovaScriptManager::get_script_instance(size_t index)
 {
 	return scriptInstances[index];
 }
-bool JenovaScriptManager::register_runtime_start_event(void* callbackPtr)
+bool JenovaScriptManager::register_runtime_start_event(jenova::VoidFunc_t callbackPtr)
 {
 	runtimeStartEvents.push_back(callbackPtr);
 	return true;
