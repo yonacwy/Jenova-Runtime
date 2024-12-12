@@ -4273,24 +4273,30 @@ namespace jenova
 			jenova::ShowMessageBox(buffer, title, 0x02 /* Error */);
 		#endif
 	}
-	std::string& ConvertToStdString(const godot::String& gstr)
+	jenova::SmartString ConvertToStdString(const godot::String& gstr)
 	{
 		std::string str((char*)gstr.utf8().ptr(), gstr.utf8().size());
 		if (!str.empty() && str.back() == '\0') str.pop_back();
-		return str;
+		jenova::SmartString strData = {};
+		strData.str = new std::string(str);
+		return strData;
 	}
-	std::string& ConvertToStdString(const godot::StringName& gstr)
+	jenova::SmartString ConvertToStdString(const godot::StringName& gstr)
 	{
 		std::string str((char*)gstr.to_utf8_buffer().ptr(), gstr.to_utf8_buffer().size());
 		if (!str.empty() && str.back() == '\0') str.pop_back();
-		return str;
+		jenova::SmartString strData = {};
+		strData.str = new std::string(str);
+		return strData;
 	}
-	std::wstring& ConvertToWideStdString(const godot::String& gstr)
+	jenova::SmartWstring ConvertToWideStdString(const godot::String& gstr)
 	{
 		std::string str((char*)gstr.utf8().ptr(), gstr.utf8().size());
 		if (!str.empty() && str.back() == '\0') str.pop_back();
 		std::wstring wstr(str.begin(), str.end());
-		return wstr;
+		jenova::SmartWstring wstrData = {};
+		wstrData.wstr = new std::wstring(wstr);
+		return wstrData;
 	}
 	std::string GetNameFromPath(godot::String gstr)
 	{
@@ -4630,7 +4636,7 @@ namespace jenova
 	}
 	std::string GetStdStringFromClipboard()
 	{
-		return ConvertToStdString(DisplayServer::get_singleton()->clipboard_get());
+		return AS_STD_STRING(DisplayServer::get_singleton()->clipboard_get());
 	}
 	jenova::ArgumentsArray CreateArgumentsArrayFromString(const std::string& str, char delimiter)
 	{

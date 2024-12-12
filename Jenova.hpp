@@ -231,9 +231,9 @@ using namespace godot;
 #define FUNCTION_CHECK						jenova::Output("%s | %p", __FUNCSIG__, this);
 #define LINE_CHECK							jenova::Output("%d", __LINE__);
 #define LINE_CHECK_THIS						jenova::Output("%d | %p", __LINE__, this);
-#define AS_STD_STRING(str)					jenova::ConvertToStdString(str)
-#define AS_C_STRING(str)					jenova::ConvertToStdString(str).c_str()
-#define AS_STD_WSTRING(str)					jenova::ConvertToWideStdString(str)
+#define AS_STD_STRING(gstr)					(*jenova::ConvertToStdString(gstr).str)
+#define AS_C_STRING(gstr)					((*jenova::ConvertToStdString(gstr).str).c_str())
+#define AS_STD_WSTRING(gstr)				(*jenova::ConvertToWideStdString(gstr).wstr)
 #define EDITOR_MENU_ID(id)					int32_t(jenova::EditorMenuID::id)
 #define BUFFER_PTR_SIZE_PARAM(buffer)		buffer, sizeof buffer
 #define JENOVA_RESOURCE(key)				jenova::resources::key
@@ -289,8 +289,10 @@ namespace jenova
 	typedef intptr_t FunctionAddress;
 	typedef intptr_t PropertyAddress;
 	typedef uint64_t LongWord;
-	typedef struct { uint32_t LowDateTime, HighDateTime; } FileTime;
 	typedef void(*VoidFunc_t)();
+	typedef struct { uint32_t LowDateTime, HighDateTime; } FileTime;
+	typedef struct SmartString { std::string* str; ~SmartString() { if (str) delete str; }} SmartString;
+	typedef struct SmartWstring { std::wstring* wstr; ~SmartWstring() { if (wstr) delete wstr; }} SmartWstring;
 
 	// Enumerators
 	enum class TargetPlatform
@@ -661,9 +663,9 @@ namespace jenova
 	void Error(const char* stageName, const char* fmt, ...);
 	void Warning(const char* stageName, const char* fmt, ...);
 	void ErrorMessage(const char* title, const char* fmt, ...);
-	std::string& ConvertToStdString(const godot::String& gstr);
-	std::string& ConvertToStdString(const godot::StringName& gstr);
-	std::wstring& ConvertToWideStdString(const godot::String& gstr);
+	jenova::SmartString ConvertToStdString(const godot::String& gstr);
+	jenova::SmartString ConvertToStdString(const godot::StringName& gstr);
+	jenova::SmartWstring ConvertToWideStdString(const godot::String& gstr);
 	std::string GetNameFromPath(godot::String gstr);
 	String GenerateStandardUIDFromPath(String resourcePath);
 	String GenerateStandardUIDFromPath(Resource* resourcePtr);
