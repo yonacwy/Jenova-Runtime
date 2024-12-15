@@ -1053,6 +1053,7 @@ bool JenovaPackageManager::UpdateStatus(const String& newStatus)
 {
 	if (!currentWindow || !statusLabel) return false;
 	statusLabel->parse_bbcode(newStatus);
+	return true;
 }
 void JenovaPackageManager::FormatStatus(const String& colorHash, const char* newStatus, ...)
 {

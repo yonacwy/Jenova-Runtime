@@ -1,0 +1,36 @@
+{
+    "configurations": [
+        {
+            "name": "Linux-Clang",
+            "includePath": [
+                "Libs",
+                "Libs/GodotSDK",
+                "Libs/Archive",
+                "Libs/Curl"
+            ],
+            "defines": [
+                "JENOVA_RUNTIME",
+                "JENOVA_SDK_BUILD",
+                "TYPED_METHOD_BIND"
+            ],
+            "compilerPath": "/usr/bin/clang++",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "linux-clang-x64",
+            "compilerArgs": [
+                "-pthread",
+                "-m64",
+                "-O2",
+                "-fPIC",
+                "-w",
+                "-static-libstdc++",
+                "-static-libgcc",
+                "-lssl",
+                "-lcrypto",
+                "-ldl",
+                "-lrt"
+            ]
+        }
+    ],
+    "version": 4
+}

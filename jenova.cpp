@@ -234,7 +234,7 @@ namespace jenova
 				isEditorPluginInitialized = true;
 
 				// Verbose
-				jenova::OutputColored("#2ebc78", "[b]J.E.N.O.V.A[/b] System Initialized. Version : %s%s%s / Arch : Win64", APP_VERSION, APP_VERSION_MIDDLEFIX, APP_VERSION_POSTFIX);
+				jenova::OutputColored("#2ebc78", "[b]J.E.N.O.V.A[/b] System Initialized. Version : %s%s%s / Arch : %s", APP_VERSION, APP_VERSION_MIDDLEFIX, APP_VERSION_POSTFIX, APP_ARCH);
 			}
 			void _exit_tree() override
 			{
@@ -3867,6 +3867,11 @@ namespace jenova
 			return LoadLibraryA(libPath);
 		#endif
 
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			return dlopen(libPath, RTLD_LAZY);
+		#endif
+
 		// Not Implemented
 		return nullptr;
 	}
@@ -3875,6 +3880,11 @@ namespace jenova
 		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return FreeLibrary(HMODULE(moduleHandle));
+		#endif
+
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			 return (dlclose(moduleHandle) == 0);
 		#endif
 
 		// Not Implemented
@@ -3887,6 +3897,11 @@ namespace jenova
 			return GetProcAddress(HMODULE(moduleHandle), functionName);
 		#endif
 
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			return dlsym(moduleHandle, functionName);
+		#endif
+
 		// Not Implemented
 		return nullptr;
 	}
@@ -3897,8 +3912,13 @@ namespace jenova
 			return EnableWindow(HWND(windowHandle), windowState);
 		#endif
 
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			return true;
+		#endif
+
 		// Not Implemented
-		return true;
+		return false;
 	}
 	int ShowMessageBox(const char* msg, const char* title, int flags)
 	{
@@ -3907,6 +3927,12 @@ namespace jenova
 			return MessageBoxA(HWND(GetMainWindowNativeHandle()), msg, title, flags);
 		#endif
 
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			OS::get_singleton()->alert(msg, title);
+			return 0;
+		#endif
+			
 		// Not Implemented
 		return 0;
 	}
@@ -3915,6 +3941,13 @@ namespace jenova
 		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return ShellExecuteA(0, 0, filePath, 0, 0, SW_SHOW) != 0;
+		#endif
+
+		// Linux Implementation		
+		#ifdef TARGET_PLATFORM_LINUX
+			std::string command = "xdg-open ";
+			command += filePath;
+			return (system(command.c_str()) == 0);
 		#endif
 
 		// Not Implemented
@@ -3927,6 +3960,13 @@ namespace jenova
 			return ShellExecuteA(0, 0, url, 0, 0, SW_SHOW) != 0;
 		#endif
 
+		// Linux Implementation	
+		#ifdef TARGET_PLATFORM_LINUX
+			std::string command = "xdg-open ";
+			command += url;
+			return (system(command.c_str()) == 0);
+		#endif
+
 		// Not Implemented
 		return false;
 	}
@@ -3937,6 +3977,11 @@ namespace jenova
 			return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, memorySize);
 		#endif
 
+		// Linux Implementation	
+		#ifdef TARGET_PLATFORM_LINUX
+			return calloc(1, memorySize);
+		#endif
+
 		// Not Implemented
 		return malloc(memorySize);
 	}
@@ -3945,6 +3990,12 @@ namespace jenova
 		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return HeapFree(GetProcessHeap(), 0, memoryPtr);
+		#endif
+
+		// Linux Implementation	
+		#ifdef TARGET_PLATFORM_LINUX
+			if (memoryPtr) free(memoryPtr);
+			return true;
 		#endif
 
 		// Not Implemented
@@ -3958,6 +4009,15 @@ namespace jenova
 			return GetEnvironmentVariableA(entityName, bufferPtr, bufferSize);
 		#endif
 
+		// Linux Implementation	
+		#ifdef TARGET_PLATFORM_LINUX
+			const char* value = getenv(entityName);
+			if (!value) return 0;
+			strncpy(bufferPtr, value, bufferSize);
+			bufferPtr[bufferSize - 1] = '\0';
+			return strlen(bufferPtr);
+		#endif
+
 		// Not Implemented
 		return 0;
 	}
@@ -3968,6 +4028,11 @@ namespace jenova
 			return SetEnvironmentVariableA(entityName, entityValue);
 		#endif
 
+		// Linux Implementation	
+		#ifdef TARGET_PLATFORM_LINUX
+			return (setenv(entityName, entityValue, 1) == 0);
+		#endif
+
 		// Not Implemented
 		return true;
 	}
@@ -3976,6 +4041,11 @@ namespace jenova
 		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 			return jenova::GenericHandle(GetCurrentProcess());
+		#endif
+
+		// Linux Implementation	
+		#ifdef TARGET_PLATFORM_LINUX
+			return (jenova::GenericHandle)getpid();
 		#endif
 
 		// Not Implemented
@@ -4612,31 +4682,11 @@ namespace jenova
 	}
 	void CopyStdStringToClipboard(const std::string& str)
 	{
-		// Windows Implementation
-		#ifdef TARGET_PLATFORM_WINDOWS
-
-			if (!OpenClipboard(nullptr)) return;
-			EmptyClipboard();
-			HGLOBAL hClipboardData = GlobalAlloc(GMEM_DDESHARE, str.size() + 1);
-			if (!hClipboardData)
-			{
-				CloseClipboard();
-				return;
-			}
-			char* pchData = static_cast<char*>(GlobalLock(hClipboardData));
-			if (pchData != nullptr)
-			{
-				strcpy_s(pchData, str.size() + 1, str.c_str());
-				GlobalUnlock(hClipboardData);
-			}
-			SetClipboardData(CF_TEXT, hClipboardData);
-			CloseClipboard();
-
-		#endif
+		return CopyStringToClipboard(String(str.c_str()));
 	}
 	std::string GetStdStringFromClipboard()
 	{
-		return AS_STD_STRING(DisplayServer::get_singleton()->clipboard_get());
+		return AS_STD_STRING(GetStringFromClipboard());
 	}
 	jenova::ArgumentsArray CreateArgumentsArrayFromString(const std::string& str, char delimiter)
 	{
@@ -4675,6 +4725,20 @@ namespace jenova
 			char pathBuffer[MAX_PATH];
 			GetModuleFileNameA(NULL, pathBuffer, MAX_PATH);
 			return std::string(pathBuffer);
+
+		#endif
+
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+
+			char pathBuffer[PATH_MAX];
+			ssize_t len = readlink("/proc/self/exe", pathBuffer, sizeof(pathBuffer) - 1);
+			if (len != -1) 
+			{
+				pathBuffer[len] = '\0';
+				return std::string(pathBuffer);
+			}
+			return std::string();
 
 		#endif
 
@@ -5064,9 +5128,25 @@ namespace jenova
 			char dllPath[MAX_PATH];
 			GetModuleFileNameA(HINSTANCE(moduleHandle), dllPath, MAX_PATH);
 			return std::string(dllPath);
-		#else
-			return std::string("Unsupported");
+
+
 		#endif
+
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			char path[PATH_MAX];
+			Dl_info info;
+			if (dladdr(moduleHandle, &info) && info.dli_fname)
+			{
+				strncpy(path, info.dli_fname, PATH_MAX);
+				path[PATH_MAX - 1] = '\0';
+				return std::string(path);
+			}
+			return std::string("Unknown");
+		#endif
+
+		// Not Implemented
+		return std::string("Unsupported");
 	}
 	jenova::MemoryBuffer CompressBuffer(void* bufferPtr, size_t bufferSize)
 	{

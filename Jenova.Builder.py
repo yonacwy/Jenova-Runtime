@@ -22,7 +22,8 @@ libs = [
 "Libs/libcurl-static-gcc-x86_64.a",
 "Libs/libasmjit-static-gcc-x86_64.a",
 "Libs/libarchive-static-gcc-x86_64.a",
-"Libs/liblzma-static-gcc-x86_64.a"
+"Libs/liblzma-static-gcc-x86_64.a",
+"Libs/libxml2-static-gcc-x86_64.a"
 ]
 sources = [
 "jenova.cpp",
@@ -44,7 +45,7 @@ sources = [
 # Configuration
 compiler = "clang++"
 linker = "clang++"
-OutputDir = "linux64"
+OutputDir = "Linux64"
 OutputName = "Jenova.Runtime.Linux64.so"
 CacheDir = f"{OutputDir}/Cache"
 
@@ -82,7 +83,7 @@ def run_compile_command(command, source_name):
         exit(1)
 def run_linker_command(command):
     try:
-        rgb_print("#367fff", f"Linking Object Files using {linker}...")
+        rgb_print("#ff2474", f"Linking Compiled Object Files using {linker}...")
         subprocess.check_call(command, shell=True)
         rgb_print("#03fc6f", f"All Object Files Linked Successfully.")
     except subprocess.CalledProcessError as e:
@@ -129,7 +130,7 @@ if __name__ == "__main__":
         object_file = f"{CacheDir}/{source.replace('.cpp', '.o')}"
         object_files.append(object_file)
         compile_command = (
-            f"{compiler} -m64 -O2 -w -std=c++20 -pthread "
+            f"{compiler} -m64 -O2 -fPIC -w -std=c++20 -pthread "
             f"{' '.join([f'-D{flag}' for flag in flags])} "
             f"{' '.join([f'-I{directory}' for directory in directories])} "
             f"-c {source} -o {object_file}"
@@ -144,8 +145,8 @@ if __name__ == "__main__":
     # Generate Linker Command
     rgb_print("#367fff", "Generating Linker Command...")
     link_command = (
-        f"{linker} -shared {' '.join(object_files)} -o {OutputDir}/{OutputName} -m64 "
-        f"-static-libstdc++ -static-libgcc -static -pthread {' '.join(libs)} -lssl -lcrypto -ldl -lrt"
+        f"{linker} -shared -fPIC {' '.join(object_files)} -o {OutputDir}/{OutputName} -m64 "
+        f"-static-libstdc++ -static-libgcc -pthread {' '.join(libs)} -lssl -lcrypto -ldl -lrt"
     )
 
     # Link Object Files

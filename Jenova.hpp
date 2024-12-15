@@ -34,27 +34,34 @@
 #if defined(_WIN64) || defined(_WIN32)
 #define TARGET_PLATFORM_WINDOWS 1
 #define TARGET_PLATFORM_CURRENT TargetPlatform::Windows
+#define APP_ARCH "Win64"
 #elif defined(__linux__)
 #define TARGET_PLATFORM_LINUX 1
 #define TARGET_PLATFORM_CURRENT TargetPlatform::Linux
+#define APP_ARCH "Linux64"
 #elif defined(__APPLE__) && defined(__MACH__)
 #include <TargetConditionals.h>
 #if TARGET_OS_IPHONE
 #define TARGET_PLATFORM_IOS 1
 #define TARGET_PLATFORM_CURRENT TargetPlatform::iOS
+#define APP_ARCH "iOS"
 #elif TARGET_OS_MAC
 #define TARGET_PLATFORM_MACOS 1
 #define TARGET_PLATFORM_CURRENT TargetPlatform::MacOS
+#define APP_ARCH "MacOS"
 #endif
 #elif defined(__ANDROID__)
 #define TARGET_PLATFORM_ANDROID 1
 #define TARGET_PLATFORM_CURRENT TargetPlatform::Android
+#define APP_ARCH "Android"
 #elif defined(__EMSCRIPTEN__)
 #define TARGET_PLATFORM_WEB 1
 #define TARGET_PLATFORM_CURRENT TargetPlatform::Web
+#define APP_ARCH "Web"
 #else
 #define TARGET_PLATFORM_UNKNOWN 1
 #define TARGET_PLATFORM_CURRENT TargetPlatform::Unknown
+#define APP_ARCH "Unknown"
 #endif
 
 // Jenova API Import/Export
@@ -72,14 +79,24 @@
 #include <DbgHelp.h>
 #endif
 
+// Linux SDK
+#ifdef TARGET_PLATFORM_LINUX
+#include <dlfcn.h>
+#include <unistd.h>
+#include <limits.h>
+#include <link.h>
+#endif
+
 // C++ SDK
 #include <stddef.h>
 #include <stdarg.h>
+#include <cstdlib>
 #include <iostream>
 #include <time.h>
 #include <thread>
 #include <regex>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <random>
 #include <fstream>
@@ -214,7 +231,6 @@
 #include <godot_cpp/classes/confirmation_dialog.hpp>
 #include <godot_cpp/classes/worker_thread_pool.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
-
 
 // Shared Third-Party
 #include <Parsers/json.hpp>

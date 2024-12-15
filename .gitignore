@@ -9,6 +9,8 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.sln.docstates
+*.depend
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -361,6 +363,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Build System Files
 /Win64
 /Linux64
 /Libs
