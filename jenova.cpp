@@ -128,7 +128,7 @@ namespace jenova
 			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::MicrosoftCompiler;
 			#elif defined(TARGET_PLATFORM_LINUX)
 			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::GNUCompiler;
-			#elif defined(TARGET_PLATFORM_UNKNOWN)
+			#else
 			const jenova::CompilerModel CompilerDefaultModel = jenova::CompilerModel::Unspecified;
 			#endif
 
