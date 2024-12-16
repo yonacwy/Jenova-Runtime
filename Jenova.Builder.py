@@ -1,8 +1,13 @@
+# Jenova Runtime Build System Script
+# Developed by Hamid.Memar (2024-2025)
+# Usage : python3 ./Jenova.Builder.py --compiler clang --skip-banner
+
 # Imports
 import os
 import subprocess
 import hashlib
 import json
+import argparse
 from concurrent.futures import ThreadPoolExecutor
 from colored import fg, attr
 
@@ -143,11 +148,33 @@ def get_compiler_choice():
 # Entrypoint
 if __name__ == "__main__":
 
-    # Print Banner
-    print_banner()
+    # Create Arguments Parser
+    parser = argparse.ArgumentParser(description="Jenova Runtime Build System")
+    parser.add_argument('--compiler', type=str, help='Specify the compiler to use.')
+    parser.add_argument('--skip-banner', action='store_true', help='Skip printing the banner')
 
-    # Ask for Compiler
-    get_compiler_choice()
+    # Parser Arguments
+    args = parser.parse_args()
+
+    # Print Banner
+    if not args.skip_banner:
+        print_banner()
+
+    # Set Compiler
+    if args.compiler:
+        if args.compiler == "clang":
+            compiler = "clang++"
+            linker = "clang++"
+        elif args.compiler == "gcc":
+            compiler = "g++"
+            linker = "g++"
+        else:
+            compiler = "g++"
+            linker = "g++"
+            rgb_print("#e02626", "[ x ] Invalid Compiler Input. Defaulting to GNU Compiler Collection (g++).")
+    else:
+        # Ask for Compiler
+        get_compiler_choice()
 
     # Ensure Required Directories Exist
     rgb_print("#367fff", "[ ^ ] Validating Paths...")

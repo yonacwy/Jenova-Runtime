@@ -17,9 +17,9 @@
 
 // String Resources
 #define APP_NAME						"Jenova Runtime for Godot Engine"
-#define APP_COMPANYNAME					"MemarDesign™ LLC."
+#define APP_COMPANYNAME					"MemarDesignâ„¢ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
-#define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025"
+#define APP_COPYRIGHT					"Copyright MemarDesignâ„¢ LLC. (Â©) 2024-2025"
 #define APP_VERSION						"0.3.3.9"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
@@ -85,6 +85,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <link.h>
+#include <cxxabi.h>
 #endif
 
 // C++ SDK
@@ -354,8 +355,15 @@ namespace jenova
 	};
 	enum class CompilerModel
 	{
+		#ifdef TARGET_PLATFORM_WINDOWS
 		MicrosoftCompiler,
+		ClangCompiler,
+		MinGWCompiler,
+		#endif
+		#ifdef TARGET_PLATFORM_LINUX
 		GNUCompiler,
+		ClangCompiler,
+		#endif
 		Unspecified
 	};
 	enum class InterpreterBackend
@@ -590,7 +598,7 @@ namespace jenova
 		constexpr size_t FormatBufferSize						= 4096;
 		constexpr size_t ScriptReloadCooldown					= 1000;
 
-		constexpr char* JenovaRuntimeModuleName					= "Jenova.Runtime.Win64";
+		constexpr char* JenovaRuntimeModuleName					= "Jenova.Runtime";
 		constexpr char* JenovaScriptExtension					= "cpp";
 		constexpr char* JenovaScriptType						= "CPPScript";
 		constexpr char* JenovaHeaderType						= "CPPHeader";

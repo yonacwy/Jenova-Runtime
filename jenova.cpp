@@ -66,9 +66,21 @@ using namespace std;
 // Linux Routine
 #ifdef TARGET_PLATFORM_LINUX
 
+	// Linux Global Objects
+	jenova::ModuleHandle jenovaRuntimeInstance = nullptr;
+
 	// Linux Entrypoint
-	extern "C" void _start() 
+	extern "C" void _start() { }
+
+	// Linux Constructor
+	__attribute__((constructor)) static void _init()
 	{
+		Dl_info info;
+		if (dladdr((void*)&_init, &info) && info.dli_fbase)
+		{
+			jenovaRuntimeInstance = info.dli_fbase;
+			jenova::GlobalStorage::CurrentJenovaRuntimeModulePath = jenova::GetLoadedModulePath(jenovaRuntimeInstance);
+		}
 	}
 
 #endif
@@ -482,8 +494,11 @@ namespace jenova
 						editor_settings->set_initial_value(RemoveSourcesFromBuildEditorConfigPath, true, false);
 
 						// Compiler Model Property
+						String availableCompilers = "";
+						if (QUERY_PLATFORM(Windows)) availableCompilers = "Microsoft Visual C++ (MSVC),LLVM Clang Toolchain,MinGW Standard";
+						if (QUERY_PLATFORM(Linux)) availableCompilers = "GNU Compiler Collection (GCC),LLVM Clang Toolchain";					
 						PropertyInfo CompilerModelProperty(Variant::INT, CompilerModelConfigPath, 
-							PropertyHint::PROPERTY_HINT_ENUM, "Microsoft Visual C++ (MSVC),GNU Compiler Collection (GCC)",
+							PropertyHint::PROPERTY_HINT_ENUM, availableCompilers,
 							PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED, JenovaEditorSettingsCategory);
 						editor_settings->add_property_info(CompilerModelProperty);
 						editor_settings->set_initial_value(CompilerModelConfigPath, int32_t(CompilerDefaultModel), false);
@@ -1794,14 +1809,20 @@ namespace jenova
 						scriptModules.push_back(scriptModule);
 					}
 
+					// Create Compiler [For Obtaining Settings Only]
+					if (!CreateCompiler()) return false;
+
 					// Create Build Result
 					jenova::BuildResult buildResult;
 					buildResult.hasError = false;
 					buildResult.buildResult = true;
 					buildResult.builtModuleData = moduleData;
 					buildResult.buildPath = jenova::GlobalStorage::CurrentJenovaCacheDirectory;
-					buildResult.compilerModel = jenova::CompilerModel::MicrosoftCompiler;
+					buildResult.compilerModel = this->jenovaCompiler->GetCompilerModel();
 					buildResult.hasDebugInformation = hasDebugInformation;
+
+					// Dispose Compiler
+					DisposeCompiler();
 
 					// Generate Metadata
 					buildResult.moduleMetaData = JenovaInterpreter::GenerateModuleMetadata(mapPath, scriptModules, buildResult);
@@ -1905,6 +1926,9 @@ namespace jenova
 				// Initialize Compiler Compiler
 				switch (jenova::CompilerModel(int32_t(compilerModel)))
 				{
+				
+				// Windows Compilers
+				#ifdef TARGET_PLATFORM_WINDOWS
 				case jenova::CompilerModel::MicrosoftCompiler:
 					jenova::Output("Creating Microsoft Visual C++ (MSVC) Compiler...");
 					if (!QUERY_PLATFORM(Windows))
@@ -1916,16 +1940,30 @@ namespace jenova
 					jenovaCompiler = new jenova::MicrosoftCompiler();
 					jenova::Output("New Microsoft Visual C++ (MSVC) Compiler Implemented at [color=#44e376]%p[/color]", jenovaCompiler);
 					break;
-				case jenova::CompilerModel::GNUCompiler:
-					jenova::Output("Creating Linux GNU (GCC) Compiler...");
-					if (!QUERY_PLATFORM(Linux))
-					{
-						jenova::Error("Jenova Builder", "Microsoft Visual C++ (MSVC) Compiler can only be used on the Windows platform.");
-						jenovaCompiler = nullptr;
-						break;
-					}
+				case jenova::CompilerModel::ClangCompiler:
+					jenova::Output("Creating LLVM Clang (Windows) Compiler...");
 					jenovaCompiler = nullptr; // Not Implemented Yet
 					break;
+				case jenova::CompilerModel::MinGWCompiler:
+					jenova::Output("Creating MinGW Compiler...");
+					jenovaCompiler = nullptr; // Not Implemented Yet
+					break;
+				#endif
+
+				// Linux Compilers
+				#ifdef TARGET_PLATFORM_LINUX
+				case jenova::CompilerModel::GNUCompiler:
+					jenova::Output("Creating Linux GNU (GCC) Compiler...");
+					jenovaCompiler = nullptr; // Not Implemented Yet
+					break;
+				case jenova::CompilerModel::ClangCompiler:
+					jenova::Output("Creating LLVM Clang (Linux) Compiler...");
+					jenovaCompiler = nullptr; // Not Implemented Yet
+					break;
+				#endif
+
+				// Unknown Compiler
+				case jenova::CompilerModel::Unspecified:
 				default:
 					jenova::Error("Jenova Builder", "Invalid Compiler Model detected, Build aborted.");
 					return false;
@@ -3564,7 +3602,8 @@ namespace jenova
 		{
 			std::string currentModuleName = std::filesystem::path(GlobalStorage::CurrentJenovaRuntimeModulePath).filename().string();
 			std::string runtimeModuleName = std::string(GlobalSettings::JenovaRuntimeModuleName);
-			if (QUERY_PLATFORM(Windows)) runtimeModuleName += ".dll";
+			if (QUERY_PLATFORM(Windows)) runtimeModuleName += ".Win64.dll";
+			if (QUERY_PLATFORM(Linux)) runtimeModuleName += ".Linux64.so";
 			if (currentModuleName == runtimeModuleName) return false;
 			return true;
 		}
@@ -3572,7 +3611,8 @@ namespace jenova
 		{
 			std::string wrapperDirectory = std::filesystem::path(GlobalStorage::CurrentJenovaRuntimeModulePath).parent_path().string();
 			std::string originalRuntimeModulePath = wrapperDirectory + "/" + std::string(GlobalSettings::JenovaRuntimeModuleName);
-			if (QUERY_PLATFORM(Windows)) originalRuntimeModulePath += ".dll";
+			if (QUERY_PLATFORM(Windows)) originalRuntimeModulePath += ".Win64.dll";
+			if (QUERY_PLATFORM(Linux)) originalRuntimeModulePath += ".Linux64.so";
 			if (!std::filesystem::exists(originalRuntimeModulePath)) return false;
 			jenova::ModuleHandle jenovaRuntimeModule = jenova::LoadModule(originalRuntimeModulePath.c_str());
 			if (!jenovaRuntimeModule) return false;
@@ -4750,14 +4790,23 @@ namespace jenova
 		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 
-			char buffer[MAX_PATH];
-			GetModuleFileNameA(nullptr, buffer, MAX_PATH);
-			std::string fullPath(buffer);
+			std::string fullPath = GetExecutablePath();
 			size_t pos = fullPath.find_last_of("\\/");
 			std::string folder = fullPath.substr(0, pos);
 			SetCurrentDirectoryA(folder.c_str());
 
 		#endif
+
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+
+			std::string fullPath = GetExecutablePath();
+			size_t pos = fullPath.find_last_of("\\/");
+			std::string folder = fullPath.substr(0, pos);
+			chdir(folder.c_str());
+
+		#endif
+		
 	}
 	void DoApplicationEvents()
 	{
@@ -4893,15 +4942,44 @@ namespace jenova
 	}
 	std::string GetDemangledFunctionSignature(std::string mangledName, jenova::CompilerModel compilerModel)
 	{
-		// Demangled MSVC Function
-		if (compilerModel == jenova::CompilerModel::MicrosoftCompiler)
-		{
-			// MSVC Only Supported On Windows
-			#ifdef TARGET_PLATFORM_WINDOWS
+		// Windows Compilers
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			// Demangle MSVC Function
+			if (compilerModel == jenova::CompilerModel::MicrosoftCompiler)
+			{
 				char demangled_name[1024];
 				if (UnDecorateSymbolName(mangledName.c_str(), demangled_name, sizeof(demangled_name), UNDNAME_COMPLETE)) return std::string(demangled_name);
-			#endif
-		}
+			}
+
+			// Demangle Clang Function
+			if (compilerModel == jenova::CompilerModel::ClangCompiler)
+			{
+				// Not Implemented Yet			
+			}
+
+			// Demangle MinGW Function
+			if (compilerModel == jenova::CompilerModel::MinGWCompiler)
+			{
+				// Not Implemented Yet
+			}
+
+		#endif
+
+		// Linux Compilers
+		#ifdef TARGET_PLATFORM_LINUX
+
+			// Demangle GCC/Clang Function
+			if (compilerModel == jenova::CompilerModel::GNUCompiler || compilerModel == jenova::CompilerModel::ClangCompiler)
+			{
+				int status = -1;
+				char* demangled = abi::__cxa_demangle(mangledName.c_str(), nullptr, nullptr, &status);
+				std::string result = (status == 0 && demangled) ? std::string(demangled) : "Unknown";
+				std::free(demangled);
+				return result;
+			}
+
+		#endif
 		
 		// Unknown Compiler, Return Empty String
 		return std::string();
@@ -5663,10 +5741,13 @@ namespace jenova
 		jenova::PackageList filteredCompilerPackages;
 		for (const auto& compilerPackage : compilerPackages)
 		{
+			// Windows Compilers
+			#ifdef TARGET_PLATFORM_WINDOWS
 			if (compilerModel == jenova::CompilerModel::MicrosoftCompiler && compilerPackage.pkgDestination.contains("JenovaMSVCCompiler"))
 			{
 				filteredCompilerPackages.push_back(compilerPackage);
 			}
+			#endif
 		}
 
 		// Sort Package Collections
