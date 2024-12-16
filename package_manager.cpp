@@ -1013,14 +1013,12 @@ void JenovaPackageManager::UtilizeNewPackageTask(const String& taskName, const S
 	if (taskName == "InstallPackagePrepare")
 	{
 		utilizerButton->set_text("    Installing    ");
-		Callable installPackageTask = callable_mp(this, &JenovaPackageManager::UtilizeNewPackageTask).bind(String("InstallPackage"), packageHash);
-		this->SetBusy(true, WorkerThreadPool::get_singleton()->add_task(installPackageTask));
+		this->SetBusy(true, JenovaTaskSystem::CreateNewTask([=]() { UtilizeNewPackageTask("InstallPackage", packageHash);}));
 	}
 	if (taskName == "UninstallPackagePrepare")
 	{
 		utilizerButton->set_text("    Unnstalling    ");
-		Callable installPackageTask = callable_mp(this, &JenovaPackageManager::UtilizeNewPackageTask).bind(String("UninstallPackage"), packageHash);
-		this->SetBusy(true, WorkerThreadPool::get_singleton()->add_task(installPackageTask));
+		this->SetBusy(true, JenovaTaskSystem::CreateNewTask([=]() { UtilizeNewPackageTask("UninstallPackage", packageHash);}));
 	}
 
 	// Actual Task Operation On New Thread
@@ -1095,7 +1093,7 @@ void JenovaPackageManager::ForceUpdatePackageList()
 {
 	this->UpdatePackageList(jenova::PackageType(currentTabID));
 }
-void JenovaPackageManager::SetBusy(bool busyState, int64_t taskID)
+void JenovaPackageManager::SetBusy(bool busyState, jenova::TaskID taskID)
 {
 	this->isBusy = busyState;
 	if (this->isBusy)
@@ -1147,8 +1145,9 @@ void JenovaPackageManager::PrepareForClose()
 }
 void JenovaPackageManager::OnTaskTimerTick()
 {
-	if (WorkerThreadPool::get_singleton()->is_task_completed(this->currentTaskID))
+	if (JenovaTaskSystem::IsTaskDone(this->currentTaskID))
 	{
+		JenovaTaskSystem::CleanupTask(this->currentTaskID);
 		this->SetBusy(false);
 	}
 }

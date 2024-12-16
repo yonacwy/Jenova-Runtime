@@ -41,6 +41,9 @@
     <ClCompile Include="package_manager.cpp">
       <Filter>Implementation\Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="task_system.cpp">
+      <Filter>Implementation\Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Implementation">
@@ -132,6 +135,9 @@
     </ClInclude>
     <ClInclude Include="VisualStudioTemplates.h">
       <Filter>Resources\Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="task_system.h">
+      <Filter>Implementation\Utilities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

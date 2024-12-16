@@ -106,6 +106,8 @@ Developed By Hamid.Memar
 		<Unit filename="script_resource.h" />
 		<Unit filename="script_templates.cpp" />
 		<Unit filename="script_templates.h" />
+		<Unit filename="task_system.cpp" />
+		<Unit filename="task_system.h" />
 		<Unit filename="tiny_profiler.cpp" />
 		<Unit filename="tiny_profiler.h" />
 		<Extensions />

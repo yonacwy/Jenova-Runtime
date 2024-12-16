@@ -305,6 +305,8 @@ namespace jenova
 	typedef intptr_t FunctionAddress;
 	typedef intptr_t PropertyAddress;
 	typedef uint64_t LongWord;
+	typedef uint16_t TaskID;
+	typedef std::function<void()> TaskFunction;
 	typedef void(*VoidFunc_t)();
 	typedef struct { uint32_t LowDateTime, HighDateTime; } FileTime;
 	typedef struct SmartString { std::string* str; ~SmartString() { if (str) delete str; }} SmartString;
@@ -791,6 +793,7 @@ namespace jenova
 
 // Jenova Tools
 #include "tiny_profiler.h"
+#include "task_system.h"
 #include "asset_monitor.h"
 #include "package_manager.h"
 

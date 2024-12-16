@@ -32,7 +32,7 @@ private:
 	Window* currentWindow = nullptr;
 	GridContainer* browserContent = nullptr;
 	RichTextLabel* statusLabel = nullptr;
-	int64_t currentTaskID = 0;
+	jenova::TaskID currentTaskID = 0;
 	int64_t currentTabID = 0;
 	std::string currentDatabaseURL = "";
 	bool isBusy = false;
@@ -57,12 +57,12 @@ private:
 	bool DownloadPackage(const String& packageFileURL, const String& downloadFilePath);
 	bool InstallPackage(const String& packageHash);
 	bool UninstallPackage(const String& packageHash);
-	void UtilizeNewPackageTask(const String& taskName, const String& packageHash, Button* utilizerButton);
+	void UtilizeNewPackageTask(const String& taskName, const String& packageHash, Button* utilizerButton = nullptr);
 	bool UpdateStatus(const String& newStatus);
 	void FormatStatus(const String& colorHash, const char* newStatus, ...);
 	void UpdatePackageList(const jenova::PackageType& packageType);
 	void ForceUpdatePackageList();
-	void SetBusy(bool busyState, int64_t taskID = 0);
+	void SetBusy(bool busyState, jenova::TaskID taskID = 0);
 	bool CanClose() const;
 	bool PreparePackageManager();
 	void PrepareForClose();
