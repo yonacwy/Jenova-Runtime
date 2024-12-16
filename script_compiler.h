@@ -48,6 +48,9 @@ namespace jenova
 		virtual bool SolveCompilerSettings(const Dictionary& compilerSettings) = 0;
 	};
 
+	// Windows Compilers
+	#ifdef TARGET_PLATFORM_WINDOWS
+
 	// Jenova Microsoft Visual C++ Compiler Definitions
 	class MicrosoftCompiler : public IJenovaCompiler
 	{
@@ -84,4 +87,6 @@ namespace jenova
 		std::string godotSDKPath;
 		std::string jenovaCachePath;
 	};
+
+	#endif
 }
