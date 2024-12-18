@@ -20,13 +20,13 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025"
-#define APP_VERSION						"0.3.3.9"
+#define APP_VERSION						"0.3.4.0"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 3, 9
+#define APP_VERSION_DATA				0, 3, 4, 0
 #define APP_VERSION_BUILD				"0"
-#define APP_VERSION_NAME				"Bullet"
+#define APP_VERSION_NAME				"Genesis"
 
 #ifndef NO_JENOVA_RUNTIME_SDK
 
@@ -435,6 +435,18 @@ namespace jenova
 		Tool,
 		All
 	};
+	enum class PackagePlatform
+	{
+		WindowsAMD64,
+		LinuxAMD64,
+		WindowsARM64,
+		LinuxARM64,
+		AndroidARM64,
+		iOSARM64,
+		MacOSARM64,
+		Universal,
+		Unknown
+	};
 	enum class PropertySetMethod
 	{
 		MemoryCopy,
@@ -569,10 +581,13 @@ namespace jenova
 		String				pkgHash;
 		Ref<ImageTexture>	pkgImage;
 		PackageType			pkgType;
+		PackagePlatform		pkgPlatform;
 		uint32_t			pkgSize;
 		String				pkgDate;
 		String				pkgURL;
 		String				pkgDestination;
+		bool				pkgInstallScript;
+		bool				pkgUninstallScript;
 
 		// Operators
 		bool operator==(const JenovaPackage& other) const
@@ -782,6 +797,7 @@ namespace jenova
 	jenova::ScriptFileState BackupScriptFileState(const std::string& scriptFilePath);
 	bool RestoreScriptFileState(const std::string& scriptFilePath, const jenova::ScriptFileState& scriptFileState);
 	void RandomWait(int minWaitTime, int maxWaitTime);
+	bool ExecutePackageScript(const std::string& packageScriptFile);
 	#pragma endregion
 
 	// Core Reimplementation

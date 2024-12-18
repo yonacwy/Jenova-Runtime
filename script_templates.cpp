@@ -88,19 +88,19 @@ TypedArray<Dictionary> JenovaTemplateManager::GetGlobalScriptTemplates()
 String JenovaTemplateManager::GetGlobalScriptTemplateSource(const String& templateName)
 {
 	for (const auto& globalTemplate : globalTemplates) 
-		if (globalTemplate["name"] == templateName) return globalTemplate["content"];
+		if (String(globalTemplate["name"]) == templateName) return globalTemplate["content"];
 	return String("/* Global Template Not Found */");
 }
 TypedArray<Dictionary> JenovaTemplateManager::GetClassScriptTemplates(const String& className)
 {
 	TypedArray<Dictionary> scriptTemplates;
 	for (const auto& classTemplate : classTemplates)
-		if (classTemplate["inherit"] == className) scriptTemplates.push_back(classTemplate);
+		if (String(classTemplate["inherit"]) == className) scriptTemplates.push_back(classTemplate);
 	return scriptTemplates;
 }
 String JenovaTemplateManager::GetClassScriptTemplateSource(const String& templateName, const String& className)
 {
 	for (const auto& classTemplate : classTemplates)
-		if (classTemplate["name"] == templateName && classTemplate["inherit"] == className) return classTemplate["content"];
+		if (String(classTemplate["name"]) == templateName && String(classTemplate["inherit"]) == className) return classTemplate["content"];
 	return String("/* Class Template Not Found */");
 }

@@ -536,10 +536,13 @@ bool JenovaPackageManager::FetchOnlinePackages(const String& packageDatabaseURL)
 			newPackage.pkgDescription = String(packageItem["pkgDescription"].get<std::string>().c_str());
 			newPackage.pkgHash = String(packageItem["pkgHash"].get<std::string>().c_str());
 			newPackage.pkgType = packageItem["pkgType"].get<jenova::PackageType>();
+			newPackage.pkgPlatform = packageItem["pkgPlatform"].get<jenova::PackagePlatform>();
 			newPackage.pkgSize = packageItem["pkgSize"].get<uint32_t>();
 			newPackage.pkgDate = String(packageItem["pkgDate"].get<std::string>().c_str());
 			newPackage.pkgURL = String(packageItem["pkgURL"].get<std::string>().c_str());
 			newPackage.pkgDestination = String(packageItem["pkgDestination"].get<std::string>().c_str());
+			newPackage.pkgInstallScript = packageItem["pkgInstallScript"].get<bool>();
+			newPackage.pkgUninstallScript = packageItem["pkgUninstallScript"].get<bool>();
 
 			// Create Package Icon
 			double scaleFactor = EditorInterface::get_singleton()->get_editor_scale();
@@ -596,7 +599,10 @@ bool JenovaPackageManager::ObtainInstalledPackages()
 			newPackage.pkgVersion = String(packageItem["pkgVersion"].get<std::string>().c_str());
 			newPackage.pkgHash = String(packageItem["pkgHash"].get<std::string>().c_str());
 			newPackage.pkgType = packageItem["pkgType"].get<jenova::PackageType>();
+			newPackage.pkgPlatform = packageItem["pkgPlatform"].get<jenova::PackagePlatform>();
 			newPackage.pkgDestination = String(packageItem["pkgDestination"].get<std::string>().c_str());
+			newPackage.pkgInstallScript = packageItem["pkgInstallScript"].get<bool>();
+			newPackage.pkgUninstallScript = packageItem["pkgUninstallScript"].get<bool>();
 
 			// Add Package
 			installedPackages.push_back(newPackage);
@@ -638,7 +644,10 @@ bool JenovaPackageManager::CacheInstalledPackages()
 			packageItem["pkgVersion"] = AS_STD_STRING(installedPackage.pkgVersion);
 			packageItem["pkgHash"] = AS_STD_STRING(installedPackage.pkgHash);
 			packageItem["pkgType"] = installedPackage.pkgType;
+			packageItem["pkgPlatform"] = installedPackage.pkgPlatform;
 			packageItem["pkgDestination"] = AS_STD_STRING(installedPackage.pkgDestination);
+			packageItem["pkgInstallScript"] = installedPackage.pkgInstallScript;
+			packageItem["pkgUninstallScript"] = installedPackage.pkgUninstallScript;
 
 			// Add package item to the packages array
 			packageDatabase["packages"].push_back(packageItem);
@@ -908,6 +917,17 @@ bool JenovaPackageManager::InstallPackage(const String& packageHash)
 		return false;
 	};
 
+	// Execute Install Script if Exists
+	if (package.pkgInstallScript)
+	{
+		std::string installerScriptPath = AS_STD_STRING(installPath) + "/" + "Install.jnvscript";
+		if (!jenova::ExecutePackageScript(installerScriptPath))
+		{
+			jenova::Error("Jenova Package Installer", "Install Script Failed to Execute.");
+			return false;
+		}
+	}
+
 	// Update Installed Package Database
 	installedPackages.push_back(package);
 
@@ -945,6 +965,17 @@ bool JenovaPackageManager::UninstallPackage(const String& packageHash)
 
 	// Get Package URL
 	std::string installPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path(package.pkgDestination));
+
+	// Execute Uninstall Script if Exists
+	if (package.pkgUninstallScript)
+	{
+		std::string uninstallerScriptPath = installPath + "/" + "Uninstall.jnvscript";
+		if (!jenova::ExecutePackageScript(uninstallerScriptPath))
+		{
+			jenova::Error("Jenova Package Uninstaller", "Uninstall Script Failed to Execute.");
+			return false;
+		}
+	}
 
 	// Delete Install Path Directory If Exists
 	if (std::filesystem::exists(installPath))

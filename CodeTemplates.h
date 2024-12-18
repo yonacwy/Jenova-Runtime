@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 namespace jenova::templates
 {
 	static constexpr char CODE_TEMPLATE_DEFAULT[257] = {

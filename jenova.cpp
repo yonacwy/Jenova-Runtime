@@ -1931,13 +1931,7 @@ namespace jenova
 				#ifdef TARGET_PLATFORM_WINDOWS
 				case jenova::CompilerModel::MicrosoftCompiler:
 					jenova::Output("Creating Microsoft Visual C++ (MSVC) Compiler...");
-					if (!QUERY_PLATFORM(Windows))
-					{
-						jenova::Error("Jenova Builder", "Microsoft Visual C++ (MSVC) Compiler can only be used on the Windows platform.");
-						jenovaCompiler = nullptr;
-						break;
-					}
-					jenovaCompiler = new jenova::MicrosoftCompiler();
+					jenovaCompiler = jenova::CreateMicrosoftCompiler();
 					jenova::Output("New Microsoft Visual C++ (MSVC) Compiler Implemented at [color=#44e376]%p[/color]", jenovaCompiler);
 					break;
 				case jenova::CompilerModel::ClangCompiler:
@@ -1953,8 +1947,9 @@ namespace jenova
 				// Linux Compilers
 				#ifdef TARGET_PLATFORM_LINUX
 				case jenova::CompilerModel::GNUCompiler:
-					jenova::Output("Creating Linux GNU (GCC) Compiler...");
-					jenovaCompiler = nullptr; // Not Implemented Yet
+					jenova::Output("Creating GNU C++ (GCC) Compiler...");
+					jenovaCompiler = jenova::CreateGNUCompiler();
+					jenova::Output("New GNU C++ (GCC) Compiler Implemented at [color=#44e376]%p[/color]", jenovaCompiler);
 					break;
 				case jenova::CompilerModel::ClangCompiler:
 					jenova::Output("Creating LLVM Clang (Linux) Compiler...");
@@ -5748,6 +5743,14 @@ namespace jenova
 				filteredCompilerPackages.push_back(compilerPackage);
 			}
 			#endif
+
+			// Linux Compilers
+			#ifdef TARGET_PLATFORM_LINUX
+			if (compilerModel == jenova::CompilerModel::GNUCompiler && compilerPackage.pkgDestination.contains("JenovaGNUCompiler"))
+			{
+				filteredCompilerPackages.push_back(compilerPackage);
+			}
+			#endif
 		}
 
 		// Sort Package Collections
@@ -6927,6 +6930,26 @@ namespace jenova
 
 		#endif
 
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			jenova::ScriptFileState scriptFileState;
+			struct stat fileStat;
+			if (stat(scriptFilePath.c_str(), &fileStat) == 0) 
+			{
+				scriptFileState.isValid = true;
+				uint64_t creationNs = static_cast<uint64_t>(fileStat.st_ctim.tv_sec) * 10000000 + static_cast<uint64_t>(fileStat.st_ctim.tv_nsec) / 100;
+				uint64_t accessNs = static_cast<uint64_t>(fileStat.st_atim.tv_sec) * 10000000 + static_cast<uint64_t>(fileStat.st_atim.tv_nsec) / 100;
+				uint64_t writeNs = static_cast<uint64_t>(fileStat.st_mtim.tv_sec) * 10000000 + static_cast<uint64_t>(fileStat.st_mtim.tv_nsec) / 100;
+				scriptFileState.creationTime.LowDateTime = static_cast<uint32_t>(creationNs & 0xFFFFFFFF);
+				scriptFileState.creationTime.HighDateTime = static_cast<uint32_t>((creationNs >> 32) & 0xFFFFFFFF);
+				scriptFileState.accessTime.LowDateTime = static_cast<uint32_t>(accessNs & 0xFFFFFFFF);
+				scriptFileState.accessTime.HighDateTime = static_cast<uint32_t>((accessNs >> 32) & 0xFFFFFFFF);
+				scriptFileState.writeTime.LowDateTime = static_cast<uint32_t>(writeNs & 0xFFFFFFFF);
+				scriptFileState.writeTime.HighDateTime = static_cast<uint32_t>((writeNs >> 32) & 0xFFFFFFFF);
+			}
+			return scriptFileState;
+		#endif
+
 		// Not Implemented
 		return ScriptFileState();
 	}
@@ -6944,6 +6967,20 @@ namespace jenova
 
 		#endif
 
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			if (!scriptFileState.isValid) return false;
+			uint64_t accessNs = (static_cast<uint64_t>(scriptFileState.accessTime.HighDateTime) << 32) | scriptFileState.accessTime.LowDateTime;
+			uint64_t writeNs = (static_cast<uint64_t>(scriptFileState.writeTime.HighDateTime) << 32) | scriptFileState.writeTime.LowDateTime;
+			struct timespec times[2];
+			times[0].tv_sec = accessNs / 10000000;
+			times[0].tv_nsec = (accessNs % 10000000) * 100;
+			times[1].tv_sec = writeNs / 10000000;
+			times[1].tv_nsec = (writeNs % 10000000) * 100;
+			if (utimensat(AT_FDCWD, scriptFilePath.c_str(), times, 0) == 0) return true;
+			return false;
+		#endif
+
 		// Not Implemented
 		return false;
 	}
@@ -6955,7 +6992,36 @@ namespace jenova
 		int waitTime = dis(gen);
 		std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 	}
+	bool ExecutePackageScript(const std::string& packageScriptFile)
+	{
+		// Validate Script File
+		if (!std::filesystem::exists(packageScriptFile)) return false;
 
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			std::string command = "cmd /c \"" + packageScriptFile + "\"";
+			std::array<char, 128> buffer = {};
+			FILE* pipe = _popen(command.c_str(), "r");
+			if (!pipe) return false;
+			while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) jenova::Output("%s", buffer.data());
+			int result = _pclose(pipe);
+			return result == 0;
+		#endif
+
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			std::string command = "/bin/bash \"" + packageScriptFile + "\"";
+			std::array<char, 128> buffer = {};
+			FILE* pipe = popen(command.c_str(), "r");
+			if (!pipe) return false;
+			while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) jenova::Output("%s", buffer.data());
+			int result = pclose(pipe);
+			return result == 0;
+		#endif
+
+		// Unsupported platform
+		return false;
+	}
 	#pragma endregion
 	
 	// Core Reimplementation

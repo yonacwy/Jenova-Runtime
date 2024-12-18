@@ -48,45 +48,7 @@ namespace jenova
 		virtual bool SolveCompilerSettings(const Dictionary& compilerSettings) = 0;
 	};
 
-	// Windows Compilers
-	#ifdef TARGET_PLATFORM_WINDOWS
-
-	// Jenova Microsoft Visual C++ Compiler Definitions
-	class MicrosoftCompiler : public IJenovaCompiler
-	{
-	public:
-		MicrosoftCompiler();
-		~MicrosoftCompiler();
-
-		bool InitializeCompiler(String compilerInstanceName = "<JenovaMSVCCompiler>");
-		bool ReleaseCompiler();
-		String PreprocessScript(Ref<CPPScript> cppScript, const Dictionary& preprocessorSettings);
-		CompileResult CompileScript(const String sourceCode);
-		CompileResult CompileScriptWithCustomSettings(const String sourceCode, const Dictionary& compilerSettings);
-		CompileResult CompileScriptFromFile(const String scriptFilePath);
-		CompileResult CompileScriptFromFileWithCustomSettings(const String scriptFilePath, const Dictionary& compilerSettings);
-		CompileResult CompileScriptModuleContainer(const ScriptModuleContainer& scriptModulesContainer);
-		CompileResult CompileScriptModuleWithCustomSettingsContainer(const ScriptModuleContainer& scriptModulesContainer, const Dictionary& compilerSettings);
-		BuildResult BuildFinalModule(const jenova::ModuleList& scriptModules);
-		BuildResult BuildFinalModuleWithCustomSettings(const jenova::ModuleList& scriptModules, const Dictionary& linkerSettings);
-		bool SetCompilerOption(const StringName& optName, const Variant& optValue);
-		Variant GetCompilerOption(const StringName& optName) const;
-		Variant ExecuteCommand(const StringName& commandName, const Dictionary& commandSettings) const;
-		CompilerFeatures GetCompilerFeatures() const;
-		CompilerModel GetCompilerModel() const;
-		bool SolveCompilerSettings(const Dictionary& compilerSettings);
-
-	private:
-		Dictionary internalDefaultSettings;
-		std::string projectPath;
-		std::string compilerBinaryPath;
-		std::string linkerBinaryPath;
-		std::string includePath;
-		std::string libraryPath;
-		std::string jenovaSDKPath;
-		std::string godotSDKPath;
-		std::string jenovaCachePath;
-	};
-
-	#endif
+	// Compiler Factory
+	IJenovaCompiler* CreateMicrosoftCompiler();
+	IJenovaCompiler* CreateGNUCompiler();
 }
