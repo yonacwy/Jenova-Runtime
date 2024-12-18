@@ -35,7 +35,7 @@ namespace jenova
         {
             // Initialize Tool Chain Settings
             internalDefaultSettings["instance_name"]                        = compilerInstanceName;
-            internalDefaultSettings["instance_version"]                     = 1.1f;
+            internalDefaultSettings["instance_version"]                     = 1.0f;
             internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMSVCCompiler"; // Placeholder
             internalDefaultSettings["cpp_compiler_binary"]                  = "/Bin/cl.exe";
             internalDefaultSettings["cpp_linker_binary"]                    = "/Bin/link.exe";
@@ -57,7 +57,7 @@ namespace jenova
             internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL"; /* REAL_T_IS_DOUBLE Removed for Now */
 
             // MSVC Linker Settings
-            internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug, .jnv for Final*/
+            internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug .jnv for Final*/
             internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";
             internalDefaultSettings["cpp_default_libs"]                     = "kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;delayimp.lib";
             internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.lib;Jenova.SDK.x64.lib";
@@ -770,6 +770,37 @@ namespace jenova
         }
         bool InitializeCompiler(String compilerInstanceName = "<JenovaGNUCompiler>")
         {
+            // Initialize Tool Chain Settings
+            internalDefaultSettings["instance_name"]                        = compilerInstanceName;
+            internalDefaultSettings["instance_version"]                     = 1.0f;
+            internalDefaultSettings["cpp_compiler_binary"]                  = "g++"; 
+            internalDefaultSettings["cpp_linker_binary"]                    = "g++";
+            internalDefaultSettings["cpp_include_path"]                     = "/include";                           // Default include path
+            internalDefaultSettings["cpp_library_path"]                     = "/lib";                               // Default library path
+            internalDefaultSettings["cpp_symbols_path"]                     = "/Symbols";                       
+            internalDefaultSettings["cpp_jenovasdk_path"]                   = "/Jenova/JenovaSDK";
+            internalDefaultSettings["cpp_godotsdk_path"]                    = "/Jenova/GodotSDK";                   // Placeholder
+
+            // GNU Compiler Settings
+            internalDefaultSettings["cpp_language_standards"]               = "cpp20";                              // -std=c++20
+            internalDefaultSettings["cpp_open_mp_support"]                  = true;                                 // -fopenmp
+            internalDefaultSettings["cpp_multithreaded"]                    = true;                                 // -j<CPU_CORES>
+            internalDefaultSettings["cpp_debug_database"]                   = true;                                 // -g
+            internalDefaultSettings["cpp_extra_compiler"]                   = "-O2 -march=native";                  // Extra Compiler Options
+            internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED";
+
+            // GNU Linker Settings
+            internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.so";
+            internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";
+            internalDefaultSettings["cpp_default_libs"]                     = "m;pthread;dl;rt";
+            internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.a;Jenova.Runtime.Linux64.so";
+            internalDefaultSettings["cpp_machine_architecture"]             = "Linux64";                            // -m64
+            internalDefaultSettings["cpp_machine_pe_type"]                  = "so";                                 // -shared
+            internalDefaultSettings["cpp_dynamic_base"]                     = true;                                 // -fPIE
+            internalDefaultSettings["cpp_debug_symbol"]                     = true;                                 // -ggdb
+            internalDefaultSettings["cpp_statics_libs"]                     = "-static-libstdc++ -static-libgcc";   // Static Libraries
+            internalDefaultSettings["cpp_extra_linker"]                     = "-Wl,--strip-all";                    // Extra Linker Options 
+
             // All Good
             return true;
         }
@@ -817,12 +848,15 @@ namespace jenova
         {
             // Create Compiler Result
             CompileResult result;
+            result.hasError = true;
+            result.compileError = "Compile Failed.";
 
             // Yield Engine
             OS::get_singleton()->delay_msec(1);
             std::this_thread::yield();
 
             // Return Final Result
+
             return result;
         }
         BuildResult BuildFinalModule(const jenova::ModuleList& scriptModules)
@@ -833,6 +867,8 @@ namespace jenova
         {
             // Create Build Result
             BuildResult result;
+            result.hasError = true;
+            result.buildError = "Build Failed.";
 
             // Yield Engine
             OS::get_singleton()->delay_msec(1);
@@ -896,5 +932,4 @@ namespace jenova
         // Not Supported
         return nullptr;
     }
-
 }

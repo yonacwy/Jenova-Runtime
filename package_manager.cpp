@@ -920,6 +920,7 @@ bool JenovaPackageManager::InstallPackage(const String& packageHash)
 	// Execute Install Script if Exists
 	if (package.pkgInstallScript)
 	{
+		FormatStatus("#fa205a", "Executing Package Installer Script...");
 		std::string installerScriptPath = AS_STD_STRING(installPath) + "/" + "Install.jnvscript";
 		if (!jenova::ExecutePackageScript(installerScriptPath))
 		{
@@ -969,6 +970,7 @@ bool JenovaPackageManager::UninstallPackage(const String& packageHash)
 	// Execute Uninstall Script if Exists
 	if (package.pkgUninstallScript)
 	{
+		FormatStatus("#fa205a", "Executing Package Uninstaller Script...");
 		std::string uninstallerScriptPath = installPath + "/" + "Uninstall.jnvscript";
 		if (!jenova::ExecutePackageScript(uninstallerScriptPath))
 		{

@@ -81,6 +81,9 @@
 
 // Linux SDK
 #ifdef TARGET_PLATFORM_LINUX
+#include <sys/stat.h>
+#include <utime.h>
+#include <fcntl.h>
 #include <dlfcn.h>
 #include <unistd.h>
 #include <limits.h>

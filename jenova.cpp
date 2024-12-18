@@ -7003,23 +7003,35 @@ namespace jenova
 			std::array<char, 128> buffer = {};
 			FILE* pipe = _popen(command.c_str(), "r");
 			if (!pipe) return false;
-			while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) jenova::Output("%s", buffer.data());
+			while (fgets(buffer.data(), buffer.size(), pipe) != nullptr)
+			{
+				std::string line(buffer.data());
+				if (!line.empty() && line.back() == '\n') line.pop_back();
+				if (!line.empty() && line.back() == '\r') line.pop_back();
+				jenova::Output("%s", line.c_str());
+			}
 			int result = _pclose(pipe);
 			return result == 0;
 		#endif
 
 		// Linux Implementation
 		#ifdef TARGET_PLATFORM_LINUX
-			std::string command = "/bin/bash \"" + packageScriptFile + "\"";
+			std::string command = "sudo /bin/bash \"" + packageScriptFile + "\"";
 			std::array<char, 128> buffer = {};
 			FILE* pipe = popen(command.c_str(), "r");
 			if (!pipe) return false;
-			while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) jenova::Output("%s", buffer.data());
+			while (fgets(buffer.data(), buffer.size(), pipe) != nullptr)
+			{
+				std::string line(buffer.data());
+				if (!line.empty() && line.back() == '\n') line.pop_back();
+				if (!line.empty() && line.back() == '\r') line.pop_back();
+				jenova::Output("%s", line.c_str());
+			}
 			int result = pclose(pipe);
 			return result == 0;
 		#endif
 
-		// Unsupported platform
+		// Unsupported Platform
 		return false;
 	}
 	#pragma endregion

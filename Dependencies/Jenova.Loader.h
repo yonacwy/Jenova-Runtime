@@ -105,15 +105,15 @@ class JenovaLoader
 public:
 	static bool Initialize()
 	{
-		return false;
+		return true;
 	}
 	static bool Release()
 	{
-		return false;
+		return true;
 	}
 	static bool SetAgressiveMode(bool arState)
 	{
-		return false;
+		return true;
 	}
 	static jenova::ModuleHandle LoadModule(void* bufferPtr, size_t bufferSize, int flags = 0)
 	{
@@ -125,7 +125,7 @@ public:
 	}
 	static bool ReleaseModule(jenova::ModuleHandle moduleHandle)
 	{
-		return false;
+		return true;
 	}
 };
 

@@ -56,6 +56,7 @@ compiler = "clang++"
 linker = "clang++"
 OutputDir = "Linux64"
 OutputName = "Jenova.Runtime.Linux64.so"
+MapFileName = "Jenova.Runtime.Linux64.map"
 CacheDir = f"{OutputDir}/Cache"
 CacheDB = f"{CacheDir}/Build.db"
 
@@ -223,7 +224,8 @@ if __name__ == "__main__":
     rgb_print("#367fff", "[ ^ ] Generating Linker Command...")
     link_command = (
         f"{linker} -shared -fPIC {' '.join(object_files)} -o {OutputDir}/{OutputName} -m64 "
-        f"-static-libstdc++ -static-libgcc -pthread {' '.join(libs)} -lssl -lcrypto -ldl -lrt"
+        f"-static-libstdc++ -static-libgcc -pthread {' '.join(libs)} -lssl -lcrypto -ldl -lrt "
+        f"-Wl,-Map,{OutputDir}/{MapFileName}"
     )
 
     # Link Object Files
