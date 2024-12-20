@@ -2825,7 +2825,6 @@ namespace jenova
 				compiler_selector->select(compiler_selector->get_item_count() - 1);
 				window_surface->add_child(compiler_selector);
 	
-
 				Label* godotkit_package_label = memnew(Label);
 				godotkit_package_label->set_name("GodotKitLabel");
 				godotkit_package_label->set_anchors_and_offsets_preset(Control::PRESET_TOP_WIDE);

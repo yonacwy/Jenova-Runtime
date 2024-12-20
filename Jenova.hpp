@@ -82,6 +82,7 @@
 // Linux SDK
 #ifdef TARGET_PLATFORM_LINUX
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <utime.h>
 #include <fcntl.h>
 #include <dlfcn.h>

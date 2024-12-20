@@ -68,6 +68,11 @@
 	#define JENOVA_CLASS_NAME(className)
 #endif
 
+// GodotSDK Imports
+#ifndef JENOVA_SDK_BUILD
+	#include <Godot/classes/global_constants.hpp>
+#endif
+
 // Pre-defined Types
 namespace godot
 {
