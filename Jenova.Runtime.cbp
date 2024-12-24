@@ -60,6 +60,7 @@ Developed By Hamid.Memar
 					<Add library="Libs/libarchive-static-gcc-x86_64.a" />
 					<Add library="Libs/liblzma-static-gcc-x86_64.a" />
 					<Add library="Libs/libxml2-static-gcc-x86_64.a" />
+					<Add library="Libs/libdwarf-static-gcc-x86_64.a" />
 					<Add library="ssl" />
 					<Add library="crypto" />
 					<Add library="dl" />

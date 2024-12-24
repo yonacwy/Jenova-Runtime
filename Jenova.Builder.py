@@ -31,7 +31,8 @@ libs = [
     "Libs/libasmjit-static-gcc-x86_64.a",
     "Libs/libarchive-static-gcc-x86_64.a",
     "Libs/liblzma-static-gcc-x86_64.a",
-    "Libs/libxml2-static-gcc-x86_64.a"
+    "Libs/libxml2-static-gcc-x86_64.a",
+    "Libs/libdwarf-static-gcc-x86_64.a"
 ]
 sources = [
     "jenova.cpp",

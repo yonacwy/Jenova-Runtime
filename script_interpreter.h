@@ -49,6 +49,7 @@ public:
     static bool SetPropertyValueFromVariant(const String& propertyName, const Variant& propertyValue, const String& scriptUID);
     static jenova::InterpreterBackend GetInterpreterBackend();
     static void SetInterpreterBackend(jenova::InterpreterBackend newBackend);
+    static void* SolveVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName);
 
 // Module Database API
 public:

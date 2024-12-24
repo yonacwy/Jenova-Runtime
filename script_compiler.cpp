@@ -798,8 +798,9 @@ namespace jenova
             internalDefaultSettings["cpp_machine_pe_type"]                  = "so";                                 // -shared
             internalDefaultSettings["cpp_dynamic_base"]                     = true;                                 // -fPIC
             internalDefaultSettings["cpp_debug_symbol"]                     = true;                                 // -ggdb
+            internalDefaultSettings["cpp_strip_symbol"]                     = false;                                // -Wl,--strip-all         
             internalDefaultSettings["cpp_statics_libs"]                     = "-static-libstdc++ -static-libgcc";   // Static Libraries
-            internalDefaultSettings["cpp_extra_linker"]                     = "-Wl,--strip-all";                    // Extra Linker Options 
+            internalDefaultSettings["cpp_extra_linker"]                     = "";                                   // Extra Linker Options 
 
             // All Good
             return true;
@@ -1006,9 +1007,7 @@ namespace jenova
                 // If Contains Changes, Reset All Script Cache
                 if (detectedHeaderChanges)
                 {
-                    if (buildCacheDatabase.contains("Modules"))
-                        for (auto& scriptModule : buildCacheDatabase["Modules"].items())
-                            scriptModule.value() = "No Hash";
+                    if (buildCacheDatabase.contains("Modules")) for (auto& scriptModule : buildCacheDatabase["Modules"].items()) scriptModule.value() = "No Hash";
                 }
             }
 
@@ -1022,15 +1021,14 @@ namespace jenova
                 {
                     if (buildCacheDatabase["Modules"].contains(AS_STD_STRING(scriptModule.scriptUID)))
                     {
-                        if (AS_STD_STRING(scriptModule.scriptHash) == buildCacheDatabase["Modules"][AS_STD_STRING(scriptModule.scriptUID)].get<std::string>())
-                            continue;
+                        if (AS_STD_STRING(scriptModule.scriptHash) == buildCacheDatabase["Modules"][AS_STD_STRING(scriptModule.scriptUID)].get<std::string>()) continue;
                     }
                 }
 
                 // Generate Command for Each Script Module
                 std::string compilerArgument = compilerSettings["cpp_compiler_binary"].operator String().utf8().get_data();
 
-                // Compile without linking
+                // Compile Without Linking
                 compilerArgument += " -c ";
 
                 // Language Standards
@@ -1094,9 +1092,6 @@ namespace jenova
 
                         // Execute compiler command
                         execl("/bin/sh", "sh", "-c", compilerArgument.c_str(), nullptr);
-
-                        // If execl fails
-                        _exit(127);
                     }
                     else
                     {
@@ -1113,7 +1108,8 @@ namespace jenova
                             result += buffer;
                         }
 
-                        close(pipefd[0]); // Close the read end
+                        // Close the read end
+                        close(pipefd[0]); 
 
                         // Wait for the child process to finish
                         int status;
@@ -1137,6 +1133,15 @@ namespace jenova
 
             }
 
+            // Skip Compile If Source Count is 0
+            if (result.scriptsCount == 0)
+            {
+                result.compileResult = true;
+                result.hasError = false;
+                result.compileVerbose = "Cache System Detected No Script Requires to be Compiled.";
+                return result;
+            }
+
             // Wait for All Tasks to Complete
             for (const auto& taskID : taskIDs)
             {
@@ -1148,9 +1153,13 @@ namespace jenova
             }
 
             // Aggregate Results
-            for (int exitCode : taskResults)
+            for (size_t i = 0; i < taskResults.size(); i++)
             {
-                if (exitCode != 0)
+                // Skip tasks not executed (cached scripts)
+                if (taskResults[i] == -1) continue;
+
+                // Check for failures
+                if (taskResults[i] != 0)
                 {
                     result.compileResult = false;
                     result.hasError = true;
@@ -1241,9 +1250,9 @@ namespace jenova
             // Generate Linker Arguments
             std::string linkerArgument = linkerSettings["cpp_linker_binary"].operator String().utf8().get_data();
             linkerArgument += " -o \"" + outputModule + "\" ";
-            if (result.hasDebugInformation) linkerArgument += "-ggdb ";
+            if (result.hasDebugInformation && bool(linkerSettings["cpp_debug_symbol"])) linkerArgument += "-ggdb ";
             linkerArgument += "-Wl,-Map=\"" + outputMap + "\" ";
-            linkerArgument += "-shared "; // Always shared for Linux .so
+            linkerArgument += "-shared ";
             linkerArgument += "-fPIC ";
 
             // Machine Architecture
@@ -1263,6 +1272,9 @@ namespace jenova
             {
                 linkerArgument += "\"" + AS_STD_STRING(scriptModule.scriptObjectFile) + "\" ";
             }
+
+            // Strip Symbols
+            if (bool(linkerSettings["cpp_strip_symbol"])) linkerArgument += "-Wl,--strip-all ";
 
             // Add Extra Options
             linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_extra_linker"])) + " ";

@@ -5054,6 +5054,9 @@ namespace jenova
 	}
 	bool LoadSymbolForModule(jenova::GenericHandle process, jenova::LongWord baseAddress, const std::string& pdbPath, size_t dllSize)
 	{
+		// Disabled for Instability
+		return true;
+
 		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
 
@@ -5075,13 +5078,26 @@ namespace jenova
 		// Not Implemented
 		return true;
 	}
-	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase)
+	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase, jenova::ModuleCallMode callType)
 	{
 		// Initializer Function Typedef
 		typedef GDExtensionBool(*InitializeExtensionModuleFunc)(ExtensionInitializerData*);
 
 		// Get Initializer Function
-		InitializeExtensionModuleFunc InitializeModule = (InitializeExtensionModuleFunc)jenova::GetModuleFunction(moduleBase, initFuncName);
+		InitializeExtensionModuleFunc InitializeModule = nullptr;
+		switch (callType)
+		{
+		case jenova::ModuleCallMode::Actual:
+			InitializeModule = (InitializeExtensionModuleFunc)jenova::GetModuleFunction(moduleBase, initFuncName);
+			break;
+		case jenova::ModuleCallMode::Virtual:
+			InitializeModule = (InitializeExtensionModuleFunc)JenovaInterpreter::SolveVirtualFunction(moduleBase, initFuncName);
+			break;
+		default:
+			break;
+		}
+
+		// Validate Function
 		if (!InitializeModule) return false;
 
 		// Create A Clone from Initializer Data
@@ -5095,13 +5111,24 @@ namespace jenova
 		// All Good
 		return true;
 	}
-	bool CallModuleEvent(const char* eventFuncName, jenova::ModuleHandle moduleBase)
+	bool CallModuleEvent(const char* eventFuncName, jenova::ModuleHandle moduleBase, jenova::ModuleCallMode callType)
 	{
-		// Initializer Function Typedef
+		// Event Function Typedef
 		typedef bool(*ModuleEventFun)(void);
 
-		// Get Initializer Function
-		ModuleEventFun ModuleEvent = (ModuleEventFun)jenova::GetModuleFunction(moduleBase, eventFuncName);
+		// Get Event Function
+		ModuleEventFun ModuleEvent = nullptr;
+		switch (callType)
+		{
+		case jenova::ModuleCallMode::Actual:
+			ModuleEvent = (ModuleEventFun)jenova::GetModuleFunction(moduleBase, eventFuncName);
+			break;
+		case jenova::ModuleCallMode::Virtual:
+			ModuleEvent = (ModuleEventFun)JenovaInterpreter::SolveVirtualFunction(moduleBase, eventFuncName);
+			break;
+		default:
+			break;
+		}
 
 		// Event Functions Are Optional, If Doesn't Exist We Ignore
 		if (!ModuleEvent) return true;

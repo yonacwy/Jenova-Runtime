@@ -456,6 +456,11 @@ namespace jenova
 		MemoryCopy,
 		DirectAssign
 	};
+	enum class ModuleCallMode
+	{
+		Actual,
+		Virtual
+	};
 
 	// Flags
 	enum CompilerFeature : CompilerFeatures
@@ -745,8 +750,8 @@ namespace jenova
 	std::string ExtractReturnTypeFromSignature(const std::string& functionSignature);
 	std::string ExtractPropertyTypeFromSignature(const std::string& propertySignature);
 	bool LoadSymbolForModule(jenova::GenericHandle process, jenova::LongWord baseAddress, const std::string& pdbPath, size_t dllSize);
-	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase);
-	bool CallModuleEvent(const char* eventFuncName, jenova::ModuleHandle moduleBase);
+	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase, jenova::ModuleCallMode callType);
+	bool CallModuleEvent(const char* eventFuncName, jenova::ModuleHandle moduleBase, jenova::ModuleCallMode callType);
 	ScriptModule CreateScriptModuleFromInternalSource(const std::string& sourceName, const std::string& sourceCode);
 	bool CreateFileFromInternalSource(const std::string& sourceFile, const std::string& sourceCode);
 	bool CreateBuildCacheDatabase(const std::string& cacheFile, const ModuleList& scriptModules, const jenova::HeaderList& scriptHeaders, bool skipHashes = false);

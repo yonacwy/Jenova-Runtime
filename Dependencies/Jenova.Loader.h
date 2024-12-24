@@ -88,6 +88,10 @@ public:
 	{
 		return LoadLibraryMemoryExA(bufferPtr, bufferSize, moduleName, modulePath, LOAD_FLAGS_USE_DLL_NAME);
 	}
+	static void* GetVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName)
+	{
+		return jenova::GetModuleFunction(moduleHandle, functionName);
+	}
 	static bool ReleaseModule(jenova::ModuleHandle moduleHandle)
 	{
 		return FreeLibraryMemory(HMEMORYMODULE(moduleHandle));
@@ -122,6 +126,10 @@ public:
 	static jenova::ModuleHandle LoadModuleAsVirtual(void* bufferPtr, size_t bufferSize, const char* moduleName, const char* modulePath, int flags)
 	{
 		return 0;
+	}
+	static void* GetVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName)
+	{
+		return nullptr;
 	}
 	static bool ReleaseModule(jenova::ModuleHandle moduleHandle)
 	{
