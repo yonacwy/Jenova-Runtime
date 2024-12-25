@@ -716,6 +716,7 @@ namespace jenova
 	int GetEnvironmentEntity(const char* entityName, char* bufferPtr, size_t bufferSize);
 	bool SetEnvironmentEntity(const char* entityName, const char* entityValue);
 	jenova::GenericHandle GetCurrentProcessHandle();
+	bool CreateSymbolicFile(const char* srcFile, const char* dstFile);
 	#pragma endregion
 
 	// Utilities & Helpers

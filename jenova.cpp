@@ -4169,6 +4169,21 @@ namespace jenova
 		// Not Implemented
 		return 0;
 	}
+	bool CreateSymbolicFile(const char* srcFile, const char* dstFile)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			return CreateSymbolicLinkA(srcFile, dstFile, SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE);
+		#endif
+
+		// Linux Implementation
+		#ifdef TARGET_PLATFORM_LINUX
+			return symlink(srcFile, dstFile) == 0;
+		#endif
+
+		// Not Implemented
+		return false;
+	}
 	#pragma endregion
 
 	// Utilities & Helpers
@@ -7182,7 +7197,7 @@ namespace jenova
 						if (createSymbolic)
 						{
 							// Create Symbolic Link
-							if (!CreateSymbolicLinkA(targetPath.c_str(), binaryPath.c_str(), SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+							if (!jenova::CreateSymbolicFile(targetPath.c_str(), binaryPath.c_str()))
 							{
 								jenova::Error("Addon Manager", "Unable to Create Addon Symlink, Enabled Developer Mode in Windows and Try Again.");
 								continue;
