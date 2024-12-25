@@ -103,6 +103,10 @@ public:
 // Linux Module Loader
 #ifdef TARGET_PLATFORM_LINUX
 
+// Imports
+#include "MojoELF/mojoelf.h"
+#include "MojoELF/mojoelf.c"
+
 // Loader Interface [Linux]
 class JenovaLoader
 {
@@ -121,18 +125,20 @@ public:
 	}
 	static jenova::ModuleHandle LoadModule(void* bufferPtr, size_t bufferSize, int flags = 0)
 	{
-		return 0;
+		return MOJOELF_dlopen_mem(bufferPtr, bufferSize, nullptr);
 	}
 	static jenova::ModuleHandle LoadModuleAsVirtual(void* bufferPtr, size_t bufferSize, const char* moduleName, const char* modulePath, int flags)
 	{
-		return 0;
+		return MOJOELF_dlopen_mem(bufferPtr, bufferSize, nullptr);
 	}
 	static void* GetVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName)
 	{
-		return nullptr;
+		return MOJOELF_dlsym(moduleHandle, functionName);
 	}
 	static bool ReleaseModule(jenova::ModuleHandle moduleHandle)
 	{
+		if (!moduleHandle) return false;
+		MOJOELF_dlclose(moduleHandle);
 		return true;
 	}
 };
