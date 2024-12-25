@@ -1597,6 +1597,9 @@ namespace jenova
 					return false;
 				}
 
+				// Copy Addon Binaries
+				jenova::CopyAddonBinariesToEngineDirectory(jenova::GlobalSettings::CreateSymbolicAddonModules);
+
 				// Initialize Interpreter If Not Initialized Yet
 				if (!JenovaInterpreter::IsInterpreterInitialized())
 				{
@@ -1702,6 +1705,23 @@ namespace jenova
 				catch (const std::filesystem::filesystem_error& e) 
 				{
 					jenova::Error("Jenova Builder", "Failed to Clean Jenova Cache Directory.");
+				}
+
+				// Delete Addon Binaries
+				for (const auto& addonConfig : jenova::GetInstalledAddones())
+				{
+					if (addonConfig.Type == "RuntimeModule")
+					{
+						std::string binaryPath = std::filesystem::path(jenova::GetExecutablePath()).parent_path().string() + "/" + addonConfig.Binary;
+						try
+						{
+							if (std::filesystem::exists(binaryPath)) std::filesystem::remove(binaryPath);
+						}
+						catch (const std::exception&)
+						{
+							continue;
+						}
+					}
 				}
 
 				// Verbose
@@ -1837,6 +1857,19 @@ namespace jenova
 					{
 						jenova::Error("Jenova Interpreter", "Unable to Cache Bootstrapped Jenova Module to Database.");
 						return false;
+					}
+
+					// Copy Addon Binaries
+					jenova::CopyAddonBinariesToEngineDirectory(jenova::GlobalSettings::CreateSymbolicAddonModules);
+
+					// Initialize Interpreter If Not Initialized Yet
+					if (!JenovaInterpreter::IsInterpreterInitialized())
+					{
+						if (!JenovaInterpreter::InitializeInterpreter())
+						{
+							jenova::Error("Jenova Interpreter", "Jenova Interpreter Failed to Initialize!");
+							quick_exit(jenova::ErrorCode::INTERPRETER_INIT_FAILED);
+						}
 					}
 
 					// Load Built Module
@@ -2476,7 +2509,9 @@ namespace jenova
 				std::string extraIncludeDirectories = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_extra_include_directories")));
 				std::string extralibraryDirectories = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_extra_library_directories")));
 				std::string extraLibraries = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_extra_libs")));
-				
+				std::string delayedDlls = "Jenova.Runtime.Win64.dll;";
+				std::string forcedHeaders = "";
+
 				// Solve GodotKit Path
 				String selectedGodotKitPath = jenova::GetInstalledGodotKitPathFromPackages(jenovaCompiler->GetCompilerOption("cpp_godotsdk_path"));
 				if (selectedGodotKitPath == "Missing-GodotKit-1.0.0")
@@ -2491,10 +2526,26 @@ namespace jenova
 				if (!extralibraryDirectories.empty() && extralibraryDirectories.back() != ';') extralibraryDirectories.push_back(';');
 				if (!extraLibraries.empty() && extraLibraries.back() != ';') extraLibraries.push_back(';');
 
+				// Add Packages Include/Linkage (Addons, Libraries etc.)
+				for (const auto& addonConfig : jenova::GetInstalledAddones())
+				{
+					// Check For Addon Type
+					if (addonConfig.Type == "RuntimeModule")
+					{
+						if (!addonConfig.Header.empty())
+						{
+							if (jenova::GlobalSettings::ForceIncludePackageHeaders) forcedHeaders += addonConfig.Path + "/" + addonConfig.Header;
+							else extraIncludeDirectories += addonConfig.Path;
+							extraLibraries += addonConfig.Path + "/" + addonConfig.Library + ";";
+							delayedDlls += addonConfig.Binary + ";";
+						}
+					}
+				}
+
 				// Generate Output Path (Must Added From VS Generator Settings [Absoulte/Releative])
 				std::string outputPath = std::filesystem::relative(AS_STD_STRING(jenova::GetJenovaCacheDirectory())).string() + "\\";
 				std::string intermediatePath = outputPath + "VisualStudio\\";
-				std::string builtinPath = outputPath + "\\BuiltInScripts\\";
+				std::string builtinPath = outputPath + "BuiltInScripts\\";
 
 				// Create Builtin Cache Directory If Required
 				if (scriptCollection.builtinCount != 0)
@@ -2570,6 +2621,8 @@ namespace jenova
 				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@ADDITIONALINCLUDEDIRECTORIES@@", "./;./Jenova/JenovaSDK;" + solvedGodotKitPath + ";" + extraIncludeDirectories);
 				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@ADDITIONALLIBRARYDIRECTORIES@@", "./;./Jenova/JenovaSDK;" + solvedGodotKitPath + ";" + extralibraryDirectories);
 				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@ADDITIONALDEPENDENCIES@@", "libGodot.x64.lib;Jenova.SDK.x64.lib;" + extraLibraries + "%(AdditionalDependencies)");
+				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@DELAYLOADDLLS@@", delayedDlls);
+				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@FORCEDINCLUDEFILES@@", forcedHeaders);
 				if (!jenova::WriteStdStringToFile(projectFile, projectTemplate))
 				{
 					DisposeCompiler();
@@ -2989,7 +3042,8 @@ namespace jenova
 				version->set_offset(Side::SIDE_TOP, SCALED(73.0));
 				version->set_offset(Side::SIDE_RIGHT, SCALED(724.0));
 				version->set_offset(Side::SIDE_BOTTOM, SCALED(106.0));
-				version->set_text("Version " + String(APP_VERSION) + " (" + String(APP_VERSION_POSTFIX) + ") Build " + String(APP_VERSION_BUILD) + "\n" + __TIMESTAMP__);
+				version->set_text("Version " + String(APP_VERSION) + " (" + String(APP_VERSION_POSTFIX) + "/" + 
+					String(APP_VERSION_NAME) + ") Build " + String(APP_VERSION_BUILD) + " \n" + __TIMESTAMP__);
 				version->set_autowrap_mode(TextServer::AUTOWRAP_WORD); 
 				version->add_theme_font_size_override("font_size", SCALED(14));
 				jenova_about_ui->add_child(version);
@@ -3124,6 +3178,7 @@ namespace jenova
 
 		private:
 			bool ExcludeSourcesFromBuild = true;
+			std::string exportDirectory = "";
 			static void _bind_methods() {}
 
 		public:
@@ -3139,6 +3194,7 @@ namespace jenova
 
 				// Supports Windows
 				if (p_platform->get_os_name() == "Windows") return true;
+				if (p_platform->get_os_name() == "Linux") return true;
 
 				// Unsupported Platform
 				return false;
@@ -3147,8 +3203,11 @@ namespace jenova
 			// Events
 			void _export_begin(const PackedStringArray& p_features, bool p_is_debug, const String& p_path, uint32_t p_flags) override
 			{
-				// Build Verbose
+				// Verbose Build Start
 				jenova::Output("[color=#729bed][Build][/color] Building Jenova Runtime...");
+
+				// Set Export Directory
+				exportDirectory = std::filesystem::absolute(std::filesystem::path(AS_STD_STRING(p_path)).parent_path()).string() + "\\";
 
 				// Validate Editor Plugin Instance
 				if (jenovaEditorPlugin == nullptr)
@@ -3189,6 +3248,31 @@ namespace jenova
 			}
 			void _export_end() override
 			{
+				// Verbose Addon Export
+				jenova::Output("[color=#729bed][Build][/color] Copying Addons to Build Directory...", exportDirectory.c_str());
+				for (const auto& addonConfig : jenova::GetInstalledAddones())
+				{
+					if (addonConfig.Type == "RuntimeModule")
+					{
+						std::string binaryPath = addonConfig.Path + "/" + addonConfig.Binary;
+						try
+						{
+							if (std::filesystem::exists(binaryPath) && std::filesystem::exists(exportDirectory))
+							{
+								std::string targetPath = exportDirectory + "/" + addonConfig.Binary;
+								if (std::filesystem::exists(targetPath)) std::filesystem::remove(targetPath);
+								std::filesystem::copy_file(binaryPath, targetPath);
+							}
+						}
+						catch (const std::exception&)
+						{
+							jenova::Warning("Jenova Exporter", "Failed to Copy Addon [%s] Binary File to Build Directory!", addonConfig.Binary.c_str());
+							continue;
+						}
+					}
+				}
+
+				// Verbose Build Success
 				jenova::Output("[color=#729bed][Build][/color] Jenova Runtime Successfully Generated.");
 			}
 			void _export_file(const String& p_path, const String& p_type, const PackedStringArray& p_features) override 
@@ -5755,6 +5839,20 @@ namespace jenova
 		file->close();
 		return md5_hex;
 	}
+	jenova::PackageList GetInstalledAddonPackages()
+	{
+		// Collect Compiler Packages
+		auto addonPackages = JenovaPackageManager::get_singleton()->GetInstalledPackages(jenova::PackageType::Addon);
+		jenova::PackageList filteredAddonPackages;
+		for (const auto& addonPackage : addonPackages) filteredAddonPackages.push_back(addonPackage);
+		
+		// Sort Package Collections
+		std::sort(filteredAddonPackages.begin(), filteredAddonPackages.end(),
+			[](const jenova::JenovaPackage& a, const jenova::JenovaPackage& b) { return a.pkgDestination < b.pkgDestination; });
+		
+		// Return Package List
+		return filteredAddonPackages;
+	}
 	jenova::PackageList GetInstalledCompilerPackages(const jenova::CompilerModel& compilerModel)
 	{
 		// Collect Compiler Packages
@@ -5797,6 +5895,54 @@ namespace jenova
 
 		// Return Package List
 		return godotKitPackages;
+	}
+	jenova::InstalledAddons GetInstalledAddones()
+	{
+		// Create Addon List
+		jenova::InstalledAddons addonList;
+		
+		// Collect Installed Addons
+		for (const auto& addonPackage : jenova::GetInstalledAddonPackages())
+		{
+			std::string addonConfigFile = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path(addonPackage.pkgDestination)) + "/Addon-Config.json";
+			if (std::filesystem::exists(addonConfigFile))
+			{
+				std::string addonConfigData = jenova::ReadStdStringFromFile(addonConfigFile);
+				if (!addonConfigData.empty())
+				{
+					try
+					{
+						// Create Addon Config
+						jenova::AddonConfig addonConfig;
+
+						// Parse Addon Config Data
+						nlohmann::json addonConfigParser = nlohmann::json::parse(addonConfigData);
+						addonConfig.Name = addonConfigParser["Addon Name"].get<std::string>();
+						addonConfig.Version = addonConfigParser["Addon Version"].get<std::string>();
+						addonConfig.License = addonConfigParser["Addon License"].get<std::string>();
+						addonConfig.Type = addonConfigParser["Addon Type"].get<std::string>();
+						addonConfig.Arch = addonConfigParser["Addon Arch"].get<std::string>();
+						addonConfig.Header = addonConfigParser["Addon Header"].get<std::string>();
+						addonConfig.Binary = addonConfigParser["Addon Binary"].get<std::string>();
+						addonConfig.Library = addonConfigParser["Addon Library"].get<std::string>();
+						addonConfig.Dependencies = addonConfigParser["Addon Dependencies"].get<std::string>();
+						
+						// Set Addon Path
+						addonConfig.Path = std::filesystem::absolute(AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path(addonPackage.pkgDestination))).string();
+						
+						// Add New Addon Config
+						addonList.push_back(addonConfig);
+					}
+					catch (const std::exception& error)
+					{
+						continue;
+					}
+				}
+			}
+		}
+
+		// Return Addon List
+		return addonList;
 	}
 	String GetInstalledCompilerPathFromPackages(const String& compilerIdentity, const jenova::CompilerModel& compilerModel)
 	{
@@ -7017,6 +7163,47 @@ namespace jenova
 		std::uniform_int_distribution<> dis(minWaitTime, maxWaitTime);
 		int waitTime = dis(gen);
 		std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
+	}
+	void CopyAddonBinariesToEngineDirectory(bool createSymbolic)
+	{
+		for (const auto& addonConfig : jenova::GetInstalledAddones())
+		{
+			if (addonConfig.Type == "RuntimeModule")
+			{
+				std::string binaryPath = addonConfig.Path + "/" + addonConfig.Binary;
+				std::string enginePath = std::filesystem::path(jenova::GetExecutablePath()).parent_path().string();
+				try
+				{
+					if (std::filesystem::exists(binaryPath) && std::filesystem::exists(enginePath))
+					{
+						std::string targetPath = enginePath + "/" + addonConfig.Binary;
+						if (std::filesystem::exists(targetPath)) std::filesystem::remove(targetPath);
+
+						if (createSymbolic)
+						{
+							// Create Symbolic Link
+							if (!CreateSymbolicLinkA(targetPath.c_str(), binaryPath.c_str(), SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+							{
+								jenova::Error("Addon Manager", "Unable to Create Addon Symlink, Enabled Developer Mode in Windows and Try Again.");
+								continue;
+							}
+						}
+						else
+						{
+							// Copy File
+							if (!std::filesystem::copy_file(binaryPath, targetPath))
+							{
+								jenova::Error("Addon Manager", "Unable to Copy Addon Module.");
+							}
+						}
+					}
+				}
+				catch (const std::exception&)
+				{
+					continue;
+				}
+			}
+		}
 	}
 	bool ExecutePackageScript(const std::string& packageScriptFile)
 	{

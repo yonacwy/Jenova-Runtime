@@ -172,7 +172,6 @@ void CPPScript::_update_exports()
 }
 TypedArray<Dictionary> CPPScript::_get_script_method_list() const 
 {
-	jenova::Alert("_get_script_method_list called.");
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_script_method_list");
 	return TypedArray<Dictionary>();  // Not Supported Yet
 }

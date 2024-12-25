@@ -236,6 +236,27 @@ namespace jenova
             // Add Additional Include Directories
             compilerArgument += GenereateAdditionalIncludeDirectories(compilerSettings["cpp_extra_include_directories"]);
 
+            // Add Packages Headers (Addons, Libraries etc.)
+            for (const auto& addonConfig : jenova::GetInstalledAddones())
+            {
+                // Check For Addon Type
+                if (addonConfig.Type == "RuntimeModule")
+                {
+                    if (!addonConfig.Header.empty())
+                    {
+                        if (jenova::GlobalSettings::ForceIncludePackageHeaders)
+                        {
+                            std::string headerPath = addonConfig.Path + "/" + addonConfig.Header;
+                            compilerArgument += "/FI \"" + headerPath + "\" ";
+                        }
+                        else
+                        {
+                            compilerArgument += "/I \"" + addonConfig.Path + "\" ";
+                        }
+                    }
+                }
+            }
+
             // Disable Logo
             compilerArgument += "/nologo ";
 
@@ -565,6 +586,21 @@ namespace jenova
 
             // Add Additional Library Directories
             linkerArgument += GenereateAdditionalLibraryDirectories(linkerSettings["cpp_extra_library_directories"]);
+
+            // Add Packages Libraries (Addons, Libraries etc.)
+            for (const auto& addonConfig : jenova::GetInstalledAddones())
+            {
+                // Check For Addon Type
+                if (addonConfig.Type == "RuntimeModule")
+                {
+                    if (!addonConfig.Header.empty())
+                    {
+                        std::string libraryPath = addonConfig.Path + "/" + addonConfig.Library;
+                        linkerArgument += "\"" + libraryPath + "\" ";
+                        linkerArgument += "/DELAYLOAD:\"" + addonConfig.Binary + "\" ";
+                    }
+                }
+            }
 
             // Disable Logo
             linkerArgument += "/nologo ";

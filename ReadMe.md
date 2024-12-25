@@ -34,6 +34,7 @@ Jenova Core has following dependencies :
 - [LibCurl](https://github.com/curl/curl)
 - [LibFastZLib](https://github.com/gildor2/fast_zlib)
 - [LibTinyCC](http://download.savannah.gnu.org/releases/tinycc/)
+- [LibPThread](https://github.com/GerHobbelt/pthread-win32)
 - [LibVSWhere](https://github.com/TheAenema/libvswhere/tree/jenova-edition)
 - [MemoryModule++](https://github.com/bb107/MemoryModulePP)
 - [MinHook](https://github.com/TsudaKageyu/minhook)
@@ -47,14 +48,36 @@ Jenova Core has following dependencies :
 > - Only header file `libtcc.h` is required from TinyCC beside static library
 > - In **FileWatch.hpp** change `_callback(file.first, file.second);` to `_callback(_path + file.first, file.second);`
 
-> **Pre-Built Dependencise can be obtained from [here](https://drive.google.com/file/d/10qVZ3I0yVod3dSdpotCnNUcAs1jTDYG8/view?usp=sharing).**
+> - **Pre-Built Windows x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-v0.3.4.3-Dependencies-Win64.7z).**
+>
+> - **Pre-Built Linux x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-v0.3.4.3-Dependencies-Linux64.7z).**
 
 ## Build System
-Jenova Core requires Visual Studio 2022 with C++20 Support
-You can always obtain pre-built binaries from [here](https://github.com/Jenova-Framework/J.E.N.O.V.A/releases).
+### Windows x64
+
+Building Jenova Runtime for Windows x64 requires Visual Studio 2022 with C++20 Support.
+
+Proprietary Pre-built Windows x64 binaries can be obtained from [here](https://github.com/Jenova-Framework/J.E.N.O.V.A/releases).
+
+### Linux x64
+
+Building Jenova Runtime for Linux x64 can be done through Code::Blocks or Custom Builder. To build with Code::Blocks, simply open `Jenova.workspace` and build. To build using Custom Builder, Install Python 3 and then use the following commands from VSCode or Terminal:
+
+```bash
+# Running Builder
+python3 ./Jenova.Builder.py
+
+# Build using Clang++
+python3 ./Jenova.Builder.py --compiler clang --skip-banner
+
+# Build using G++
+python3 ./Jenova.Builder.py --compiler gcc --skip-banner
+```
+
+The Jenova Runtime source code is fully compatible with both Clang++ and G++. Additionally, [Visual Studio Code](https://code.visualstudio.com/) compatibility files are provided.
 
 ## Open Source vs Proprietary
-While the public source code of Jenova is ~99% identical to the proprietary version, a few specific features have been removed or disabled.
+While the public source code of Jenova is ~90% identical to the proprietary version, a few specific features have been removed or disabled.
 ### These changes include :
 - **Jenova Emulator Connector**  is provided in full source code but parts of the integration code for proprietary emulators have been removed. It remains functional if connected to another emulator module.
 - **A.K.I.R.A JIT** is removed from the public source code. This component was responsible for executing obfuscated code using a proprietary highly secured VM.
@@ -64,4 +87,4 @@ While the public source code of Jenova is ~99% identical to the proprietary vers
   
 
 ----
-Developed & Designed By **Hamid.Memar**
+Developed & Designed By **Hamid.Memar (MemarDesign™ LLC.)**

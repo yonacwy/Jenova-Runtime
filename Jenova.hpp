@@ -20,11 +20,11 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025"
-#define APP_VERSION						"0.3.4.0"
+#define APP_VERSION						"0.3.4.3"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 4, 0
+#define APP_VERSION_DATA				0, 3, 4, 3
 #define APP_VERSION_BUILD				"0"
 #define APP_VERSION_NAME				"Genesis"
 
@@ -278,8 +278,9 @@ namespace jenova
 	// Forward Declarations
 	struct ScriptModule;
 	struct JenovaPackage;
+	struct AddonConfig;
 
-	// Typedefs
+	// Type Definitions
 	typedef void* GenericHandle;
 	typedef void* ModuleHandle;
 	typedef void* WindowHandle;
@@ -304,6 +305,7 @@ namespace jenova
 	typedef std::vector<JenovaPackage> PackageList;
 	typedef std::vector<size_t> IndexList;
 	typedef std::vector<uint8_t> MemoryBuffer;
+	typedef std::vector<AddonConfig> InstalledAddons;
 	typedef std::string StringBuffer;
 	typedef std::unordered_map<std::string, void*> PointerStorage;
 	typedef Vector<Ref<Resource>> ResourceCollection;
@@ -604,6 +606,19 @@ namespace jenova
 			return pkgHash == other.pkgHash;
 		}
 	};
+	struct AddonConfig
+	{
+		std::string Name;
+		std::string Version;
+		std::string License;
+		std::string Type;
+		std::string Arch;
+		std::string Header;
+		std::string Binary;
+		std::string Library;
+		std::string Dependencies;
+		std::string Path;
+	};
 
 	// Global Settings
 	namespace GlobalSettings
@@ -616,6 +631,8 @@ namespace jenova
 		constexpr bool SafeExitOnPluginUnload					= true;
 		constexpr bool HandlePreLaunchErrors					= true;
 		constexpr bool AskAboutOpeningVisualStudio				= true;
+		constexpr bool ForceIncludePackageHeaders				= false;
+		constexpr bool CreateSymbolicAddonModules				= true;
 
 		constexpr size_t PrintOutputBufferSize					= 8192;
 		constexpr size_t BuildOutputBufferSize					= PrintOutputBufferSize;
@@ -787,8 +804,10 @@ namespace jenova
 	bool ReleasePopUpWindow(const Window* targetWindow);
 	String FormatBytesSize(size_t byteSize);
 	String GenerateMD5HashFromFile(const String& targetFile);
+	jenova::PackageList GetInstalledAddonPackages();
 	jenova::PackageList GetInstalledCompilerPackages(const jenova::CompilerModel& compilerModel);
 	jenova::PackageList GetInstalledGodotKitPackages();
+	jenova::InstalledAddons GetInstalledAddones();
 	String GetInstalledCompilerPathFromPackages(const String& compilerIdentity, const jenova::CompilerModel& compilerModel);
 	String GetInstalledGodotKitPathFromPackages(const String& godotKitIdentity);
 	std::string ResolveVariantValueAsString(const Variant* variantValue, jenova::PointerList& ptrList);
@@ -806,6 +825,7 @@ namespace jenova
 	jenova::ScriptFileState BackupScriptFileState(const std::string& scriptFilePath);
 	bool RestoreScriptFileState(const std::string& scriptFilePath, const jenova::ScriptFileState& scriptFileState);
 	void RandomWait(int minWaitTime, int maxWaitTime);
+	void CopyAddonBinariesToEngineDirectory(bool createSymbolic = false);
 	bool ExecutePackageScript(const std::string& packageScriptFile);
 	#pragma endregion
 
