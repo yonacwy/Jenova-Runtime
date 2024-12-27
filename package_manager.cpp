@@ -418,8 +418,9 @@ Panel* JenovaPackageManager::CreatePackageItem(const jenova::JenovaPackage& jeno
 	package_item_description->set_autowrap_mode(TextServer::AutowrapMode::AUTOWRAP_OFF);
 	package_item_description->add_theme_stylebox_override("normal", memnew(StyleBoxEmpty));
 	package_item_description->add_theme_constant_override("line_separation", 2.0f);
-	package_item_description->parse_bbcode(vformat("%s\nSize : [color=%s]%s[/color] Date Uploaded : [color=%s]%s[/color]", 
-		jenovaPackage.pkgDescription, accentColorHash, jenova::FormatBytesSize(jenovaPackage.pkgSize), accentColorHash, jenovaPackage.pkgDate));
+	package_item_description->parse_bbcode(vformat("%s\nSize : [color=%s]%s[/color]  Date Uploaded : [color=%s]%s[/color]  Platform : [color=%s]%s[/color]",
+		jenovaPackage.pkgDescription, accentColorHash, jenova::FormatBytesSize(jenovaPackage.pkgSize), accentColorHash, jenovaPackage.pkgDate,
+		accentColorHash, AS_C_STRING(JenovaPackageManager::GetPackagePlatformName(jenovaPackage.pkgPlatform))));
 	package_item->add_child(package_item_description);
 
 	// Add Package Item Install Button
@@ -677,6 +678,31 @@ jenova::JenovaPackage JenovaPackageManager::GetOnlinePackage(const String& packa
 	jenova::JenovaPackage nullPkg;
 	nullPkg.pkgName = "[NotFound]";
 	return nullPkg;
+}
+String JenovaPackageManager::GetPackagePlatformName(jenova::PackagePlatform pkgPlatform)
+{
+	switch (pkgPlatform)
+	{
+	case jenova::PackagePlatform::WindowsAMD64:
+		return "Windows (x64)";
+	case jenova::PackagePlatform::LinuxAMD64:
+		return "Linux (x64)";
+	case jenova::PackagePlatform::WindowsARM64:
+		return "Windows (arm64)";
+	case jenova::PackagePlatform::LinuxARM64:
+		return "Linux (arm64)";
+	case jenova::PackagePlatform::AndroidARM64:
+		return "Android (arm64)";
+	case jenova::PackagePlatform::iOSARM64:
+		return "iOS (arm64)";
+	case jenova::PackagePlatform::MacOSARM64:
+		return "MacOS (arm64)";
+	case jenova::PackagePlatform::Universal:
+		return "Universal";
+	case jenova::PackagePlatform::Unknown:
+	default:
+		return "Unknown";
+	}
 }
 jenova::PackageList JenovaPackageManager::GetInstalledPackages(const jenova::PackageType& packageType)
 {
@@ -950,7 +976,7 @@ bool JenovaPackageManager::InstallPackage(const String& packageHash)
 	this->call_deferred("ForceUpdatePackageList");
 
 	// Update Status
-	this->FormatStatus("#2edb76", "Package (%s) Installed.", AS_C_STRING(package.pkgName));
+	this->FormatStatus("#2edb76", "Package '%s' Installed.", AS_C_STRING(package.pkgName));
 
 	// All Good
 	return true;
@@ -1035,7 +1061,7 @@ bool JenovaPackageManager::UninstallPackage(const String& packageHash)
 	this->call_deferred("ForceUpdatePackageList");
 
 	// Update Status
-	this->FormatStatus("#2edb76", "Package (%s) Uninstalled.", AS_C_STRING(package.pkgName));
+	this->FormatStatus("#2edb76", "Package '%s' Uninstalled.", AS_C_STRING(package.pkgName));
 
 	// All Good
 	return true;

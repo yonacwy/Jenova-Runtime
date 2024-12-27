@@ -84,6 +84,7 @@ public:
 // Storages
 godot::Vector<NodeBackup> nodeBackups;
 std::unordered_map<std::string, void*> globalMemoryMap;
+std::unordered_map<std::string, godot::Variant> globalVariables;
 
 // Internal Helpers
 static void CollectNodesByClassName(godot::Node* node, const godot::String& class_name, godot::Vector<godot::Node*>& result)
@@ -398,5 +399,19 @@ namespace jenova::sdk
 			jenova::FreeMemory(it->second);
 			globalMemoryMap.erase(it);
 		}
+	}
+
+	// Global Variable Storage Utilities
+	godot::Variant GetGlobalVariable(VariableID id)
+	{
+		return globalVariables[id];
+	}
+	void SetGlobalVariable(VariableID id, godot::Variant var)
+	{
+		globalVariables[id] = var;
+	}
+	void ClearGlobalVariables()
+	{
+		globalVariables.clear();
 	}
 }

@@ -81,6 +81,7 @@ namespace godot
 	class Node;
 	class String;
 	class StringName;
+	class Variant;
 	class SceneTree;
 	class Texture2D;
 
@@ -122,6 +123,7 @@ namespace jenova::sdk
 	// Type Definitions
 	typedef void* FunctionPtr;
 	typedef const char* MemoryID;
+	typedef const char* VariableID;
 
 	// Structures
 	struct Caller
@@ -169,6 +171,11 @@ namespace jenova::sdk
 	JENOVA_API void* AllocateGlobalMemory(MemoryID id, size_t size);
 	JENOVA_API void FreeGlobalMemory(MemoryID id);
 
+	// Global Variable Storage Utilities
+	JENOVA_API godot::Variant GetGlobalVariable(VariableID id);
+	JENOVA_API void SetGlobalVariable(VariableID id, godot::Variant var);
+	JENOVA_API void ClearGlobalVariables();
+
 	// Template Helpers
 	template <typename T> T* GetNode(const godot::String& nodePath)
 	{ 
@@ -186,5 +193,9 @@ namespace jenova::sdk
 	{
 		T* ptr = static_cast<T*>(GetGlobalPointer(id));
 		if (ptr) *ptr = newValue;
+	}
+	template <typename T> T GlobalVariable(VariableID id)
+	{
+		return T(GetGlobalVariable(id));
 	}
 }

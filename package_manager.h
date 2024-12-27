@@ -53,6 +53,7 @@ private:
 	bool ObtainInstalledPackages();
 	bool CacheInstalledPackages();
 	jenova::JenovaPackage GetOnlinePackage(const String& packageHash);
+	String GetPackagePlatformName(jenova::PackagePlatform pkgPlatform);
 	bool ExtractPackage(const String& packageFile, const String& destinationPath);
 	bool DownloadPackage(const String& packageFileURL, const String& downloadFilePath);
 	bool InstallPackage(const String& packageHash);
