@@ -1072,12 +1072,12 @@ void JenovaPackageManager::UtilizeNewPackageTask(const String& taskName, const S
 	if (taskName == "InstallPackagePrepare")
 	{
 		utilizerButton->set_text("    Installing    ");
-		this->SetBusy(true, JenovaTaskSystem::CreateNewTask([=]() { UtilizeNewPackageTask("InstallPackage", packageHash);}));
+		this->SetBusy(true, JenovaTaskSystem::InitiateTask([=]() { UtilizeNewPackageTask("InstallPackage", packageHash);}));
 	}
 	if (taskName == "UninstallPackagePrepare")
 	{
 		utilizerButton->set_text("    Unnstalling    ");
-		this->SetBusy(true, JenovaTaskSystem::CreateNewTask([=]() { UtilizeNewPackageTask("UninstallPackage", packageHash);}));
+		this->SetBusy(true, JenovaTaskSystem::InitiateTask([=]() { UtilizeNewPackageTask("UninstallPackage", packageHash);}));
 	}
 
 	// Actual Task Operation On New Thread
@@ -1204,9 +1204,9 @@ void JenovaPackageManager::PrepareForClose()
 }
 void JenovaPackageManager::OnTaskTimerTick()
 {
-	if (JenovaTaskSystem::IsTaskDone(this->currentTaskID))
+	if (JenovaTaskSystem::IsTaskComplete(this->currentTaskID))
 	{
-		JenovaTaskSystem::CleanupTask(this->currentTaskID);
+		JenovaTaskSystem::ClearTask(this->currentTaskID);
 		this->SetBusy(false);
 	}
 }

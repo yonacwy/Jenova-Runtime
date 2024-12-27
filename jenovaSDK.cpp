@@ -414,4 +414,18 @@ namespace jenova::sdk
 	{
 		globalVariables.clear();
 	}
+
+	// Task System Utilities
+	TaskID InitiateTask(TaskFunction function)
+	{
+		return JenovaTaskSystem::InitiateTask(function);
+	}
+	bool IsTaskComplete(TaskID taskID)
+	{
+		return JenovaTaskSystem::IsTaskComplete(taskID);
+	}
+	void ClearTask(TaskID taskID)
+	{
+		JenovaTaskSystem::ClearTask(taskID);
+	}
 }

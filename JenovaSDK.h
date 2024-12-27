@@ -68,6 +68,12 @@
 	#define JENOVA_CLASS_NAME(className)
 #endif
 
+// C++ Runtime Imports
+#ifndef JENOVA_SDK_BUILD
+	#include <string>
+	#include <functional>
+#endif
+
 // GodotSDK Imports
 #ifndef JENOVA_SDK_BUILD
 	#include <Godot/classes/global_constants.hpp>
@@ -90,6 +96,11 @@ namespace godot
 
 	// Engine Enumerators
 	enum Error;
+}
+namespace std
+{
+	// Template Classes
+	template <typename T> class function;
 }
 
 // Jenova SDK Implementation
@@ -124,6 +135,8 @@ namespace jenova::sdk
 	typedef void* FunctionPtr;
 	typedef const char* MemoryID;
 	typedef const char* VariableID;
+	typedef unsigned short TaskID;
+	typedef std::function<void()> TaskFunction;
 
 	// Structures
 	struct Caller
@@ -175,6 +188,11 @@ namespace jenova::sdk
 	JENOVA_API godot::Variant GetGlobalVariable(VariableID id);
 	JENOVA_API void SetGlobalVariable(VariableID id, godot::Variant var);
 	JENOVA_API void ClearGlobalVariables();
+
+	// Task System Utilities
+	JENOVA_API TaskID InitiateTask(TaskFunction function);
+	JENOVA_API bool IsTaskComplete(TaskID taskID);
+	JENOVA_API void ClearTask(TaskID taskID);
 
 	// Template Helpers
 	template <typename T> T* GetNode(const godot::String& nodePath)

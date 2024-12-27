@@ -40,7 +40,7 @@ static std::mutex taskMutex;
 static TaskID nextTaskID = 1;
 
 // Jenova Task System Implementation
-TaskID JenovaTaskSystem::CreateNewTask(TaskFunction function)
+TaskID JenovaTaskSystem::InitiateTask(TaskFunction function)
 {
     std::lock_guard<std::mutex> lock(taskMutex);
     TaskID taskID = nextTaskID++;
@@ -50,13 +50,13 @@ TaskID JenovaTaskSystem::CreateNewTask(TaskFunction function)
     pthread_create(&task.thread, nullptr, &JenovaTaskSystem::TaskRunner, &task);
     return taskID;
 }
-bool JenovaTaskSystem::IsTaskDone(TaskID taskID)
+bool JenovaTaskSystem::IsTaskComplete(TaskID taskID)
 {
     std::lock_guard<std::mutex> lock(taskMutex);
     if (tasks.find(taskID) != tasks.end()) return tasks[taskID].isDone.load();
     return false;
 }
-void JenovaTaskSystem::CleanupTask(TaskID taskID)
+void JenovaTaskSystem::ClearTask(TaskID taskID)
 {
     std::lock_guard<std::mutex> lock(taskMutex);
     if (tasks.find(taskID) != tasks.end() && tasks[taskID].isDone.load())

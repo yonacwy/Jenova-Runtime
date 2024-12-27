@@ -19,9 +19,9 @@
 // Jenova Task System Definitions
 class JenovaTaskSystem {
 public:
-    static jenova::TaskID CreateNewTask(jenova::TaskFunction function);
-    static bool IsTaskDone(jenova::TaskID taskID);
-    static void CleanupTask(jenova::TaskID taskID);
+    static jenova::TaskID InitiateTask(jenova::TaskFunction function);
+    static bool IsTaskComplete(jenova::TaskID taskID);
+    static void ClearTask(jenova::TaskID taskID);
 
 private:
     static void* TaskRunner(void* taskPtr);
