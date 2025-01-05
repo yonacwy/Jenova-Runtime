@@ -36,7 +36,6 @@
 	#define JENOVA_VERSION "Unknown Version"
 #endif
 #ifndef JENOVA_COMPILER
-
 	#define JENOVA_COMPILER "Unknown Compiler"
 #endif
 

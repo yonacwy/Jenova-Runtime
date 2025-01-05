@@ -16,6 +16,7 @@
 #include "Jenova.hpp"
 
 // Archive SDK
+#define LIBARCHIVE_STATIC
 #include "Archive/archive.h"
 #include "Archive/archive_entry.h"
 
@@ -747,7 +748,7 @@ bool JenovaPackageManager::ExtractPackage(const String& packageFile, const Strin
 	int r;
 
 	// Helper Function
-	auto copy_data = [&](struct archive* ar, struct archive* aw)
+	auto copyData = [&](struct archive* ar, struct archive* aw)
 	{
 		int r;
 		const void* buff;
@@ -796,7 +797,7 @@ bool JenovaPackageManager::ExtractPackage(const String& packageFile, const Strin
 		if (r < ARCHIVE_OK) jenova::Error("Jenova Package Extractor", "Failed to Extract Package, Reason [%d] : %s", __LINE__, archive_error_string(a));
 		else if (archive_entry_size(entry) > 0)
 		{
-			r = copy_data(a, ext);
+			r = copyData(a, ext);
 			if (r < ARCHIVE_OK) jenova::Error("Jenova Package Extractor", "Failed to Extract Package, Reason [%d] : %s", __LINE__, archive_error_string(a));
 			if (r < ARCHIVE_WARN) return false;
 		}
@@ -808,6 +809,8 @@ bool JenovaPackageManager::ExtractPackage(const String& packageFile, const Strin
 	archive_read_free(a);
 	archive_write_close(ext);
 	archive_write_free(ext);
+
+	// All Good
 	return true;
 }
 bool JenovaPackageManager::DownloadPackage(const String& packageFileURL, const String& downloadFilePath)
