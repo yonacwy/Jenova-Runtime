@@ -1097,7 +1097,7 @@ namespace jenova
 
                 // Store Task Index for Results
                 size_t currentTaskIndex = taskIndex++;
-                taskIDs.push_back(JenovaTaskSystem::CreateNewTask([compilerArgument, &taskResults, currentTaskIndex, scriptModule]() 
+                taskIDs.push_back(JenovaTaskSystem::InitiateTask([compilerArgument, &taskResults, currentTaskIndex, scriptModule]()
                 {
                     // Run the compiler command using a process and capture its output
                     int pipefd[2];
@@ -1181,11 +1181,11 @@ namespace jenova
             // Wait for All Tasks to Complete
             for (const auto& taskID : taskIDs)
             {
-                while (!JenovaTaskSystem::IsTaskDone(taskID))
+                while (!JenovaTaskSystem::IsTaskComplete(taskID))
                 {
                     std::this_thread::yield();
                 }
-                JenovaTaskSystem::CleanupTask(taskID);
+                JenovaTaskSystem::ClearTask(taskID);
             }
 
             // Aggregate Results
