@@ -923,7 +923,7 @@ namespace jenova
 				// Set Jenova Menu Position And Data
 				int jenovaMenuPosition = mainMenu->get_child_count() - 2; // Before Help
 				mainMenu->move_child(jenovaMenu, jenovaMenuPosition);
-				mainMenu->set_menu_tooltip(jenovaMenuPosition, "Operations & Utilities of Jenvoa Framework");
+				mainMenu->set_menu_tooltip(jenovaMenuPosition, "Operations & Utilities of Jenova Framework");
 
 				// Bind Menu Items Press Signals
 				jenovaMenu->connect("id_pressed", callable_mp(this, &JenovaEditorPlugin::OnMenuItemPressed));
@@ -2534,8 +2534,8 @@ namespace jenova
 					{
 						if (!addonConfig.Header.empty())
 						{
-							if (jenova::GlobalSettings::ForceIncludePackageHeaders) forcedHeaders += addonConfig.Path + "/" + addonConfig.Header;
-							else extraIncludeDirectories += addonConfig.Path;
+							if (jenova::GlobalSettings::ForceIncludePackageHeaders) forcedHeaders += addonConfig.Path + "/" + addonConfig.Header + ";";
+							else extraIncludeDirectories += addonConfig.Path + ";";
 							extraLibraries += addonConfig.Path + "/" + addonConfig.Library + ";";
 							delayedDlls += addonConfig.Binary + ";";
 						}
@@ -4243,7 +4243,7 @@ namespace jenova
 		// Handle Verbose In Different Modes
 		if (QUERY_ENGINE_MODE(Editor))
 		{
-			// Jenvoa Terminal Log
+			// Jenova Terminal Log
 			if (jenova::GlobalStorage::CurrentEditorVerboseOutput == jenova::EditorVerboseOutput::JenovaTerminal)
 			{
 				if (jenova::plugin::JenovaEditorPlugin::get_singleton())
@@ -4275,7 +4275,7 @@ namespace jenova
 		// Handle Verbose In Different Modes
 		if (QUERY_ENGINE_MODE(Editor))
 		{
-			// Jenvoa Terminal Log
+			// Jenova Terminal Log
 			if (jenova::GlobalStorage::CurrentEditorVerboseOutput == jenova::EditorVerboseOutput::JenovaTerminal)
 			{
 				if (jenova::plugin::JenovaEditorPlugin::get_singleton())
@@ -4308,7 +4308,7 @@ namespace jenova
 		// Handle Verbose In Different Modes
 		if (QUERY_ENGINE_MODE(Editor))
 		{
-			// Jenvoa Terminal Log
+			// Jenova Terminal Log
 			if (jenova::GlobalStorage::CurrentEditorVerboseOutput == jenova::EditorVerboseOutput::JenovaTerminal)
 			{
 				if (jenova::plugin::JenovaEditorPlugin::get_singleton())
@@ -4372,7 +4372,7 @@ namespace jenova
 		// Handle Verbose In Different Modes
 		if (QUERY_ENGINE_MODE(Editor))
 		{
-			// Jenvoa Terminal Log
+			// Jenova Terminal Log
 			if (jenova::GlobalStorage::CurrentEditorVerboseOutput == jenova::EditorVerboseOutput::JenovaTerminal)
 			{
 				if (jenova::plugin::JenovaEditorPlugin::get_singleton())
@@ -4401,7 +4401,7 @@ namespace jenova
 		// Handle Verbose In Different Modes
 		if (QUERY_ENGINE_MODE(Editor))
 		{
-			// Jenvoa Terminal Log
+			// Jenova Terminal Log
 			if (jenova::GlobalStorage::CurrentEditorVerboseOutput == jenova::EditorVerboseOutput::JenovaTerminal)
 			{
 				if (jenova::plugin::JenovaEditorPlugin::get_singleton())
@@ -4436,7 +4436,7 @@ namespace jenova
 		// Handle Verbose In Different Modes
 		if (QUERY_ENGINE_MODE(Editor))
 		{
-			// Jenvoa Terminal Log
+			// Jenova Terminal Log
 			if (jenova::GlobalStorage::CurrentEditorVerboseOutput == jenova::EditorVerboseOutput::JenovaTerminal)
 			{
 				if (jenova::plugin::JenovaEditorPlugin::get_singleton())

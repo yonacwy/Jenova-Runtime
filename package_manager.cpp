@@ -1093,7 +1093,7 @@ void JenovaPackageManager::UtilizeNewPackageTask(const String& taskName, const S
 		else
 		{
 			FormatStatus("#ff1717", "Failed to Install Requested Package [%s]", AS_C_STRING(packageHash));
-			jenova::Error("Jenvoa Package Installer", "Failed to Install Requested Package [%s]", AS_C_STRING(packageHash));
+			jenova::Error("Jenova Package Installer", "Failed to Install Requested Package [%s]", AS_C_STRING(packageHash));
 		}
 	}
 	if (taskName == "UninstallPackage")
@@ -1105,7 +1105,7 @@ void JenovaPackageManager::UtilizeNewPackageTask(const String& taskName, const S
 		else
 		{
 			FormatStatus("#ff1717", "Failed to Install Requested Package [%s]", AS_C_STRING(packageHash));
-			jenova::Error("Jenvoa Package Installer", "Failed to Uninstall Requested Package [%s]", AS_C_STRING(packageHash));
+			jenova::Error("Jenova Package Installer", "Failed to Uninstall Requested Package [%s]", AS_C_STRING(packageHash));
 		}
 	}
 }
