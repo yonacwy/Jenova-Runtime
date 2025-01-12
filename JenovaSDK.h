@@ -194,6 +194,10 @@ namespace jenova::sdk
 	JENOVA_API void ClearTask(TaskID taskID);
 
 	// Template Helpers
+	template <typename T> T* GetSelf(Caller* caller)
+	{
+		return (T*)(caller->self);
+	}
 	template <typename T> T* GetNode(const godot::String& nodePath)
 	{ 
 		return static_cast<T*>(GetNodeByPath(nodePath));

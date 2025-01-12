@@ -60,7 +60,7 @@ PackedStringArray CPPScriptLanguage::_get_reserved_words() const
 		"static_assert", "static_cast", "struct", "switch", "synchronized", "template", "this", "thread_local", 
 		"throw", "true", "try", "typedef", "typeid","typename", "union", "unsigned", "using", "virtual", "void", 
 		"volatile", "wchar_t", "while", "xor", "xor_eq", "jenova", "godot", "__int64", "__int32", "Caller", "Variant",
-		"include", "ifdef", "else", "endif", "pragma", "GlobalGet", "GlobalSet", "GlobalPointer", "GlobalVariable", "GetNode",
+		"include", "ifdef", "else", "endif", "pragma", "GlobalGet", "GlobalSet", "GlobalPointer", "GlobalVariable", "GetNode", "GetSelf",
 		jenova::GlobalSettings::ScriptToolIdentifier,
 		jenova::GlobalSettings::ScriptBlockBeginIdentifier,
 		jenova::GlobalSettings::ScriptBlockEndIdentifier,
