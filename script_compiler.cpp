@@ -1409,6 +1409,30 @@ namespace jenova
                 return result;
             }
 
+            // Generate Function Information
+            std::string funcInfoCmd = R"(gdb -q -batch -ex "set logging file "%FUNC_INFO_FILE%"" -ex "set logging on" -ex "info functions" -ex "quit" "%BINARY%" > /dev/null 2>&1)";
+            jenova::ReplaceAllMatchesWithString(funcInfoCmd, "%FUNC_INFO_FILE%", AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + std::filesystem::path(outputMap).stem().string() + ".finfo");
+            jenova::ReplaceAllMatchesWithString(funcInfoCmd, "%BINARY%", outputModule);
+            if (std::system(funcInfoCmd.c_str()) != 0)
+            {
+                result.buildResult = false;
+                result.hasError = true;
+                result.buildError = "L850 : Failed to Extract Module Function Information.";
+                return result;
+            }
+
+            // Generate Variable Information
+            std::string varInfoCmd = R"(gdb -q -batch -ex "set logging file "%VAR_INFO_FILE%"" -ex "set logging on" -ex "info variables" -ex "quit" "%BINARY%" > /dev/null 2>&1)";
+            jenova::ReplaceAllMatchesWithString(varInfoCmd, "%VAR_INFO_FILE%", AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + std::filesystem::path(outputMap).stem().string() + ".pinfo");
+            jenova::ReplaceAllMatchesWithString(varInfoCmd, "%BINARY%", outputModule);
+            if (std::system(varInfoCmd.c_str()) != 0)
+            {
+                result.buildResult = false;
+                result.hasError = true;
+                result.buildError = "L860 : Failed to Extract Module Variable Information.";
+                return result;
+            }
+
             // Generate Metadata
             result.moduleMetaData = JenovaInterpreter::GenerateModuleMetadata(outputMap, scriptModules, result);
             if (result.moduleMetaData.empty())

@@ -763,10 +763,10 @@ namespace jenova
 	String RemoveCommentsFromSource(const String& sourceCode);
 	bool ContainsExactString(const String& srcStr, const String& matchStr);
 	std::string GetDemangledFunctionSignature(std::string mangledName, CompilerModel compilerModel);
-	std::string CleanFunctionSignature(const std::string& functionSignature);
-	ParameterTypeList ExtractParameterTypesFromSignature(const std::string& functionSignature);
-	std::string ExtractReturnTypeFromSignature(const std::string& functionSignature);
-	std::string ExtractPropertyTypeFromSignature(const std::string& propertySignature);
+	std::string CleanFunctionSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel);
+	ParameterTypeList ExtractParameterTypesFromSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel);
+	std::string ExtractReturnTypeFromSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel);
+	std::string ExtractPropertyTypeFromSignature(const std::string& propertySignature, jenova::CompilerModel compilerModel);
 	bool LoadSymbolForModule(jenova::GenericHandle process, jenova::LongWord baseAddress, const std::string& pdbPath, size_t dllSize);
 	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase, jenova::ModuleCallMode callType);
 	bool CallModuleEvent(const char* eventFuncName, jenova::ModuleHandle moduleBase, jenova::ModuleCallMode callType);

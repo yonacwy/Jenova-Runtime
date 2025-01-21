@@ -5077,7 +5077,7 @@ namespace jenova
 		// Unknown Compiler, Return Empty String
 		return std::string();
 	}
-	std::string CleanFunctionSignature(const std::string& functionSignature) 
+	std::string CleanFunctionSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel)
 	{
 		std::string cleanedSignature = functionSignature;
 
@@ -5113,7 +5113,7 @@ namespace jenova
 
 		return cleanedSignature;
 	}
-	jenova::ParameterTypeList ExtractParameterTypesFromSignature(const std::string& functionSignature)
+	jenova::ParameterTypeList ExtractParameterTypesFromSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel)
 	{
 		ParameterTypeList parameterTypes;
 
@@ -5130,25 +5130,73 @@ namespace jenova
 				// Split Parameters
 				std::string line;
 				std::stringstream ss(parameterString);
-				while (std::getline(ss, line, ',')) parameterTypes.push_back(line);
+				while (std::getline(ss, line, ','))
+				{
+					// Get Parameter Type
+					std::string paramType = line;
+
+					// Clean Parameter Type
+					if (paramType.front() == ' ') paramType.erase(paramType.begin());
+
+					// Add Parameter Type
+					parameterTypes.push_back(paramType);
+				}
 			}
 		}
 
 		// Return Parameter Types
 		return parameterTypes;
 	}
-	std::string ExtractReturnTypeFromSignature(const std::string& functionSignature) 
+	std::string ExtractReturnTypeFromSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel)
 	{
 		std::regex funcRegex(R"(^\s*([^\s]+)\s+\w+::\w+\()");
 		std::smatch match;
 		if (std::regex_search(functionSignature, match, funcRegex)) return match[1];
 		return std::string();
 	}
-	std::string ExtractPropertyTypeFromSignature(const std::string& propertySignature)
+	std::string ExtractPropertyTypeFromSignature(const std::string& propertySignature, jenova::CompilerModel compilerModel)
 	{
-		std::regex propRegex(R"(^\s*([^\s]+)\s+\w+::\w+$)");
-		std::smatch match;
-		if (std::regex_search(propertySignature, match, propRegex)) return match[1];
+		// Windows Compilers
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			// Extract MSVC Property Type
+			if (compilerModel == jenova::CompilerModel::MicrosoftCompiler)
+			{
+				std::regex propRegex(R"(^\s*([^\s]+)\s+\w+::\w+$)");
+				std::smatch match;
+				if (std::regex_search(propertySignature, match, propRegex)) return match[1];
+				return std::string();
+			}
+
+			// Extract Clang Property Type
+			if (compilerModel == jenova::CompilerModel::ClangCompiler)
+			{
+				// Not Implemented Yet			
+			}
+
+			// Extract MinGW Property Type
+			if (compilerModel == jenova::CompilerModel::MinGWCompiler)
+			{
+				// Not Implemented Yet
+			}
+
+		#endif
+
+		// Linux Compilers
+		#ifdef TARGET_PLATFORM_LINUX
+
+			// Extract GCC/Clang Property Type
+			if (compilerModel == jenova::CompilerModel::GNUCompiler || compilerModel == jenova::CompilerModel::ClangCompiler)
+			{
+				std::regex propRegex(R"(^\s*([^\s]+\s*\*?)\s*\w+::\w+$)");
+				std::smatch match;
+				if (std::regex_search(propertySignature, match, propRegex)) return jenova::ReplaceAllMatchesWithStringAndReturn(match[1], " ", "");
+				return std::string();
+			}
+
+		#endif
+		
+		// Unknown Compiler, Return Empty String
 		return std::string();
 	}
 	bool LoadSymbolForModule(jenova::GenericHandle process, jenova::LongWord baseAddress, const std::string& pdbPath, size_t dllSize)

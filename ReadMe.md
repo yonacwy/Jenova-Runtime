@@ -48,9 +48,9 @@ Jenova Core has following dependencies :
 > - Only header file `libtcc.h` is required from TinyCC beside static library
 > - In **FileWatch.hpp** change `_callback(file.first, file.second);` to `_callback(_path + file.first, file.second);`
 
-> - **Pre-Built Windows x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-v0.3.4.3-Dependencies-Win64.7z).**
+> - **Pre-Built Windows x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-latest-Dependencies-Win64.7z).**
 >
-> - **Pre-Built Linux x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-v0.3.4.3-Dependencies-Linux64.7z).**
+> - **Pre-Built Linux x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-latest-Dependencies-Linux64.7z).**
 
 ## Build System
 ### Windows x64

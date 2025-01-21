@@ -10,6 +10,7 @@
 #define RtlOffsetToPointer(Base, Offset) ((PCHAR)(((PCHAR)(Base)) + ((ULONG_PTR)(Offset))))
 #define RtlPointerToOffset(Base, Pointer) ((ULONG)(((PCHAR)(Pointer)) - ((PCHAR)(Base))))
 
+
 // Linked lists
 
 FORCEINLINE VOID InitializeListHead(
@@ -28,18 +29,22 @@ _Check_return_ FORCEINLINE BOOLEAN IsListEmpty(
 
 FORCEINLINE BOOLEAN RemoveEntryList(
     _In_ PLIST_ENTRY Entry
-    )
+)
 {
-    PLIST_ENTRY Blink;
-    PLIST_ENTRY Flink;
+    if (!Entry) return FALSE;
 
-    Flink = Entry->Flink;
-    Blink = Entry->Blink;
+    PLIST_ENTRY Blink = Entry->Blink;
+    PLIST_ENTRY Flink = Entry->Flink;
+
+    if (!Blink || !Flink) return FALSE;
+
     Blink->Flink = Flink;
     Flink->Blink = Blink;
-
+    Entry->Flink = NULL;
+    Entry->Blink = NULL;
     return Flink == Blink;
 }
+
 
 FORCEINLINE PLIST_ENTRY RemoveHeadList(
     _Inout_ PLIST_ENTRY ListHead
