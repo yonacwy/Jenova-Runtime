@@ -1,16 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Editor|x64">
-      <Configuration>Editor</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Hybrid|x64">
-      <Configuration>Hybrid</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Game|x64">
-      <Configuration>Game</Configuration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
@@ -80,7 +72,8 @@ xcopy "$(ProjectDir)JenovaSDK.h" "$(BuildPath)JenovaSDK" /Y
 xcopy ".\Jenova.Runtime.gdextension" "$(BuildPath)" /Y
 xcopy "$(TargetDir)$(TargetName).lib" "$(BuildPath)JenovaSDK" /Y
 if exist "$(BuildPath)JenovaSDK\Jenova.SDK.x64.lib" del "$(BuildPath)JenovaSDK\Jenova.SDK.x64.lib"
-ren "$(BuildPath)JenovaSDK\$(TargetName).lib" "Jenova.SDK.x64.lib"</Command>
+ren "$(BuildPath)JenovaSDK\$(TargetName).lib" "Jenova.SDK.x64.lib"
+:: rundll32.exe "$(TargetPath)",Deploy --command increment-build-number /in:"$(SolutionDir)jenova.hpp"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

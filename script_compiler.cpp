@@ -35,7 +35,7 @@ namespace jenova
         {
             // Initialize Tool Chain Settings
             internalDefaultSettings["instance_name"]                        = compilerInstanceName;
-            internalDefaultSettings["instance_version"]                     = 1.0f;
+            internalDefaultSettings["instance_version"]                     = 1.2f;
             internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMSVCCompiler";
             internalDefaultSettings["cpp_compiler_binary"]                  = "/Bin/cl.exe";
             internalDefaultSettings["cpp_linker_binary"]                    = "/Bin/link.exe";
@@ -60,6 +60,7 @@ namespace jenova
             // MSVC Linker Settings
             internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug .jnv for Final*/
             internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";
+            internalDefaultSettings["cpp_output_database"]                  = "Jenova.Module.Database.pdb";
             internalDefaultSettings["cpp_default_libs"]                     = "kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;delayimp.lib";
             internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.lib;";
             internalDefaultSettings["cpp_delayed_dll"]                      = "/DELAYLOAD:\"Jenova.Runtime.Win64.dll\"";
@@ -76,7 +77,7 @@ namespace jenova
         }
         bool ReleaseCompiler()
         {
-            // Release resources here
+            // Release Resources
             internalDefaultSettings.clear();
             return true;
         }
@@ -217,7 +218,11 @@ namespace jenova
             if (bool(compilerSettings["cpp_intrinsic_functions"])) compilerArgument += "/Oi ";
             if (bool(compilerSettings["cpp_open_mp_support"])) compilerArgument += "/openmp ";
             if (bool(compilerSettings["cpp_multithreaded"])) compilerArgument += "/MT ";
-            if (bool(compilerSettings["cpp_debug_database"]) && bool(compilerSettings["cpp_generate_debug_info"])) compilerArgument += "/Zi ";
+            if (bool(compilerSettings["cpp_debug_database"]) && bool(compilerSettings["cpp_generate_debug_info"]))
+            {
+                compilerArgument += "/Zi ";
+                compilerArgument += "/Fd\"" + this->jenovaCachePath + AS_STD_STRING(String(compilerSettings["cpp_output_database"])) + "\" ";;
+            }
             compilerArgument += bool(compilerSettings["cpp_conformance_mode"]) ? "/permissive- " : "/permissive ";
             if (int(compilerSettings["cpp_exception_handling"]) == 1) compilerArgument += "/EHsc ";
             if (int(compilerSettings["cpp_exception_handling"]) == 2) compilerArgument += "/EHa ";
@@ -239,15 +244,12 @@ namespace jenova
                 {
                     if (!addonConfig.Header.empty())
                     {
-                        if (jenova::GlobalSettings::ForceIncludePackageHeaders)
+                        if (addonConfig.Global)
                         {
                             std::string headerPath = addonConfig.Path + "/" + addonConfig.Header;
                             compilerArgument += "/FI \"" + headerPath + "\" ";
                         }
-                        else
-                        {
-                            compilerArgument += "/I \"" + addonConfig.Path + "\" ";
-                        }
+                        compilerArgument += "/I \"" + addonConfig.Path + "\" ";
                     }
                 }
             }
@@ -715,19 +717,26 @@ namespace jenova
             // Return Final Result
             return result;
         }
-        bool SetCompilerOption(const StringName& optName, const Variant& optValue)
+        bool SetCompilerOption(const String& optName, const Variant& optValue)
         {
             internalDefaultSettings[optName] = optValue;
             return true;
         }
-        Variant GetCompilerOption(const StringName& optName) const
+        Variant GetCompilerOption(const String& optName) const
         {
             if (internalDefaultSettings.has(optName)) return internalDefaultSettings[optName];
             return Variant();
         }
-        Variant ExecuteCommand(const StringName& commandName, const Dictionary& commandSettings) const
+        Variant ExecuteCommand(const String& commandName, const Dictionary& commandSettings)
         {
-            return Variant();
+            // Process Commands
+            if (commandName == "Solve-Compiler-Settings")
+            {
+                return SolveCompilerSettings(internalDefaultSettings);
+            }
+
+            // Invalid Command
+            return Variant::NIL;
         }
         CompilerFeatures GetCompilerFeatures() const
         {
@@ -771,6 +780,10 @@ namespace jenova
             this->jenovaSDKPath = std::filesystem::absolute(AS_STD_STRING(projectPath + (String)compilerSettings["cpp_jenovasdk_path"])).string();
             this->godotSDKPath = std::filesystem::absolute(AS_STD_STRING(selectedGodotKitPath)).string();
             this->jenovaCachePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory());
+
+            // Store Solved Paths
+            this->internalDefaultSettings["compiler_solved_binary_path"] = String(this->compilerBinaryPath.c_str());
+            this->internalDefaultSettings["linker_solved_binary_path"] = String(this->linkerBinaryPath.c_str());
 
             // All Good
             return true;
@@ -842,7 +855,7 @@ namespace jenova
         }
         bool ReleaseCompiler()
         {
-            // Release resources here
+            // Release Resources
             internalDefaultSettings.clear();
             return true;
         }
@@ -1454,19 +1467,26 @@ namespace jenova
             // Return Final Result
             return result;
         }
-        bool SetCompilerOption(const StringName& optName, const Variant& optValue)
+        bool SetCompilerOption(const String& optName, const Variant& optValue)
         {
             internalDefaultSettings[optName] = optValue;
             return true;
         }
-        Variant GetCompilerOption(const StringName& optName) const
+        Variant GetCompilerOption(const String& optName) const
         {
             if (internalDefaultSettings.has(optName)) return internalDefaultSettings[optName];
             return Variant();
         }
-        Variant ExecuteCommand(const StringName& commandName, const Dictionary& commandSettings) const
+        Variant ExecuteCommand(const String& commandName, const Dictionary& commandSettings)
         {
-            return Variant();
+            // Process Commands
+            if (commandName == "Solve-Compiler-Settings")
+            {
+                return SolveCompilerSettings(internalDefaultSettings);
+            }
+
+            // Invalid Command
+            return Variant::NIL;
         }
         CompilerFeatures GetCompilerFeatures() const
         {
@@ -1509,6 +1529,10 @@ namespace jenova
             this->jenovaSDKPath = std::filesystem::absolute(AS_STD_STRING(projectPath + (String)compilerSettings["cpp_jenovasdk_path"])).string();
             this->godotSDKPath = std::filesystem::absolute(AS_STD_STRING(selectedGodotKitPath)).string();
             this->jenovaCachePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory());
+
+            // Store Solved Paths
+            this->internalDefaultSettings["compiler_solved_binary_path"] = String(this->compilerBinaryPath.c_str());
+            this->internalDefaultSettings["linker_solved_binary_path"] = String(this->linkerBinaryPath.c_str());
 
             // All Good
             return true;

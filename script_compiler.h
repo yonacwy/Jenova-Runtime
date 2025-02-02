@@ -40,9 +40,9 @@ namespace jenova
 		virtual CompileResult CompileScriptModuleWithCustomSettingsContainer(const ScriptModuleContainer& scriptModulesContainer, const Dictionary& compilerSettings) = 0;
 		virtual BuildResult BuildFinalModule(const jenova::ModuleList& scriptModules) = 0;
 		virtual BuildResult BuildFinalModuleWithCustomSettings(const jenova::ModuleList& scriptModules, const Dictionary& linkerSettings) = 0;
-		virtual bool SetCompilerOption(const StringName& optName, const Variant& optValue) = 0;
-		virtual Variant GetCompilerOption(const StringName& optName) const = 0;
-		virtual Variant ExecuteCommand(const StringName& commandName, const Dictionary& commandSettings) const = 0;
+		virtual bool SetCompilerOption(const String& optName, const Variant& optValue) = 0;
+		virtual Variant GetCompilerOption(const String& optName) const = 0;
+		virtual Variant ExecuteCommand(const String& commandName, const Dictionary& commandSettings) = 0;
 		virtual CompilerFeatures GetCompilerFeatures() const = 0;
 		virtual CompilerModel GetCompilerModel() const = 0;
 		virtual bool SolveCompilerSettings(const Dictionary& compilerSettings) = 0;

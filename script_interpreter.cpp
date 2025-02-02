@@ -131,6 +131,13 @@ bool JenovaInterpreter::LoadModule(const uint8_t* moduleDataPtr, const size_t mo
         return false;
     }
 
+    // Resolve And Load Addon Modules
+    if (!jenova::ResolveAndLoadAddonModulesAtRuntime())
+    {
+        jenova::Error("Jenova Interpreter", "Failed to Resolve and Load Addon Modules.");
+        return false;
+    }
+
     // Solve Functions Inside Module
     if(!jenova::InitializeExtensionModule("InitializeJenovaModule", moduleHandle, jenova::ModuleCallMode::Virtual))
     {
@@ -1275,14 +1282,15 @@ bool JenovaInterpreter::DeployFromDatabase(const std::string& moduleDatabaseName
     }
 
     // Open & Validate File
-    Ref<FileAccess> fileAccess = FileAccess::open(defaultModuleDatabasePath, FileAccess::READ);
-    if (!fileAccess.is_valid()) return false;
+    Ref<FileAccess> moduleDatabaseReader = FileAccess::open(defaultModuleDatabasePath, FileAccess::READ);
+    if (!moduleDatabaseReader.is_valid()) return false;
 
     // Read File
-    PackedByteArray databaseFileBytes = fileAccess->get_buffer(fileAccess->get_length());
+    PackedByteArray databaseFileBytes = moduleDatabaseReader->get_buffer(moduleDatabaseReader->get_length());
     databaseRawData.assign(databaseFileBytes.ptr(), databaseFileBytes.ptr() + databaseFileBytes.size());
     databaseFileBytes.clear();
-    
+    moduleDatabaseReader->close();
+
     // Validate Buffer
     if (databaseRawData.size() == 0) return false;
 

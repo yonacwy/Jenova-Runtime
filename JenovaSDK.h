@@ -135,6 +135,12 @@ namespace jenova::sdk
 		Ready,
 		EnterTree,
 		ExitTree,
+		FrameBegin,
+		FrameIdle,
+		FrameEnd,
+		FramePresent,
+		Process,
+		PhysicsProcess,
 		ReceivedDebuggerMessage
 	};
 
@@ -166,6 +172,7 @@ namespace jenova::sdk
 	JENOVA_API EngineMode GetEngineMode();
 	JENOVA_API godot::Node* GetNodeByPath(const godot::String& nodePath);
 	JENOVA_API godot::Node* FindNodeByName(godot::Node* parent, const godot::String& name);
+	JENOVA_API StringPtr GetNodeUniqueID(godot::Node* node);
 	JENOVA_API godot::SceneTree* GetTree();
 	JENOVA_API double GetTime();
 	JENOVA_API void Alert(StringPtr fmt, ...);

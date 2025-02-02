@@ -131,6 +131,10 @@ namespace jenova::sdk
 		}
 		return nullptr;
 	}
+	StringPtr GetNodeUniqueID(godot::Node* node)
+	{
+		return GetCStr(godot::String(node->get_path()).md5_text());
+	}
 	godot::SceneTree* GetTree()
 	{
 		godot::SceneTree* scene_tree = dynamic_cast<godot::SceneTree*>(godot::Engine::get_singleton()->get_main_loop());

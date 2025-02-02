@@ -17,8 +17,8 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8546F551-80FE-49B0-ABE2-9C8498C0B34E}.Release|x64.ActiveCfg = Editor|x64
-		{8546F551-80FE-49B0-ABE2-9C8498C0B34E}.Release|x64.Build.0 = Editor|x64
+		{8546F551-80FE-49B0-ABE2-9C8498C0B34E}.Release|x64.ActiveCfg = Release|x64
+		{8546F551-80FE-49B0-ABE2-9C8498C0B34E}.Release|x64.Build.0 = Release|x64
 		{5B1F46DB-036E-4A50-AF5F-F5D6584D42C6}.Release|x64.ActiveCfg = Release|x64
 		{5B1F46DB-036E-4A50-AF5F-F5D6584D42C6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection

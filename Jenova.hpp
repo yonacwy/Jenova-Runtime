@@ -20,11 +20,11 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.5.4"
+#define APP_VERSION						"0.3.5.5"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 5, 4
+#define APP_VERSION_DATA				0, 3, 5, 5
 #define APP_VERSION_BUILD				"0"
 #define APP_VERSION_NAME				"Bloom"
 
@@ -421,11 +421,13 @@ namespace jenova
 		CleanSolution,
 		ConfigureBuild,
 		ExportToVisualStudio,
+		ExportToVisualStudioCode,
 		ExportJenovaModule,
 		DeveloperMode,
 		ClearCacheDatabase,
 		GenerateEncryptionKey,
 		BackupCurrentEncryptionKey,
+		OpenAddonExplorer,
 		OpenScriptManager,
 		OpenPackageManager,
 		Documentation,
@@ -618,6 +620,7 @@ namespace jenova
 	};
 	struct AddonConfig
 	{
+		// Parsed Configurations
 		std::string Name;
 		std::string Version;
 		std::string License;
@@ -628,6 +631,11 @@ namespace jenova
 		std::string Library;
 		std::string Dependencies;
 		std::string Path;
+		bool Global;
+		bool AutoLoad;
+
+		// Serialized Data
+		SerializedData Data;
 	};
 
 	// Global Settings
@@ -641,7 +649,7 @@ namespace jenova
 		constexpr bool SafeExitOnPluginUnload					= true;
 		constexpr bool HandlePreLaunchErrors					= true;
 		constexpr bool AskAboutOpeningVisualStudio				= true;
-		constexpr bool ForceIncludePackageHeaders				= false;
+		constexpr bool AskAboutOpeningVSCode					= true;
 		constexpr bool CreateSymbolicAddonModules				= true;
 		constexpr bool CopyRuntimeModuleOnExport				= true;
 		constexpr bool RespectSourceFilesEncoding				= true;
@@ -851,6 +859,9 @@ namespace jenova
 	std::string FindScriptPathFromPreprocessedFile(const std::string& preprocessedFile);
 	bool RegisterRuntimeEventCallback(jenova::FunctionPointer runtimeCallback);
 	bool UnregisterRuntimeEventCallback(jenova::FunctionPointer runtimeCallback);
+	jenova::SerializedData GenerateRuntimeModuleConfiguration();
+	jenova::SerializedData ObtainRuntimeModuleConfiguration();
+	bool ResolveAndLoadAddonModulesAtRuntime();
 	#pragma endregion
 
 	// Core Reimplementation

@@ -758,6 +758,21 @@ namespace jenova
 				// Validate Theme
 				if (!editor_theme.is_valid()) return false;
 
+				// Register Runtime Class Icon
+				if (!editor_theme->has_icon("JenovaRuntime", "EditorIcons"))
+				{
+					Ref<ImageTexture> iconImage = jenova::CreateImageTextureFromByteArray(BUFFER_PTR_SIZE_PARAM(JENOVA_RESOURCE(PNG_JENOVA_ICON_64)));
+					if (iconImage.is_valid())
+					{
+						editor_theme->set_icon("JenovaRuntime", "EditorIcons", iconImage);
+					}
+					else
+					{
+						jenova::Error("Jenova Plugin", "Cannot Load Runtime Icon.");
+						return false;
+					}
+				}
+
 				// Register C++ Script Icon
 				if (jenova::GlobalSettings::ScriptingEnabled)
 				{
@@ -805,6 +820,9 @@ namespace jenova
 			}
 			bool InitializeDocumentation()
 			{
+				// Register Nodes Documentation
+				jenova::RegisterDocumentationFromByteArray(BUFFER_PTR_SIZE_PARAM(jenova::documentation::JenovaRuntimeXML));
+
 				// Register Settings Documentation [ Disabled : This will replace entire Editor Settings ]
 				// jenova::RegisterDocumentationFromByteArray(BUFFER_PTR_SIZE_PARAM(jenova::documentation::EditorSettingsXML));
 
@@ -841,6 +859,7 @@ namespace jenova
 				jenovaMenu->add_item("  Configure Build...  ", EDITOR_MENU_ID(ConfigureBuild));
 				jenovaMenu->add_separator();
 				jenovaMenu->add_shortcut(CreateShortcut("  Export to Visual Studio...  ", Key(KEY_MASK_CTRL | KEY_MASK_SHIFT | KEY_E)), EDITOR_MENU_ID(ExportToVisualStudio));
+				jenovaMenu->add_shortcut(CreateShortcut("  Export to Visual Studio Code...  ", Key(KEY_MASK_ALT | KEY_MASK_SHIFT | KEY_E)), EDITOR_MENU_ID(ExportToVisualStudioCode));
 				jenovaMenu->add_item("  Export Jenova Module...  ", EDITOR_MENU_ID(ExportJenovaModule));
 				jenovaMenu->add_separator();
 
@@ -855,6 +874,8 @@ namespace jenova
 				toolsMenu->add_separator();
 				toolsMenu->add_item("  Generate Encryption Key...  ", EDITOR_MENU_ID(GenerateEncryptionKey));
 				toolsMenu->add_item("  Backup Current Encryption Key...  ", EDITOR_MENU_ID(BackupCurrentEncryptionKey));
+				toolsMenu->add_separator();
+				toolsMenu->add_item("  Open Addon Explorer...  ", EDITOR_MENU_ID(OpenAddonExplorer));
 				toolsMenu->add_separator();
 				toolsMenu->add_item("  Open Script Manager...  ", EDITOR_MENU_ID(OpenScriptManager));
 				toolsMenu->add_item("  Open Package Manager...  ", EDITOR_MENU_ID(OpenPackageManager));
@@ -874,6 +895,7 @@ namespace jenova
 				// Load Menu Icons
 				auto jenovaIcon = CREATE_PNG_MENU_ICON(JENOVA_RESOURCE(PNG_JENOVA_ICON_64));
 				auto vsIcon = CREATE_SVG_MENU_ICON(JENOVA_RESOURCE(SVG_VISUAL_STUDIO_ICON));
+				auto vsCodeIcon = CREATE_SVG_MENU_ICON(JENOVA_RESOURCE(SVG_VISUAL_STUDIO_CODE_ICON));
 				auto codeTealIcon = CREATE_SVG_MENU_ICON(JENOVA_RESOURCE(SVG_CODEBLOCK_TEAL_ICON));
 				auto codeRedIcon = CREATE_SVG_MENU_ICON(JENOVA_RESOURCE(SVG_CODEBLOCK_RED_ICON));
 				auto discordIcon = CREATE_SVG_MENU_ICON(JENOVA_RESOURCE(SVG_DISCORD_ICON));
@@ -886,6 +908,7 @@ namespace jenova
 				auto compilerIcon = CREATE_SVG_MENU_ICON(JENOVA_RESOURCE(SVG_COMPILER_ICON));
 				auto packageIcon = CREATE_SVG_MENU_ICON(JENOVA_RESOURCE(SVG_PACKAGE_ICON));
 				auto configureIcon = CREATE_SVG_MENU_ICON(JENOVA_RESOURCE(SVG_CONFIGURE_ICON));
+				auto puzzleIcon = CREATE_SVG_MENU_ICON(JENOVA_RESOURCE(SVG_PUZZLE_ICON));
 
 				// Set Menu Icons
 				jenovaMenu->set_item_icon(jenovaMenu->get_item_index(EDITOR_MENU_ID(BuildSolution)), jenova::GetEditorIcon("PluginScript"));
@@ -893,6 +916,7 @@ namespace jenova
 				jenovaMenu->set_item_icon(jenovaMenu->get_item_index(EDITOR_MENU_ID(CleanSolution)), jenova::GetEditorIcon("Clear"));
 				jenovaMenu->set_item_icon(jenovaMenu->get_item_index(EDITOR_MENU_ID(ConfigureBuild)), configureIcon);
 				jenovaMenu->set_item_icon(jenovaMenu->get_item_index(EDITOR_MENU_ID(ExportToVisualStudio)), vsIcon);
+				jenovaMenu->set_item_icon(jenovaMenu->get_item_index(EDITOR_MENU_ID(ExportToVisualStudioCode)), vsCodeIcon);
 				jenovaMenu->set_item_icon(jenovaMenu->get_item_index(EDITOR_MENU_ID(ExportJenovaModule)), lightningIcon);
 				jenovaMenu->set_item_icon(jenovaMenu->get_item_index(EDITOR_MENU_ID(DeveloperMode)), jenova::GlobalSettings::VerboseEnabled ? codeTealIcon : codeRedIcon);
 				jenovaMenu->set_item_icon(jenovaMenu->get_item_index(EDITOR_MENU_ID(DiscordServer)), discordIcon);
@@ -902,6 +926,7 @@ namespace jenova
 				toolsMenu->set_item_icon(toolsMenu->get_item_index(EDITOR_MENU_ID(ClearCacheDatabase)), eraserIcon);
 				toolsMenu->set_item_icon(toolsMenu->get_item_index(EDITOR_MENU_ID(GenerateEncryptionKey)), keyTealIcon);
 				toolsMenu->set_item_icon(toolsMenu->get_item_index(EDITOR_MENU_ID(BackupCurrentEncryptionKey)), keyMaroonIcon);
+				toolsMenu->set_item_icon(toolsMenu->get_item_index(EDITOR_MENU_ID(OpenAddonExplorer)), puzzleIcon);
 				toolsMenu->set_item_icon(toolsMenu->get_item_index(EDITOR_MENU_ID(OpenScriptManager)), compilerIcon);
 				toolsMenu->set_item_icon(toolsMenu->get_item_index(EDITOR_MENU_ID(OpenPackageManager)), packageIcon);
 
@@ -1138,6 +1163,9 @@ namespace jenova
 				case jenova::EditorMenuID::ExportToVisualStudio:
 					OpenVisualStudioSelectorWindow();
 					break;
+				case jenova::EditorMenuID::ExportToVisualStudioCode:
+					if (!ExportVisualStudioCodeProject()) jenova::Error("Jenova Visual Studio Code Exporter", "Failed to Export Jenova Solution to Visual Studio Code.");
+					break;
 				case jenova::EditorMenuID::ExportJenovaModule:
 					OpenModuleExporterWindow();
 					break;
@@ -1167,6 +1195,9 @@ namespace jenova
 					break;
 				case jenova::EditorMenuID::BackupCurrentEncryptionKey:
 					jenova::Error("Jenova Main Menu", "Feature is Removed.");
+					break;
+				case jenova::EditorMenuID::OpenAddonExplorer:
+					jenova::Error("Jenova Main Menu", "Feature Not Implemented Yet");
 					break;
 				case jenova::EditorMenuID::OpenScriptManager:
 					jenova::Error("Jenova Main Menu", "Feature Not Implemented Yet");
@@ -1747,7 +1778,7 @@ namespace jenova
 					// Deserialize Configuration
 					jenovaConfiguration = nlohmann::json::parse(AS_STD_STRING(jenovaConfig));
 				}
-				catch (const std::exception& error)
+				catch (const std::exception&)
 				{
 					jenova::Error("Jenova Bootstraper", "Failed to Bootstrap Jenova Module, Configuration Parsing Failed.");
 					return false;
@@ -1887,9 +1918,9 @@ namespace jenova
 					// Release Buffers
 					jenova::MemoryBuffer().swap(moduleData);
 				}
-				catch (const std::exception& err)
+				catch (const std::exception& error)
 				{
-					jenova::Error("Jenova Bootstraper", "Failed to Bootstrap Jenova Module, Something Went Wrong! > %s", err.what());
+					jenova::Error("Jenova Bootstraper", "Failed to Bootstrap Jenova Module, Something Went Wrong! > %s", error.what());
 					return false;
 				}
 
@@ -2231,9 +2262,9 @@ namespace jenova
 					// Serialize Jenova Version
 					jenovaConfiguration["RuntimeVersion"] = std::string(APP_VERSION);
 				}
-				catch (const std::exception& error)
+				catch (const std::exception&)
 				{
-					jenova::Error("Jenova Utilities", "Failed to Serialize Jenova Configurations. Error : %s", error.what());
+					jenova::Error("Jenova Utilities", "Failed to Serialize Jenova Configurations.");
 					return false;
 				}
 
@@ -2542,8 +2573,8 @@ namespace jenova
 					{
 						if (!addonConfig.Header.empty())
 						{
-							if (jenova::GlobalSettings::ForceIncludePackageHeaders) forcedHeaders += addonConfig.Path + "/" + addonConfig.Header + ";";
-							else extraIncludeDirectories += addonConfig.Path + ";";
+							if (addonConfig.Global) forcedHeaders += addonConfig.Path + "/" + addonConfig.Header + ";";
+							extraIncludeDirectories += addonConfig.Path + ";";
 							extraLibraries += addonConfig.Path + "/" + addonConfig.Library + ";";
 							delayedDlls += addonConfig.Binary + ";";
 						}
@@ -2738,6 +2769,8 @@ namespace jenova
 			{
 				// Get Project Path
 				std::string projectPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path("res://"));
+
+				// Open Project in Visual Studio
 				std::string solutionFile = projectPath + jenova::GlobalSettings::VisualStudioSolutionFile;
 				if (!std::filesystem::exists(solutionFile)) return false;
 				jenova::RunFile(solutionFile.c_str());
@@ -2778,7 +2811,7 @@ namespace jenova
 						// Serialize Metadata and Return
 						return vsMetadata.dump(3);
 					}
-					catch (const std::exception& error)
+					catch (const std::exception&)
 					{
 						jenova::Error("Jenova Vistual Studio Locator", "Failed to Generate Visual Studio Metadata.");
 					}
@@ -2794,6 +2827,205 @@ namespace jenova
 			VisualStudioInstance& GetVisualStudioInstance(int instanceIndex)
 			{
 				return vsInstances[instanceIndex];
+			}
+
+			// Visual Studio Code Integration
+			bool ExportVisualStudioCodeProject()
+			{
+				// Verbose
+				jenova::Output("Initializing Visual Studio Code Exporter...");
+
+				// Update Storage Configurations
+				if (!UpdateStorageConfigurations())
+				{
+					jenova::Error("Jenova Settings", "Unable to Update Storage Configurations!");
+					return false;
+				}
+
+				// Get Project Path
+				std::string projectPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path("res://"));
+
+				// Create .vscode Directory
+				std::string vsCodeDirectory = projectPath + ".vscode";
+				if (!std::filesystem::exists(vsCodeDirectory))
+				{
+					if (!std::filesystem::create_directory(vsCodeDirectory)) return false;
+				}
+
+				// Generate VSCode Files Path
+				std::string cppPropertiesFile = vsCodeDirectory + "/" + "c_cpp_properties.json";
+				std::string vsCodeSettingsFile = vsCodeDirectory + "/" + "settings.json";
+				std::string gitIgnoreFile = projectPath + ".gitignore";
+
+				// Create Compiler [For Obtaining Settings Only]
+				if (!CreateCompiler()) return false;
+
+				// Solve Compiler Settings
+				if (!bool(jenovaCompiler->ExecuteCommand("Solve-Compiler-Settings", Dictionary()))) return false;
+
+				// Get Settings from Compiler
+				std::string compilerBinary = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("compiler_solved_binary_path")));
+				std::string intelliSenseMode = jenovaCompiler->GetCompilerModel() == CompilerModel::MicrosoftCompiler ? "windows-msvc-x64" : "not-supported";
+				std::string cpp_definitions = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_definitions")));
+				std::string extraIncludeDirectories = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_extra_include_directories")));
+				std::string forcedHeaders = "";
+
+				// Solve GodotKit Path
+				String selectedGodotKitPath = jenova::GetInstalledGodotKitPathFromPackages(jenovaCompiler->GetCompilerOption("cpp_godotsdk_path"));
+				if (selectedGodotKitPath == "Missing-GodotKit-1.0.0")
+				{
+					jenova::Error("Visual Studio Exporter", "No GodotSDK Detected On Build System, Install At Least One From Package Manager!");
+					return false;
+				}
+				std::string solvedGodotKitPath = "./" + AS_STD_STRING(selectedGodotKitPath.replace("res://", ""));
+
+				// Adjust Compiler Settings
+				if (!extraIncludeDirectories.empty() && extraIncludeDirectories.back() != ';') extraIncludeDirectories.push_back(';');
+
+				// Add Packages Include/Linkage (Addons, Libraries etc.)
+				for (const auto& addonConfig : jenova::GetInstalledAddones())
+				{
+					// Check For Addon Type
+					if (addonConfig.Type == "RuntimeModule")
+					{
+						if (!addonConfig.Header.empty())
+						{
+							if (addonConfig.Global) forcedHeaders += addonConfig.Path + "/" + addonConfig.Header + ";";
+							extraIncludeDirectories += addonConfig.Path + ";";
+						}
+					}
+				}
+
+				// Dispose Compiler
+				DisposeCompiler();
+
+				// Helper Functions
+				auto CreateJsonArrayFromString = [&](std::string input) -> nlohmann::json
+					{
+						if (!input.empty() && input.back() == ';') input.pop_back();
+						std::stringstream ss(input);
+						std::string item;
+						std::vector<std::string> elements;
+						while (std::getline(ss, item, ';')) elements.push_back(item);
+						nlohmann::json jsonArray = elements;
+						return jsonArray;
+					};
+				auto CreateJsonObjectFromDelimitedString = [&](const std::string& input, const char delimiter) -> nlohmann::json
+					{
+						std::stringstream ss(input);
+						std::string item;
+						nlohmann::json jsonObject;
+						while (std::getline(ss, item, delimiter)) jsonObject[item] = true;
+						return jsonObject;
+					};
+
+				// Generate Visual Studio Code Project
+				try
+				{
+					// Create C++ Properties
+					nlohmann::json cppProperties, configuration;
+					nlohmann::json configurations = nlohmann::json::array();
+					configuration["name"] = "Jenova-Framework";
+					configuration["cStandard"] = "c17";
+					configuration["cppStandard"] = "c++20";
+					configuration["compilerPath"] = std::filesystem::absolute(compilerBinary).string();
+					configuration["includePath"] = CreateJsonArrayFromString("./;./Jenova/JenovaSDK;" + solvedGodotKitPath + ";" + extraIncludeDirectories);
+					configuration["forcedInclude"] = CreateJsonArrayFromString(forcedHeaders);
+					configuration["defines"] = CreateJsonArrayFromString(cpp_definitions);
+					configuration["intelliSenseMode"] = intelliSenseMode;
+					configuration["compilerArgs"] = nlohmann::json::array();
+
+					// Finalize C++ Properties
+					configurations.push_back(configuration);
+					cppProperties["configurations"] = configurations;
+					cppProperties["version"] = 4;
+
+					// Serialize C++ Properties
+					jenova::SerializedData cppPropertiesSerialized = cppProperties.dump(4);
+					jenova::ReplaceAllMatchesWithString(cppPropertiesSerialized, "\\\\", "/");
+					jenova::ReplaceAllMatchesWithString(cppPropertiesSerialized, "\\", "/");
+
+					// Write C++ Properties to File
+					if (!jenova::WriteStdStringToFile(cppPropertiesFile, cppPropertiesSerialized))
+					{
+						jenova::Error("Jenova Visual Studio Code Exporter", "Unable to Create C++ Properties File!");
+						return false;
+					}
+
+					// Create VSCode Settings
+					nlohmann::json excludeConfig;
+					std::string filesExclude = ".godot|.vs|.vscode|Jenova|*.cfg|*.tscn|*.scn|*.sln|*.vcxproj*|vc*.pdb|project.godot";
+					excludeConfig["files.exclude"] = CreateJsonObjectFromDelimitedString(filesExclude, '|');
+
+					// Serialize & Write VSCode Settings to File
+					if (!jenova::WriteStdStringToFile(vsCodeSettingsFile, excludeConfig.dump(4)))
+					{
+						jenova::Error("Jenova Visual Studio Code Exporter", "Unable to Create Visual Studio Code Settings File!");
+						return false;
+					}
+
+					// Generate Source Control Git Ignore
+					std::string gitIgnoreTemplate = std::string(BUFFER_PTR_SIZE_PARAM(jenova::visualstudio::VS_SCRIPT_GIT_IGNORE));
+					if (!jenova::WriteStdStringToFile(gitIgnoreFile, gitIgnoreTemplate)) return false;
+
+					// Check If User Wants to Launch VS Code
+					if (jenova::GlobalSettings::AskAboutOpeningVSCode)
+					{
+						// Prompt User for Opening Visual Studio Code
+						ConfirmationDialog* dialog = memnew(ConfirmationDialog);
+						dialog->set_title("[ Visual Studio Code Integration ]");
+						dialog->set_text("Visual Studio Code Project Successfully Generated. Would you like to open it now?");
+						dialog->get_ok_button()->set_text("Open Visual Studio Code");
+						dialog->get_cancel_button()->set_text("No Thanks!");
+
+						// Define Internal UI Callback
+						class OnConfirmedEvent : public RefCounted
+						{
+						private:
+							JenovaEditorPlugin* pluginInstance;
+
+						public:
+							OnConfirmedEvent(JenovaEditorPlugin* _plugin) { pluginInstance = _plugin; }
+							void ProcessEvent()
+							{
+								EditorInterface::get_singleton()->stop_playing_scene();
+								pluginInstance->OpenProjectInVisualStudioCode();
+								memdelete(this);
+							}
+						};
+
+						// Create & Assign UI Callback to Dialog
+						dialog->connect("confirmed", callable_mp(memnew(OnConfirmedEvent(this)), &OnConfirmedEvent::ProcessEvent));
+						dialog->connect("confirmed", callable_mp((Node*)dialog, &ConfirmationDialog::queue_free));
+						dialog->connect("canceled", callable_mp((Node*)dialog, &ConfirmationDialog::queue_free));
+
+						// Add Dialog to Engine & Show
+						add_child(dialog);
+						dialog->popup_centered();
+					}
+
+					// Verbose
+					jenova::OutputColored("#425af5", "Jenova Project Has Been Successfully Exported to Visual Studio Code.");
+
+					// All Good
+					return true;
+				}
+				catch (const std::exception& error)
+				{
+					jenova::Error("Jenova Visual Studio Code Exporter", "Visual Studio Code Project Generation Failed.");
+					return false;
+				}
+			}
+			bool OpenProjectInVisualStudioCode()
+			{
+				// Get Project Path
+				std::string projectPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path("res://"));
+
+				// Open Project in VSCode
+				std::string vscodeExecutable = "code";
+				std::string command = vscodeExecutable + " " + projectPath;
+				if (std::system(command.c_str()) != 0) return false;
+				return true;
 			}
 
 			// Build Configuration
@@ -3221,6 +3453,7 @@ namespace jenova
 				open_web_button->add_theme_color_override("font_color", Color(0.427828, 0.675155, 0.933394, 1));
 				open_web_button->set_text("Open Projekt Jenova Website");
 				jenova_about_ui->add_child(open_web_button);
+				open_web_button->grab_focus();
 
 				// Define Internal UI Callback Handler
 				class AboutEventManager : public RefCounted
@@ -3340,23 +3573,32 @@ namespace jenova
 				if (!jenovaEditorPlugin->GetEditorSetting(jenovaEditorPlugin->GetEditorSettingStringPath("remove_source_codes_from_build"), RemoveSourcesFromBuild)) RemoveSourcesFromBuild = true;
 				ExcludeSourcesFromBuild = RemoveSourcesFromBuild;
 
-				// Add Configuration File
-				jenova::Output("[color=#729bed][Build][/color] Generating Jenova Runtime Data...");
-				std::string runtimeData = "[JENOVA RUNTIME CONFIGURATION]";
-				PackedByteArray packed_svg_data;
-				packed_svg_data.resize(runtimeData.size());
-				memcpy(packed_svg_data.ptrw(), runtimeData.data(), runtimeData.size());
+				// Generate & Add Configuration File
+				jenova::Output("[color=#729bed][Build][/color] Generating Jenova Runtime Configuration Data...");
+				jenova::SerializedData runtimeData = jenova::GenerateRuntimeModuleConfiguration();
+				if (runtimeData == "{}")
+				{
+					jenova::Error("Jenova Exporter", "Export Plugin Encountered a Fatal Error, Failed to Generate Runtime Configuration.");
+					return;
+				}
+
+				// Pack Runtime Configuration
+				PackedByteArray packedRuntimeData;
+				packedRuntimeData.resize(runtimeData.size());
+				memcpy(packedRuntimeData.ptrw(), runtimeData.data(), runtimeData.size());
 				String runtimeConfigPath = String(jenova::GlobalSettings::DefaultJenovaBootPath) + String(jenova::GlobalSettings::DefaultModuleConfigFile);
-				this->add_file(runtimeConfigPath, packed_svg_data, false);
-				packed_svg_data.clear();
+				this->add_file(runtimeConfigPath, packedRuntimeData, false);
+				packedRuntimeData.clear();
 
 				// Add Module Cache File
+				jenova::Output("[color=#729bed][Build][/color] Generating Jenova Runtime Module Data...");
 				String runtimeCachePath = String(jenova::GlobalSettings::DefaultJenovaBootPath) + String(jenova::GlobalSettings::DefaultModuleDatabaseFile);
 				String defaultModuleDatabasePath = jenova::GetJenovaCacheDirectory() + String(jenova::GlobalSettings::DefaultModuleDatabaseFile);
 				if (FileAccess::file_exists(defaultModuleDatabasePath))
 				{
 					Ref<FileAccess> fileAccess = FileAccess::open(defaultModuleDatabasePath, FileAccess::READ);
 					PackedByteArray moduleCacheData = fileAccess->get_buffer(fileAccess->get_length());
+					fileAccess->close();
 					this->add_file(runtimeCachePath, moduleCacheData, false);
 					moduleCacheData.clear();
 				}
@@ -3551,12 +3793,19 @@ namespace jenova
 			// Types
 			enum class RuntimeEvent
 			{
+				/* Must Match to JenovaSDK One */
 				Initialized,
 				Started,
 				Stopped,
 				Ready,
 				EnterTree,
 				ExitTree,
+				FrameBegin,
+				FrameIdle,
+				FrameEnd,
+				FramePresent,
+				Process,
+				PhysicsProcess,
 				ReceivedDebuggerMessage
 			};
 
@@ -3569,7 +3818,10 @@ namespace jenova
 
 		protected:
 			// Method Binding
-			static void _bind_methods() { }
+			static void _bind_methods()
+			{
+				ClassDB::bind_method(D_METHOD("OnFrameIdle"), &JenovaRuntime::OnFrameIdle);
+			}
 
 		public:
 			// Initializer/Deinitializer
@@ -3581,10 +3833,16 @@ namespace jenova
 				// Initialize Singleton
 				singleton = memnew(JenovaRuntime);
 
+				// Set Instance Name
+				singleton->set_name("< JenovaRuntime >");
+
+				// Set Instance Description
+				singleton->set_editor_description("Jenova Runtime Node\nDo not Modify, Delete or Move this Node!");
+
 				// Register Singleton
 				Engine::get_singleton()->register_singleton("JenovaRuntime", singleton);
 
-				// Initialize Runtime
+				// Start Runtime
 				if (!singleton->InitializeRuntime())
 				{
 					jenova::Error("Jenova Runtime", "Fatal Error :: Jenova Runtime Failed to Initialize!");
@@ -3629,11 +3887,6 @@ namespace jenova
 			}
 
 			// Events
-			void _ready() override
-			{
-				// Rise Events
-				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Ready, nullptr, 0);
-			}
 			void _enter_tree() override
 			{
 				// Update Tree State
@@ -3641,6 +3894,24 @@ namespace jenova
 
 				// Rise Events
 				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::EnterTree, nullptr, 0);
+			}
+			void _ready() override
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Ready, nullptr, 0);
+			}
+			void _process(double p_delta) override
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Process, &p_delta, sizeof(p_delta));
+
+				// Call Idle Frame
+				this->call_deferred("OnFrameIdle");
+			}
+			void _physics_process(double p_delta) override
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::PhysicsProcess, &p_delta, sizeof(p_delta));
 			}
 			void _exit_tree() override
 			{
@@ -3666,11 +3937,16 @@ namespace jenova
 			}
 			bool StartRuntime()
 			{
-				// Rise Events
-				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Started, nullptr, 0);
+				// Connect Signals
+				jenova::GetSceneTree()->connect("process_frame", callable_mp(this, &JenovaRuntime::OnFrameBegin));
+				RenderingServer::get_singleton()->connect("frame_pre_draw", callable_mp(this, &JenovaRuntime::OnFrameEnd));
+				RenderingServer::get_singleton()->connect("frame_post_draw", callable_mp(this, &JenovaRuntime::OnFramePresent));
 
 				// Add Runtime to Tree
 				jenova::GetSceneTree()->get_root()->add_child(this);
+
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Started, nullptr, 0);
 
 				// All Good
 				return true;
@@ -3712,6 +3988,26 @@ namespace jenova
 
 				// All Good
 				return true;
+			}
+			void OnFrameBegin()
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::FrameBegin, nullptr, 0);
+			}
+			void OnFrameIdle()
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::FrameIdle, nullptr, 0);
+			}
+			void OnFrameEnd()
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::FrameEnd, nullptr, 0);
+			}
+			void OnFramePresent()
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::FramePresent, nullptr, 0);
 			}
 
 		public:
@@ -3970,7 +4266,7 @@ namespace jenova
 						// Get Parsed Values
 						std::string command = program.get<std::string>("--command");
 
-						// Process Commands
+						// Build System Process Commands
 						if (command == "prepare")
 						{
 							// Get Input/Output Values & Files
@@ -4158,6 +4454,47 @@ namespace jenova
 							{
 								jenova_log("[Jenova Deployer] Build Completed.");
 								quick_exit(EXIT_SUCCESS);
+							}
+						}
+
+						// Internal Process Commands
+						if (command == "increment-build-number")
+						{
+							// Get Input/Output Values & Files
+							std::string inputFile = std::filesystem::absolute(program.get<std::string>("--in")).string();
+
+							// Read Source File
+							std::string sourceContent = jenova::ReadStdStringFromFile(inputFile);
+							if (sourceContent.empty())
+							{
+								jenova_log("[Jenova Deployer] Error : Source File is Empty!");
+								quick_exit(EXIT_FAILURE);
+							}
+
+							// Find and Increase Build Number
+							std::regex versionBuildRegex(R"((\#define\s+APP_VERSION_BUILD\s+\")(\d+)(\"))");
+							std::smatch match;
+							if (std::regex_search(sourceContent, match, versionBuildRegex))
+							{
+								// Increment Build Number
+								int buildNumber = std::stoi(match[2]);
+								buildNumber++;
+								std::string newVersion = match[1].str() + std::to_string(buildNumber) + match[3].str();
+								sourceContent = std::regex_replace(sourceContent, versionBuildRegex, newVersion, std::regex_constants::format_first_only);
+								if (!jenova::WriteStdStringToFile(inputFile, sourceContent))
+								{
+									jenova_log("[Jenova Deployer] Error: Can't Write Source File!");
+									quick_exit(EXIT_FAILURE);
+								};
+
+								// Success
+								jenova_log("[Jenova Deployer] Build Number Incremented.");
+								quick_exit(EXIT_SUCCESS);
+							}
+							else
+							{
+								jenova_log("[Jenova Deployer] Error: APP_VERSION_BUILD Not Found!");
+								quick_exit(EXIT_FAILURE);
 							}
 						}
 
@@ -6383,7 +6720,7 @@ namespace jenova
 			std::string addonConfigFile = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path(addonPackage.pkgDestination)) + "/Addon-Config.json";
 			if (std::filesystem::exists(addonConfigFile))
 			{
-				std::string addonConfigData = jenova::ReadStdStringFromFile(addonConfigFile);
+				jenova::SerializedData addonConfigData = jenova::ReadStdStringFromFile(addonConfigFile);
 				if (!addonConfigData.empty())
 				{
 					try
@@ -6402,14 +6739,19 @@ namespace jenova
 						addonConfig.Binary = addonConfigParser["Addon Binary"].get<std::string>();
 						addonConfig.Library = addonConfigParser["Addon Library"].get<std::string>();
 						addonConfig.Dependencies = addonConfigParser["Addon Dependencies"].get<std::string>();
-						
+						addonConfig.Global = addonConfigParser["Addon Global"].get<bool>();
+						addonConfig.AutoLoad = addonConfigParser["Addon Autoload"].get<bool>();
+
+						// Set Config Data
+						addonConfig.Data = addonConfigData;
+
 						// Set Addon Path
 						addonConfig.Path = std::filesystem::absolute(AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path(addonPackage.pkgDestination))).string();
 						
 						// Add New Addon Config
 						addonList.push_back(addonConfig);
 					}
-					catch (const std::exception& error)
+					catch (const std::exception&)
 					{
 						continue;
 					}
@@ -7797,6 +8139,117 @@ namespace jenova
 			return true;
 		}
 		return false;
+	}
+	jenova::SerializedData GenerateRuntimeModuleConfiguration()
+	{
+		try
+		{
+			// Create Runtime Configuration Serializer
+			nlohmann::json runtimeConfigurationSerializer;
+
+			// Serialize Runtime Configuartion
+			runtimeConfigurationSerializer["RuntimeType"] = std::string("Proprietary");
+			runtimeConfigurationSerializer["RuntimeName"] = std::string(APP_VERSION_NAME);
+			runtimeConfigurationSerializer["RuntimeBuild"] = std::string(APP_VERSION_BUILD);
+			runtimeConfigurationSerializer["RuntimeVersion"] = std::string(APP_VERSION_NAME);
+			runtimeConfigurationSerializer["RuntimePlatform"] = std::string("Windows");
+			runtimeConfigurationSerializer["RuntimeArch"] = std::string("AMD64");
+			runtimeConfigurationSerializer["InterpreterSettings"]["RuntimeBackend"] = JenovaInterpreter::GetInterpreterBackend();
+			runtimeConfigurationSerializer["InterpreterSettings"]["RunInDebugNonVirtualMode"] = false;
+
+			// Serialize Addon Modules
+			jenova::InstalledAddons installedAddons = jenova::GetInstalledAddones();
+			runtimeConfigurationSerializer["AddonsNumber"] = installedAddons.size();
+			runtimeConfigurationSerializer["Addons"] = nlohmann::json::array();
+			for (const auto& installedAddon : installedAddons)
+			{
+				runtimeConfigurationSerializer["Addons"].push_back(nlohmann::json::parse(installedAddon.Data));
+			}
+
+			// Serialize Runtime Configuration
+			return runtimeConfigurationSerializer.dump(2);
+
+		}
+		catch (const std::exception&)
+		{
+			return "{}";
+		}
+	}
+	jenova::SerializedData ObtainRuntimeModuleConfiguration()
+	{
+		// If It's Editor or Debug Generate On Demand
+		if (QUERY_ENGINE_MODE(Editor) || QUERY_ENGINE_MODE(Debug)) return jenova::GenerateRuntimeModuleConfiguration();
+
+		// If It's Game Runtime Obtain from Package
+		if (QUERY_ENGINE_MODE(Runtime))
+		{
+			// Create Runtime Configuration File Path
+			String runtimeConfigPath = String(jenova::GlobalSettings::DefaultJenovaBootPath) + String(jenova::GlobalSettings::DefaultModuleConfigFile);
+
+			// Read Runtime Configuration to A Buffer
+			Ref<FileAccess> runtimeConfigReader = FileAccess::open(runtimeConfigPath, FileAccess::READ);
+			if (!runtimeConfigReader.is_valid()) return "{}";
+			PackedByteArray runtimeConfigBytes = runtimeConfigReader->get_buffer(runtimeConfigReader->get_length());
+
+			// Create Runtime Configuration Data
+			jenova::SerializedData runtimeConfig = std::string((char*)runtimeConfigBytes.ptr(), runtimeConfigBytes.size());
+
+			// Clean Up Buffer & Reader
+			runtimeConfigBytes.clear();
+			runtimeConfigReader->close();
+
+			// Validate & Return
+			return runtimeConfig.empty() ? "{}" : runtimeConfig;
+		}
+	}
+	bool ResolveAndLoadAddonModulesAtRuntime()
+	{
+		// Get Runtime Module Configuration Data
+		jenova::SerializedData runtimeConfigData = jenova::ObtainRuntimeModuleConfiguration();
+		if (runtimeConfigData == "{}") return false;
+
+		// Parse and Process Addon Modules
+		try
+		{
+			// Parse Runtime Configuration Data
+			nlohmann::json runtimeConfig = nlohmann::json::parse(runtimeConfigData);
+
+			// Get Addon Count
+			int addonCount = runtimeConfig["AddonsNumber"];
+
+			// Iterate Over Addons
+			for (const auto& addonConfig : runtimeConfig["Addons"])
+			{
+				std::string addonType = addonConfig["Addon Type"].get<std::string>();
+				if (addonType == "RuntimeModule")
+				{
+					std::string addonBinary = addonConfig["Addon Binary"].get<std::string>();
+					bool addoneAutoload = addonConfig["Addon Autoload"].get<bool>();
+					if (addoneAutoload && !QUERY_ENGINE_MODE(Editor))
+					{
+						if (!LoadLibraryA(addonBinary.c_str()))
+						{
+							jenova::Error("Jenova Addon Loader", "Following Addon '%s' Binary Missing, Failed to Load Addon.", addonBinary.c_str());
+							return false;
+						};
+						jenova::Output("Runtime Addon Module '%s' Autoloaded.", addonBinary.c_str());
+					}
+					else
+					{
+						// Warning About Missing Passive Addons
+						// if (!std::filesystem::exists(addonBinary)) jenova::Warning("Jenova Addon Loader", "Following Addon '%s' Can't Be Resolved, Skipping Addon.", addonBinary.c_str());
+					}
+				}
+			}
+
+			// All Good
+			return true;
+		}
+		catch (const std::exception&)
+		{
+			jenova::Error("Jenova Addon Loader", "Failed to Parse Runtime Configuration Data.");
+			return false;
+		}
 	}
 	#pragma endregion
 	
