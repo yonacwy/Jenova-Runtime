@@ -887,21 +887,17 @@ namespace jenova
             preprocessorDefinitions += "#define JENOVA_COMPILER \"GNU Compiler Collection\"\n";
             preprocessorDefinitions += "#define GCC_COMPILER\n";
 
-            // Preprocessor Definitions [USER]
+            // Preprocessor Definitions [Linking]
+            if (jenova::GlobalStorage::SDKLinkingMode == SDKLinkingMode::Statically) preprocessorDefinitions += "#define JENOVA_SDK_STATIC_LINKING\n";
+            if (jenova::GlobalStorage::SDKLinkingMode == SDKLinkingMode::Dynamically) preprocessorDefinitions += "#define JENOVA_SDK_DYNAMIC_LINKING\n";
+
+            // Preprocessor Definitions [User]
             String userPreprocessorDefinitions = preprocessorSettings["PreprocessorDefinitions"];
             PackedStringArray userPreprocessorDefinitionsList = userPreprocessorDefinitions.split(";");
             for (const auto& definition : userPreprocessorDefinitionsList) if (!definition.is_empty()) preprocessorDefinitions += "#define " + definition + "\n";
 
             // Add Final Preprocessor Definitions
             scriptSourceCode = scriptSourceCode.insert(0, preprocessorDefinitions + "\n");
-
-            // Add Entire Godot SDK Headers
-            if (scriptSourceCode.contains(jenova::GlobalSettings::ScriptGodotSDKdIdentifier))
-            {
-                std::string headerCachePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + jenova::GlobalSettings::JenovaGodotSDKHeaderCacheFile;
-                String headerCacheInclude(jenova::Format("#include \"%s\"", headerCachePath.c_str()).c_str());
-                scriptSourceCode = scriptSourceCode.replace(jenova::GlobalSettings::ScriptGodotSDKdIdentifier, headerCacheInclude);
-            }
 
             // Replecements
             scriptSourceCode = scriptSourceCode.replace(jenova::GlobalSettings::ScriptToolIdentifier, "#define TOOL_SCRIPT");
@@ -1535,8 +1531,8 @@ namespace jenova
             this->jenovaCachePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory());
 
             // Store Solved Paths
-            this->internalDefaultSettings["compiler_solved_binary_path"] = String(this->compilerBinaryPath.c_str());
-            this->internalDefaultSettings["linker_solved_binary_path"] = String(this->linkerBinaryPath.c_str());
+            this->internalDefaultSettings["compiler_solved_binary_path"] = String(internalDefaultSettings["cpp_compiler_binary"]);
+            this->internalDefaultSettings["linker_solved_binary_path"] = String(internalDefaultSettings["cpp_linker_binary"]);
 
             // All Good
             return true;
@@ -1545,6 +1541,8 @@ namespace jenova
     private:
         Dictionary internalDefaultSettings;
         std::string projectPath;
+        std::string compilerBinaryPath;
+        std::string linkerBinaryPath;
         std::string includePath;
         std::string libraryPath;
         std::string jenovaPath;      

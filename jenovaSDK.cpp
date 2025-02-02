@@ -435,11 +435,11 @@ namespace jenova::sdk
 	}
 	bool RegisterRuntimeCallback(RuntimeCallback callbackPtr)
 	{
-		return jenova::RegisterRuntimeEventCallback(callbackPtr);
+		return jenova::RegisterRuntimeEventCallback((jenova::FunctionPointer)callbackPtr);
 	}
 	bool UnregisterRuntimeCallback(RuntimeCallback callbackPtr)
 	{
-		return jenova::UnregisterRuntimeEventCallback(callbackPtr);
+		return jenova::UnregisterRuntimeEventCallback((jenova::FunctionPointer)callbackPtr);
 	}
 
 	// Graphic Utilities

@@ -1510,7 +1510,7 @@ namespace jenova
 							std::string inputFilePath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path(scriptResource->get_path()));
 							if (!jenova::ApplyFileEncodingFromReferenceFile(inputFilePath, AS_STD_STRING(scriptModule.scriptCacheFile)))
 							{
-								jenova_log("[Jenova Builder] Warning : Failed to Apply Encoding to Source File.");
+								jenova::Warning("Jenova Builder", "Failed to Apply Encoding to Source File.");
 							}
 						}
 
@@ -2886,7 +2886,12 @@ namespace jenova
 
 				// Get Settings from Compiler
 				std::string compilerBinary = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("compiler_solved_binary_path")));
+				#ifdef TARGET_PLATFORM_WINDOWS 
 				std::string intelliSenseMode = jenovaCompiler->GetCompilerModel() == CompilerModel::MicrosoftCompiler ? "windows-msvc-x64" : "not-supported";
+				#endif
+				#ifdef TARGET_PLATFORM_LINUX 
+				std::string intelliSenseMode = jenovaCompiler->GetCompilerModel() == CompilerModel::GNUCompiler ? "linux-gcc-x64" : "not-supported";
+				#endif
 				std::string cpp_definitions = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_definitions")));
 				std::string extraIncludeDirectories = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_extra_include_directories")));
 				std::string forcedHeaders = "";
@@ -3570,7 +3575,7 @@ namespace jenova
 							}
 							if (updatedScript->get_class() == jenova::GlobalSettings::JenovaHeaderType)
 							{
-								Ref<CPPHeader> cppHeader = Object::cast_to<CPPScript>(updatedScript.ptr());
+								Ref<CPPHeader> cppHeader = Object::cast_to<CPPHeader>(updatedScript.ptr());
 								cppHeader->ReloadHeaderSourceCode();
 							}
 
@@ -6249,7 +6254,7 @@ namespace jenova
 	}
 	bool WriteWideStdStringToFile(const std::wstring& filePath, const std::wstring& str)
 	{
-		std::wofstream outFile(filePath, std::ios::out | std::ios::binary);
+		std::wofstream outFile(jenova::Format("%S", filePath.c_str()).c_str(), std::ios::out | std::ios::binary);
 		if (outFile.is_open())
 		{
 			outFile.write(str.c_str(), str.size());
@@ -6263,7 +6268,7 @@ namespace jenova
 	}
 	std::wstring ReadWideStdStringFromFile(const std::wstring& filePath)
 	{
-		std::wifstream inFile(filePath);
+		std::wifstream inFile(jenova::Format("%S", filePath.c_str()).c_str());
 		if (inFile.is_open())
 		{
 			std::wstring content((std::istreambuf_iterator<wchar_t>(inFile)), std::istreambuf_iterator<wchar_t>());
@@ -8444,7 +8449,7 @@ namespace jenova
 					bool addoneAutoload = addonConfig["Addon Autoload"].get<bool>();
 					if (addoneAutoload && !QUERY_ENGINE_MODE(Editor))
 					{
-						if (!LoadLibraryA(addonBinary.c_str()))
+						if (!jenova::LoadModule(addonBinary.c_str()))
 						{
 							jenova::Error("Jenova Addon Loader", "Following Addon '%s' Binary Missing, Failed to Load Addon.", addonBinary.c_str());
 							return false;
