@@ -20,11 +20,11 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.4.7"
+#define APP_VERSION						"0.3.5.0"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 4, 7
+#define APP_VERSION_DATA				0, 3, 5, 0
 #define APP_VERSION_BUILD				"0"
 #define APP_VERSION_NAME				"Genesis"
 
@@ -218,6 +218,7 @@
 #include <godot_cpp/classes/worker_thread_pool.hpp>
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/file_dialog.hpp>
 #include <godot_cpp/classes/hashing_context.hpp>
 #include <godot_cpp/classes/texture.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
@@ -265,6 +266,7 @@ using namespace godot;
 #define CREATE_GLOBAL_TEMPLATE(a,b,c)		JenovaTemplateManager::get_singleton()->RegisterNewGlobalScriptTemplate(a, CODE_TEMPLATE(b), c);
 #define CREATE_CLASS_TEMPLATE(a,b,c,d)		JenovaTemplateManager::get_singleton()->RegisterNewClassScriptTemplate(a, b, CODE_TEMPLATE(c), d);
 #define QUERY_ENGINE_MODE(mode)				(jenova::GlobalStorage::CurrentEngineMode == jenova::EngineMode::mode)
+#define QUERY_SDK_LINKING_MODE(mode)		(jenova::GlobalStorage::SDKLinkingMode == jenova::SDKLinkingMode::mode)
 #define QUERY_PLATFORM(platform)			(TARGET_PLATFORM_CURRENT == jenova::TargetPlatform::platform)
 #define SCALED(value)						(value * scaleFactor)
 
@@ -462,6 +464,12 @@ namespace jenova
 	{
 		Actual,
 		Virtual
+	};
+	enum class SDKLinkingMode
+	{
+		None,
+		Dynamically,
+		Statically
 	};
 
 	// Flags
@@ -668,7 +676,6 @@ namespace jenova
 		constexpr char* JenovaPackageDatabaseURL				= "https://raw.githubusercontent.com";
 		constexpr char* JenovaPackageRepositoryPath				= "Jenova/Packages/";
 
-
 		constexpr int JenovaTerminalLogFontSize					= 12;
 
 		constexpr char JenovaBuildVersion[4]					= { APP_VERSION_DATA };
@@ -684,6 +691,7 @@ namespace jenova
 		extern jenova::BuildAndRunMode							CurrentBuildAndRunMode;
 		extern jenova::ChangesTriggerMode						CurrentChangesTriggerMode;
 		extern jenova::EditorVerboseOutput						CurrentEditorVerboseOutput;
+		extern jenova::SDKLinkingMode							SDKLinkingMode;
 		extern std::string										CurrentJenovaCacheDirectory;
 		extern std::string										CurrentJenovaGeneratedConfiguration;
 		extern std::string										CurrentJenovaGodotSDKGeneratedData;
@@ -756,14 +764,14 @@ namespace jenova
 	std::string GetExecutablePath();
 	void ResetCurrentDirectoryToRoot();
 	void DoApplicationEvents();
-	bool QueueProjectBuild();
+	bool QueueProjectBuild(bool deferred = true);
 	bool UpdateGlobalStorageFromEditorSettings();
 	std::string GetNotificationString(int p_what);
 	String GetJenovaCacheDirectory();
 	String RemoveCommentsFromSource(const String& sourceCode);
 	bool ContainsExactString(const String& srcStr, const String& matchStr);
 	std::string GetDemangledFunctionSignature(std::string mangledName, CompilerModel compilerModel);
-	std::string CleanFunctionSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel);
+	std::string CleanFunctionAndPropertySignature(const std::string& functionSignature, jenova::CompilerModel compilerModel);
 	ParameterTypeList ExtractParameterTypesFromSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel);
 	std::string ExtractReturnTypeFromSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel);
 	std::string ExtractPropertyTypeFromSignature(const std::string& propertySignature, jenova::CompilerModel compilerModel);
@@ -828,6 +836,7 @@ namespace jenova
 	void RandomWait(int minWaitTime, int maxWaitTime);
 	void CopyAddonBinariesToEngineDirectory(bool createSymbolic = false);
 	bool ExecutePackageScript(const std::string& packageScriptFile);
+	bool ProcessCommandLineArguments();
 	#pragma endregion
 
 	// Core Reimplementation
@@ -861,5 +870,8 @@ namespace jenova
 #include "script_instance.h"
 #include "script_manager.h"
 #include "script_compiler.h"
+
+// Jenova Exporters
+#include "gdextension_exporter.h"
 
 #endif // NO_JENOVA_RUNTIME_SDK

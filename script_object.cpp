@@ -26,20 +26,20 @@ void CPPScript::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("GenerateScriptIdentity"), &CPPScript::GenerateScriptIdentity);
 }
-bool CPPScript::_editor_can_reload_from_file() 
+bool CPPScript::_editor_can_reload_from_file()
 {
 	// Needs Investigation
 	// It Seems This is for Tracking Changes to Files When They Are Open?
-	return true; 
+	return true;
 }
-void CPPScript::_placeholder_erased(void *p_placeholder) 
+void CPPScript::_placeholder_erased(void* p_placeholder)
 {
 }
-bool CPPScript::_can_instantiate() const 
+bool CPPScript::_can_instantiate() const
 {
 	return true;
 }
-Ref<Script> CPPScript::_get_base_script() const 
+Ref<Script> CPPScript::_get_base_script() const
 {
 	return Ref<Script>();
 }
@@ -49,39 +49,39 @@ StringName CPPScript::_get_global_name()
 	globalName = StringName("JenovaScript_" + scriptObjectIdentity);
 	return globalName;
 }
-bool CPPScript::_inherits_script(const Ref<Script> &p_script) const 
+bool CPPScript::_inherits_script(const Ref<Script>& p_script) const
 {
 	return false;
 }
-StringName CPPScript::_get_instance_base_type() const 
+StringName CPPScript::_get_instance_base_type() const
 {
 	return StringName(jenova::GlobalSettings::JenovaScriptType);
 }
-void *CPPScript::_instance_create(Object *p_for_object) const 
+void* CPPScript::_instance_create(Object* p_for_object) const
 {
 	godot::Node* parentNode = godot::Object::cast_to<godot::Node>(p_for_object);
 	jenova::VerboseByID(__LINE__, "Adding C++ Script (%s) Instance to (%s)", AS_C_STRING(this->get_path()), AS_C_STRING(parentNode->get_name()));
 	CPPScriptInstance* instance = memnew(CPPScriptInstance(p_for_object, Ref<CPPScript>(this)));
 	return CPPScriptInstance::create_native_instance(instance);
 }
-void *CPPScript::_placeholder_instance_create(Object *p_for_object) const 
+void* CPPScript::_placeholder_instance_create(Object* p_for_object) const
 {
-	return _instance_create(p_for_object);
+	return nullptr; // Not Supported Yet
 }
-bool CPPScript::_instance_has(Object *p_object) const 
+bool CPPScript::_instance_has(Object* p_object) const
 {
 	return false;
 }
-bool CPPScript::_has_source_code() const 
+bool CPPScript::_has_source_code() const
 {
 	return !source_code.is_empty();
 }
-String CPPScript::_get_source_code() const 
+String CPPScript::_get_source_code() const
 {
 	if (!this->get_path().is_empty()) jenova::VerboseByID(__LINE__, "Get C++ Script Source (%s) [%p]", AS_C_STRING(this->get_path()), this);
 	return source_code;
 }
-void CPPScript::_set_source_code(const String &p_code) 
+void CPPScript::_set_source_code(const String& p_code)
 {
 	if (!this->get_path().is_empty()) jenova::VerboseByID(__LINE__, "Set C++ Script Source (%s) [%p]", AS_C_STRING(this->get_path()), this);
 	source_code = p_code;
@@ -90,7 +90,7 @@ void CPPScript::_set_source_code(const String &p_code)
 	String cleanedSource = jenova::RemoveCommentsFromSource(p_code);
 	this->IsTool = jenova::ContainsExactString(cleanedSource, jenova::GlobalSettings::ScriptToolIdentifier);
 }
-Error CPPScript::_reload(bool p_keep_state) 
+Error CPPScript::_reload(bool p_keep_state)
 {
 	jenova::VerboseByID(__LINE__, "Reloading C++ Script (%s)", AS_C_STRING(this->get_path()));
 	if (!jenova::UpdateGlobalStorageFromEditorSettings()) return Error::FAILED;
@@ -105,102 +105,102 @@ Error CPPScript::_reload(bool p_keep_state)
 	}
 	return Error::ERR_UNAVAILABLE;
 }
-TypedArray<Dictionary> CPPScript::_get_documentation() const 
+TypedArray<Dictionary> CPPScript::_get_documentation() const
 {
 	return TypedArray<Dictionary>();  // Not Supported Yet
 }
-String CPPScript::_get_class_icon_path() const 
+String CPPScript::_get_class_icon_path() const
 {
 	return String();  // Not Supported Yet
 }
-bool CPPScript::_has_method(const StringName &p_method) const 
+bool CPPScript::_has_method(const StringName& p_method) const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_has_method (%s)", AS_C_STRING(p_method));
 	return false; // Not Supported Yet
 }
-bool CPPScript::_has_static_method(const StringName &p_method) const 
+bool CPPScript::_has_static_method(const StringName& p_method) const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_has_static_method (%s)", AS_C_STRING(p_method));
 	return false; // Not Supported Yet
 }
-Dictionary CPPScript::_get_method_info(const StringName &p_method) const 
+Dictionary CPPScript::_get_method_info(const StringName& p_method) const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_method_info (%s)", AS_C_STRING(p_method));
 	return Dictionary(); // Not Supported Yet
 }
-bool CPPScript::_is_tool() const 
+bool CPPScript::_is_tool() const
 {
-	return IsTool; 
+	return IsTool;
 }
-bool CPPScript::_is_valid() const 
+bool CPPScript::_is_valid() const
 {
 	// Ask From Interpreter
 	return true;
 }
-bool CPPScript::_is_abstract() const 
+bool CPPScript::_is_abstract() const
 {
 	return false;
 }
-ScriptLanguage *CPPScript::_get_language() const 
+ScriptLanguage* CPPScript::_get_language() const
 {
 	return CPPScriptLanguage::get_singleton();
 }
-bool CPPScript::_has_script_signal(const StringName &p_signal) const 
+bool CPPScript::_has_script_signal(const StringName& p_signal) const
 {
-	jenova::VerboseByID( __LINE__, "CPPScript::_has_script_signal (%s)", AS_C_STRING(p_signal));
+	jenova::VerboseByID(__LINE__, "CPPScript::_has_script_signal (%s)", AS_C_STRING(p_signal));
 	return false; // Not Supported Yet
 }
-TypedArray<Dictionary> CPPScript::_get_script_signal_list() const 
+TypedArray<Dictionary> CPPScript::_get_script_signal_list() const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_script_signal_list");
 	return TypedArray<Dictionary>();
 }
-bool CPPScript::_has_property_default_value(const StringName &p_property) const 
+bool CPPScript::_has_property_default_value(const StringName& p_property) const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_has_property_default_value (%s)", AS_C_STRING(p_property));
 	// This will cause property change flag on assigned node!
 	return false;
 }
-Variant CPPScript::_get_property_default_value(const StringName &p_property) const 
+Variant CPPScript::_get_property_default_value(const StringName& p_property) const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_property_default_value (%s)", AS_C_STRING(p_property));
 	return Variant();  // Not Supported Yet
 }
-void CPPScript::_update_exports() 
+void CPPScript::_update_exports()
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_update_exports");
 }
-TypedArray<Dictionary> CPPScript::_get_script_method_list() const 
+TypedArray<Dictionary> CPPScript::_get_script_method_list() const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_script_method_list");
 	return TypedArray<Dictionary>();  // Not Supported Yet
 }
-TypedArray<Dictionary> CPPScript::_get_script_property_list() const 
+TypedArray<Dictionary> CPPScript::_get_script_property_list() const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_script_property_list");
 	TypedArray<Dictionary> properties;
 	return properties;  // Not Supported Yet
 }
-int32_t CPPScript::_get_member_line(const StringName &p_member) const 
+int32_t CPPScript::_get_member_line(const StringName& p_member) const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_member_line (%s)", AS_C_STRING(p_member));
 	return 0;  // Not Supported Yet
 }
-Dictionary CPPScript::_get_constants() const 
+Dictionary CPPScript::_get_constants() const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_constants");
 	return Dictionary();  // Not Supported Yet
 }
-TypedArray<StringName> CPPScript::_get_members() const 
+TypedArray<StringName> CPPScript::_get_members() const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_members");
 	return TypedArray<StringName>();  // Not Supported Yet
 }
-bool CPPScript::_is_placeholder_fallback_enabled() const 
+bool CPPScript::_is_placeholder_fallback_enabled() const
 {
 	return false;  // Not Supported Yet
 }
-Variant CPPScript::_get_rpc_config() const 
+Variant CPPScript::_get_rpc_config() const
 {
 	jenova::VerboseByID(__LINE__, "CPPScript::_get_rpc_config");
 	return Variant();  // Not Supported Yet
@@ -233,7 +233,7 @@ bool CPPScript::SetScriptIdentity(jenova::ScriptIdentifier newIdentity)
 }
 
 // CPPScript Initializer/Destructor
-CPPScript::CPPScript() 
+CPPScript::CPPScript()
 {
 	// Initialize Objects
 	scriptMutex.instantiate();

@@ -25,10 +25,14 @@
 	#define JENOVA_API_EXPORT __attribute__((visibility("default")))
 	#define JENOVA_API_IMPORT 
 #endif
-#ifdef JENOVA_SDK_BUILD
-	#define JENOVA_API JENOVA_API_EXPORT
+#ifdef JENOVA_SDK_STATIC
+    #define JENOVA_API
 #else
-	#define JENOVA_API JENOVA_API_IMPORT
+    #ifdef JENOVA_SDK_BUILD
+        #define JENOVA_API JENOVA_API_EXPORT
+    #else
+        #define JENOVA_API JENOVA_API_IMPORT
+    #endif
 #endif
 
 // Jenova Definitions

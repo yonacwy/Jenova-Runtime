@@ -85,6 +85,7 @@ ren "$(BuildPath)JenovaSDK\$(TargetName).lib" "Jenova.SDK.x64.lib"</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="asset_monitor.cpp" />
+    <ClCompile Include="gdextension_exporter.cpp" />
     <ClCompile Include="jenova.cpp" />
     <ClCompile Include="jenovaSDK.cpp" />
     <ClCompile Include="package_manager.cpp" />
@@ -103,6 +104,8 @@ ren "$(BuildPath)JenovaSDK\$(TargetName).lib" "Jenova.SDK.x64.lib"</Command>
   <ItemGroup>
     <ClInclude Include="AboutImage.h" />
     <ClInclude Include="asset_monitor.h" />
+    <ClInclude Include="ExtensionHosts.h" />
+    <ClInclude Include="gdextension_exporter.h" />
     <ClInclude Include="InternalSources.h" />
     <ClInclude Include="BuiltinFonts.h" />
     <ClInclude Include="CodeTemplates.h" />

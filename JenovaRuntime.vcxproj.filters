@@ -44,6 +44,9 @@
     <ClCompile Include="task_system.cpp">
       <Filter>Implementation\Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="gdextension_exporter.cpp">
+      <Filter>Implementation\Exporters</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Implementation">
@@ -66,6 +69,9 @@
     </Filter>
     <Filter Include="Resources\Storage">
       <UniqueIdentifier>{2b4efd82-3d90-44ca-ab35-a9269625828f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Implementation\Exporters">
+      <UniqueIdentifier>{41aafcac-862e-4b66-8ce9-9fbc8aba7f0b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -138,6 +144,12 @@
     </ClInclude>
     <ClInclude Include="task_system.h">
       <Filter>Implementation\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="ExtensionHosts.h">
+      <Filter>Resources\Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="gdextension_exporter.h">
+      <Filter>Implementation\Exporters</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

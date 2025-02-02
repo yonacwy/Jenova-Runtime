@@ -182,6 +182,11 @@ namespace jenova::sdk
 		}
 		void PrepareReload(const godot::String& className)
 		{
+			// Disable Hot-Reloading In Static SDK
+			#ifdef JENOVA_SDK_STATIC
+				return;
+			#endif
+
 			// Validate
 			if (!godot::ClassDB::class_exists(className)) return;
 	
@@ -237,6 +242,11 @@ namespace jenova::sdk
 		}
 		void FinishReload(const godot::String& className)
 		{
+			// Disable Hot-Reloading In Static SDK
+			#ifdef JENOVA_SDK_STATIC
+				return;
+			#endif
+
 			// Validate
 			if (!godot::ClassDB::class_exists(className)) return;
 
@@ -312,6 +322,11 @@ namespace jenova::sdk
 	jenova::sdk::EngineMode GetEngineMode()
 	{
 		return jenova::sdk::EngineMode(jenova::GlobalStorage::CurrentEngineMode);
+		jenova::sdk::EngineMode engineMode;
+		if (OS::get_singleton()->is_debug_build()) engineMode = jenova::sdk::EngineMode::Debug;
+		else engineMode = jenova::sdk::EngineMode::Runtime;
+		if (Engine::get_singleton()->is_editor_hint()) engineMode = jenova::sdk::EngineMode::Editor;
+		return engineMode;
 	}
 	bool CreateDirectoryMonitor(const String& directoryPath)
 	{
@@ -429,3 +444,29 @@ namespace jenova::sdk
 		JenovaTaskSystem::ClearTask(taskID);
 	}
 }
+
+// Static Runtime SDK Implementation
+#ifdef JENOVA_SDK_STATIC
+namespace jenova
+{
+	/*
+		Following APIs Are Replicates from jenova.hpp
+		And Are Only Available in Static Build of SDK.
+	*/
+	void Output(const char* fmt, ...)
+	{
+		char buffer[1024];
+		va_list args;
+		va_start(args, fmt);
+		vsnprintf(buffer, sizeof(buffer), fmt, args);
+		va_end(args);
+		godot::UtilityFunctions::print(godot::String("[JENOVA-SDK] > ") + godot::String(buffer));
+	}
+	std::string ConvertToStdString(const godot::String& gstr)
+	{
+		std::string str((char*)gstr.utf8().ptr(), gstr.utf8().size());
+		if (!str.empty() && str.back() == '\0') str.pop_back();
+		return str;
+	}
+}
+#endif

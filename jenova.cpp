@@ -125,6 +125,7 @@ namespace jenova
 			 String TerminalDefaultFontSizeConfigPath					= "jenova/terminal_default_font_size";
 			 String CompilerPackageConfigPath							= "jenova/compiler_package";
 			 String GodotKitPackageConfigPath							= "jenova/godot_kit_package";
+			 String SDKLinkingModeConfigPath							= "jenova/sdk_linking_mode";
 			 String BuildToolButtonEditorConfigPath						= "jenova/build_tool_button_placement";
 
 		private:
@@ -134,6 +135,7 @@ namespace jenova
 			const jenova::ChangesTriggerMode ExternalChangesDefaultTriggerMode = jenova::ChangesTriggerMode::DoNothing;
 			const jenova::EditorVerboseOutput EditorVerboseDefaultOutput = jenova::EditorVerboseOutput::JenovaTerminal;
 			const jenova::InterpreterBackend InterpreterBackendDefaultMode = jenova::InterpreterBackend::TinyCC;
+			const jenova::SDKLinkingMode SDKLinkingDefaultMode = jenova::SDKLinkingMode::Dynamically;
 
 			// Default Compiler
 			#if defined(TARGET_PLATFORM_WINDOWS)
@@ -485,6 +487,7 @@ namespace jenova
 						if (!editor_settings->has_setting(TerminalDefaultFontSizeConfigPath)) editor_settings->set(TerminalDefaultFontSizeConfigPath, jenova::GlobalSettings::JenovaTerminalLogFontSize);
 						if (!editor_settings->has_setting(CompilerPackageConfigPath)) editor_settings->set(CompilerPackageConfigPath, "Latest");
 						if (!editor_settings->has_setting(GodotKitPackageConfigPath)) editor_settings->set(GodotKitPackageConfigPath, "Latest");
+						if (!editor_settings->has_setting(SDKLinkingModeConfigPath)) editor_settings->set(SDKLinkingModeConfigPath, int32_t(SDKLinkingDefaultMode));
 						if (!editor_settings->has_setting(BuildToolButtonEditorConfigPath)) editor_settings->set(BuildToolButtonEditorConfigPath, int32_t(BuildToolButtonDefaultPlacement));
 				
 						// Add the Setting Descriptions to The Editor Settings
@@ -597,6 +600,13 @@ namespace jenova
 						editor_settings->add_property_info(GodotKitPackageProperty);
 						editor_settings->set_initial_value(GodotKitPackageConfigPath, "Latest", false);
 
+						// SDK Linking Mode Property
+						PropertyInfo SDKLinkingModeProperty(Variant::INT, SDKLinkingModeConfigPath,
+							PropertyHint::PROPERTY_HINT_ENUM, "Don't Link, Dynamically, Statically (Experimental)",
+							PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED, JenovaEditorSettingsCategory);
+						editor_settings->add_property_info(SDKLinkingModeProperty);
+						editor_settings->set_initial_value(SDKLinkingModeConfigPath, int32_t(SDKLinkingDefaultMode), false);
+
 						// Build Tool Button Placement Property
 						PropertyInfo BuildToolButtonPlacementProperty(Variant::INT, BuildToolButtonEditorConfigPath, 
 							PropertyHint::PROPERTY_HINT_ENUM, "Before Main Menu,After Main Menu,Before Stage Selector,After Stage Selector,Before Run Bar,After Run Bar,After Render Method",
@@ -672,6 +682,11 @@ namespace jenova
 				Variant terminalDefaultFontSize;
 				if (!GetEditorSetting(TerminalDefaultFontSizeConfigPath, terminalDefaultFontSize)) return false;
 				jenova::GlobalStorage::TerminalDefaultFontSize = int(terminalDefaultFontSize);
+
+				// Update SDK Linking Mode
+				Variant sdkLinkingMode;
+				if (!GetEditorSetting(SDKLinkingModeConfigPath, sdkLinkingMode)) return false;
+				jenova::GlobalStorage::SDKLinkingMode = jenova::SDKLinkingMode(int32_t(sdkLinkingMode));
 
 				// All Good
 				return true;
@@ -1151,7 +1166,7 @@ namespace jenova
 					OpenVisualStudioSelectorWindow();
 					break;
 				case jenova::EditorMenuID::ExportJenovaModule:
-					jenova::Error("Jenova Main Menu", "Feature Not Implemented Yet");
+					OpenModuleExporterWindow();
 					break;
 				case jenova::EditorMenuID::DeveloperMode:
 					jenova::GlobalStorage::DeveloperModeActivated = !jenova::GlobalStorage::DeveloperModeActivated;
@@ -2284,6 +2299,7 @@ namespace jenova
 				if (setting_key == std::string("terminal_default_font_size")) return TerminalDefaultFontSizeConfigPath;
 				if (setting_key == std::string("compiler_package")) return CompilerPackageConfigPath;
 				if (setting_key == std::string("godot_kit_package")) return GodotKitPackageConfigPath;
+				if (setting_key == std::string("sdk_linking_mode")) return SDKLinkingModeConfigPath;
 				if (setting_key == std::string("build_toolbutton_placement")) return BuildToolButtonEditorConfigPath;
 				return String("jenova/unknown");
 			}
@@ -2478,6 +2494,13 @@ namespace jenova
 				jenova::Output("Initializing Visual Studio Solution Exporter...");
 				jenova::Output("Targeting [color=#c78fe3]%s ([color=#b765e0]%s[/color])[/color]", AS_C_STRING(vsInstance.instanceName), AS_C_STRING(vsInstance.instanceVersion));
 
+				// Update Storage Configurations
+				if (!UpdateStorageConfigurations())
+				{
+					jenova::Error("Jenova Settings", "Unable to Update Storage Configurations!");
+					return false;
+				}
+
 				// Generate Script Collection
 				jenova::ScriptEntityContainer scriptCollection = jenova::CreateScriptEntityContainer("res://");
 
@@ -2509,8 +2532,20 @@ namespace jenova
 				std::string extraIncludeDirectories = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_extra_include_directories")));
 				std::string extralibraryDirectories = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_extra_library_directories")));
 				std::string extraLibraries = AS_STD_STRING(String(jenovaCompiler->GetCompilerOption("cpp_extra_libs")));
-				std::string delayedDlls = "Jenova.Runtime.Win64.dll;";
+				std::string nativeLibraries = "libGodot.x64.lib;";
+				std::string delayedDlls = QUERY_SDK_LINKING_MODE(Dynamically) ? "Jenova.Runtime.Win64.dll;" : "";
 				std::string forcedHeaders = "";
+
+				// Handle JenovaSDK Linking
+				if (QUERY_SDK_LINKING_MODE(Dynamically))
+				{
+					nativeLibraries += "Jenova.SDK.x64.lib;";
+				}
+				if (QUERY_SDK_LINKING_MODE(Statically))
+				{
+					nativeLibraries += "Jenova.SDK.Static.x64.lib;";
+					cpp_definitions += ";JENOVA_SDK_STATIC";
+				}
 
 				// Solve GodotKit Path
 				String selectedGodotKitPath = jenova::GetInstalledGodotKitPathFromPackages(jenovaCompiler->GetCompilerOption("cpp_godotsdk_path"));
@@ -2620,7 +2655,7 @@ namespace jenova
 				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@PREPROCESSOR_DEFINITIONS@@", cpp_definitions);
 				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@ADDITIONALINCLUDEDIRECTORIES@@", "./;./Jenova/JenovaSDK;" + solvedGodotKitPath + ";" + extraIncludeDirectories);
 				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@ADDITIONALLIBRARYDIRECTORIES@@", "./;./Jenova/JenovaSDK;" + solvedGodotKitPath + ";" + extralibraryDirectories);
-				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@ADDITIONALDEPENDENCIES@@", "libGodot.x64.lib;Jenova.SDK.x64.lib;" + extraLibraries + "%(AdditionalDependencies)");
+				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@ADDITIONALDEPENDENCIES@@", nativeLibraries + extraLibraries + "%(AdditionalDependencies)");
 				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@DELAYLOADDLLS@@", delayedDlls);
 				jenova::ReplaceAllMatchesWithString(projectTemplate, "@@FORCEDINCLUDEFILES@@", forcedHeaders);
 				if (!jenova::WriteStdStringToFile(projectFile, projectTemplate))
@@ -2956,6 +2991,117 @@ namespace jenova
 				}
 			}
 
+			// Module Exporter
+			void OpenModuleExporterWindow()
+			{
+				// Get Scale Factor
+				double scaleFactor = EditorInterface::get_singleton()->get_editor_scale();
+
+				// Create Window
+				Window* module_exporter_window = memnew(Window);
+				module_exporter_window->set_title("Jenova Module Exporter");
+				module_exporter_window->set_size(Vector2i(SCALED(400), SCALED(160)));
+				module_exporter_window->set_flag(Window::Flags::FLAG_RESIZE_DISABLED, true);
+				module_exporter_window->set_flag(Window::Flags::FLAG_POPUP, true);
+
+				// Show Window [Must Be Here]
+				module_exporter_window->popup_exclusive_centered(EditorInterface::get_singleton()->get_base_control());
+
+				// Get Editor Theme
+				Ref<Theme> editor_theme = EditorInterface::get_singleton()->get_editor_theme();
+				if (!editor_theme.is_valid())
+				{
+					jenova::Error("Jenova Module Exporter", "Failed to Obtain Engine Theme.");
+					return;
+				}
+
+				// Create Window Controls
+				Control* root_control = memnew(Control);
+				root_control->set_name("ModuleExporterWindow");
+				root_control->set_anchors_preset(Control::PRESET_FULL_RECT);
+				module_exporter_window->add_child(root_control);
+				ColorRect* background = memnew(ColorRect);
+				background->set_name("Background");
+				background->set_anchors_preset(Control::PRESET_FULL_RECT);
+				background->set_color(editor_theme->get_color("base_color", "Editor"));
+				root_control->add_child(background);
+
+				Control* window_surface = memnew(Control);
+				window_surface->set_name("WindowSurface");
+				window_surface->set_anchors_and_offsets_preset(Control::PRESET_TOP_LEFT);
+				window_surface->set_anchor_and_offset(Side::SIDE_LEFT, 0.0, SCALED(30.0));
+				window_surface->set_anchor_and_offset(Side::SIDE_TOP, 0.0, SCALED(15.0));
+				window_surface->set_anchor_and_offset(Side::SIDE_RIGHT, 0.0, SCALED(370.0));
+				window_surface->set_anchor_and_offset(Side::SIDE_BOTTOM, 0.0, SCALED(250.0));
+				root_control->add_child(window_surface);
+
+				Label* exporters_label = memnew(Label);
+				exporters_label->set_name("ModuleExportersLabel");
+				exporters_label->set_anchors_and_offsets_preset(Control::PRESET_TOP_WIDE);
+				exporters_label->set_anchor_and_offset(Side::SIDE_BOTTOM, 0.0, SCALED(22.0));
+				exporters_label->add_theme_font_size_override("font_size", SCALED(15));
+				exporters_label->set_text("Available Exporters");
+				window_surface->add_child(exporters_label);
+
+				OptionButton* module_type_selector = memnew(OptionButton);
+				module_type_selector->set_name("ModuleTypeSelector");
+				module_type_selector->set_anchors_and_offsets_preset(Control::PRESET_TOP_WIDE);
+				module_type_selector->set_anchor_and_offset(Side::SIDE_TOP, 0.0, SCALED(29.0));
+				module_type_selector->set_anchor_and_offset(Side::SIDE_BOTTOM, 0.0, SCALED(74.0));
+				module_type_selector->add_theme_color_override("font_color", editor_theme->get_color("accent_color", "Editor"));
+				module_type_selector->add_item(" GDExtension (Windows x64)");
+				module_type_selector->select(module_type_selector->get_item_count() - 1);
+				window_surface->add_child(module_type_selector);
+
+				Button* export_button = memnew(Button);
+				export_button->set_name("ExportModuleButton");
+				export_button->set_anchors_and_offsets_preset(Control::PRESET_CENTER_BOTTOM);
+				export_button->set_anchor_and_offset(Side::SIDE_LEFT, 0.5, SCALED(-85.0));
+				export_button->set_anchor_and_offset(Side::SIDE_TOP, 1.0, SCALED(-145.0));
+				export_button->set_anchor_and_offset(Side::SIDE_RIGHT, 0.5, SCALED(85.0));
+				export_button->set_anchor_and_offset(Side::SIDE_BOTTOM, 1.0, SCALED(-108.0));
+				export_button->set_text("   Export Module   ");
+				window_surface->add_child(export_button);
+
+				// Define Internal UI Callback Handler
+				class ModuleExporterEventManager : public RefCounted
+				{
+				private:
+					JenovaEditorPlugin* pluginInstance = nullptr;
+					Window* window = nullptr;
+				public:
+					ModuleExporterEventManager(JenovaEditorPlugin* _plugin, Window* _window) : pluginInstance(_plugin), window(_window) { }
+					void OnModuleExportButtonClick()
+					{
+						OptionButton* moduleExporterSelector = window->get_node<OptionButton>("ModuleExporterWindow/WindowSurface/ModuleTypeSelector");
+						if (moduleExporterSelector)
+						{
+							if (!moduleExporterSelector->is_disabled())
+							{
+								if (moduleExporterSelector->get_selected_id() == 0) (new GDExtensionExporter(GDExtensionTarget::Windows64, GDExtensionType::Binary))->Initialize();
+							}
+						}
+						window->queue_free();
+						memdelete(this);
+					}
+					void OnWindowClose()
+					{
+						window->queue_free();
+						memdelete(this);
+					}
+				};
+
+				// Create & Assign Callbacks
+				export_button->connect("pressed", callable_mp(memnew(ModuleExporterEventManager(this, module_exporter_window)), &ModuleExporterEventManager::OnModuleExportButtonClick));
+				module_exporter_window->connect("close_requested", callable_mp(memnew(ModuleExporterEventManager(this, module_exporter_window)), &ModuleExporterEventManager::OnWindowClose));
+
+				// Prepare Pop Up Window
+				if (!jenova::AssignPopUpWindow(module_exporter_window))
+				{
+					module_exporter_window->queue_free();
+				}
+			}
+
 			// Misc Windows
 			void OpenAboutJenovaProject()
 			{
@@ -3273,7 +3419,7 @@ namespace jenova
 				}
 
 				// Verbose Build Success
-				jenova::Output("[color=#729bed][Build][/color] Jenova Runtime Successfully Generated.");
+				jenova::Output("[color=#729bed][Build][/color] Jenova Runtime Successfully Generated and Exported.");
 			}
 			void _export_file(const String& p_path, const String& p_type, const PackedStringArray& p_features) override 
 			{
@@ -3594,6 +3740,9 @@ namespace jenova
 
 				// Rise Environment Boot Callback
 				OnEnvironmentBoot();
+
+				// Process Command Line Arguments
+				jenova::ProcessCommandLineArguments();
 
 				// Register Classes
 				ClassDB::register_class<CPPScript>();
@@ -3960,6 +4109,7 @@ namespace jenova
 		jenova::BuildAndRunMode CurrentBuildAndRunMode = jenova::BuildAndRunMode::DoNothing;
 		jenova::ChangesTriggerMode CurrentChangesTriggerMode = jenova::ChangesTriggerMode::DoNothing;
 		jenova::EditorVerboseOutput CurrentEditorVerboseOutput = jenova::EditorVerboseOutput::StandardOutput;
+		jenova::SDKLinkingMode SDKLinkingMode = jenova::SDKLinkingMode::Dynamically;
 
 		// Database
 		std::string CurrentJenovaCacheDirectory = "";
@@ -4920,11 +5070,20 @@ namespace jenova
 
 		#endif
 	}
-	bool QueueProjectBuild()
+	bool QueueProjectBuild(bool deferred)
 	{
 		if (!jenova::plugin::JenovaEditorPlugin::get_singleton()) return false;
 		jenova::plugin::JenovaEditorPlugin::get_singleton()->call_deferred("BuildProject");
 		return true;
+		if (deferred)
+		{
+			jenova::plugin::JenovaEditorPlugin::get_singleton()->call_deferred("BuildProject");
+			return true;
+		}
+		else
+		{
+			return jenova::plugin::JenovaEditorPlugin::get_singleton()->BuildProject();
+		}
 	}
 	bool UpdateGlobalStorageFromEditorSettings()
 	{
@@ -5077,7 +5236,7 @@ namespace jenova
 		// Unknown Compiler, Return Empty String
 		return std::string();
 	}
-	std::string CleanFunctionSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel)
+	std::string CleanFunctionAndPropertySignature(const std::string& functionSignature, jenova::CompilerModel compilerModel)
 	{
 		std::string cleanedSignature = functionSignature;
 
@@ -5089,6 +5248,9 @@ namespace jenova
 
 		// Remove "struct " prefix before classes
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("struct\\s+"), "");
+
+		// Remove "enum " prefix before classes
+		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("enum\\s+"), "");
 
 		// Remove "__ptrXX" keyword
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("\\s*__ptr32"), "");
@@ -7309,6 +7471,28 @@ namespace jenova
 
 		// Unsupported Platform
 		return false;
+	}
+	bool ProcessCommandLineArguments()
+	{
+		// Process Command Lines
+		for (const auto& argument : OS::get_singleton()->get_cmdline_args())
+		{
+			// Clear Jenova Cache Command
+			if (argument == "--Clear-Jenova-Cache")
+			{
+				// Get Jenova Cache Path
+				std::string jenovaCacheDirectory = AS_STD_STRING(jenova::GetJenovaCacheDirectory());
+
+				// Validate Jenova Cache Folder
+				if (std::filesystem::exists(jenovaCacheDirectory))
+				{
+					return std::filesystem::remove_all(jenovaCacheDirectory);
+				}
+			}
+		}
+
+		// All Good
+		return true;
 	}
 	#pragma endregion
 	

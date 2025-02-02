@@ -51,16 +51,16 @@ namespace jenova
             internalDefaultSettings["cpp_intrinsic_functions"]              = true;                             /* /Oi */
             internalDefaultSettings["cpp_open_mp_support"]                  = true;                             /* /openmp */
             internalDefaultSettings["cpp_multithreaded"]                    = true;                             /* /MT */
-            internalDefaultSettings["cpp_debug_database"]                   = false;                            /* /Zi */
+            internalDefaultSettings["cpp_debug_database"]                   = true;                             /* /Zi */
             internalDefaultSettings["cpp_exception_handling"]               = 2;                                /* 1 : /EHsc 2: /EHa */
-            internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /MP /GR /bigobj";        /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
+            internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /GR /bigobj";        /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
             internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL"; /* REAL_T_IS_DOUBLE Removed for Now */
 
             // MSVC Linker Settings
             internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug .jnv for Final*/
             internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";
             internalDefaultSettings["cpp_default_libs"]                     = "kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;delayimp.lib";
-            internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.lib;Jenova.SDK.x64.lib";
+            internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.lib;";
             internalDefaultSettings["cpp_delayed_dll"]                      = "/DELAYLOAD:\"Jenova.Runtime.Win64.dll\"";
             internalDefaultSettings["cpp_default_subsystem"]                = "Console";                        /* /SUBSYSTEM:CONSOLE [Console, GUI]*/
             internalDefaultSettings["cpp_machine_architecture"]             = "Win64";                          /* /MACHINE:X64 [Win64, Win32]*/
@@ -68,7 +68,7 @@ namespace jenova
             internalDefaultSettings["cpp_add_manifest"]                     = true;                             /* /MANIFEST */
             internalDefaultSettings["cpp_dynamic_base"]                     = true;                             /* /DYNAMICBASE */
             internalDefaultSettings["cpp_debug_symbol"]                     = true;                             /* /DEBUG:FULL */
-            internalDefaultSettings["cpp_extra_linker"]                     = "/OPT:ICF /OPT:NOREF";            /* Extra Linker Options */
+            internalDefaultSettings["cpp_extra_linker"]                     = "/OPT:ICF /OPT:NOREF  /LTCG";     /* Extra Linker Options */
 
             // All Good
             return true;
@@ -227,6 +227,7 @@ namespace jenova
             if (bool(compilerSettings["cpp_debug_database"]) && bool(compilerSettings["cpp_generate_debug_info"])) compilerArgument += "/Zi ";
             if (int(compilerSettings["cpp_exception_handling"]) == 1) compilerArgument += "/EHsc ";
             if (int(compilerSettings["cpp_exception_handling"]) == 2) compilerArgument += "/EHa ";
+            if (QUERY_SDK_LINKING_MODE(Statically)) compilerArgument += "/D \"JENOVA_SDK_STATIC\" ";
             compilerArgument += GenereatePreprocessDefinitions(compilerSettings["cpp_definitions"]);
             compilerArgument += "/I \"./\" ";
             compilerArgument += "/I \"" + this->includePath + "\" ";
@@ -584,6 +585,10 @@ namespace jenova
             linkerArgument += "/LIBPATH:\"" + this->jenovaSDKPath + "\" ";
             linkerArgument += "/LIBPATH:\"" + this->godotSDKPath + "\" ";
 
+            // Handle JenovaSDK Linking
+            if (QUERY_SDK_LINKING_MODE(Dynamically)) linkerArgument += "Jenova.SDK.x64.lib ";
+            if (QUERY_SDK_LINKING_MODE(Statically)) linkerArgument += "Jenova.SDK.Static.x64.lib ";
+
             // Add Additional Library Directories
             linkerArgument += GenereateAdditionalLibraryDirectories(linkerSettings["cpp_extra_library_directories"]);
 
@@ -615,7 +620,7 @@ namespace jenova
             linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_extra_linker"])) + " ";
 
             // Add Delayed DLLs
-            linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_delayed_dll"])) + " ";
+            if (QUERY_SDK_LINKING_MODE(Dynamically)) linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_delayed_dll"])) + " ";
 
             // Dump Compiler Command If Developer Mode Enabled
             if (jenova::GlobalStorage::DeveloperModeActivated) jenova::WriteStdStringToFile(jenovaCachePath + "LinkerCommand.txt", linkerArgument);

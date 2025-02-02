@@ -701,7 +701,7 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
                         }
 
                         // Clean Function Signature
-                        std::string cleanedFunctionSignature = jenova::CleanFunctionSignature(demangledFunctionSignature, buildResult.compilerModel);
+                        std::string cleanedFunctionSignature = jenova::CleanFunctionAndPropertySignature(demangledFunctionSignature, buildResult.compilerModel);
                     
                         // Exctract Return Type
                         std::string returnType = jenova::ExtractReturnTypeFromSignature(cleanedFunctionSignature, buildResult.compilerModel);
@@ -785,7 +785,7 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
                         }
 
                         // Clean Property Signature
-                        std::string cleanedPropertySignature = jenova::CleanFunctionSignature(demangledPropertySignature, buildResult.compilerModel);
+                        std::string cleanedPropertySignature = jenova::CleanFunctionAndPropertySignature(demangledPropertySignature, buildResult.compilerModel);
 
                         // Extract Type
                         std::string propertyType = jenova::ExtractPropertyTypeFromSignature(cleanedPropertySignature, buildResult.compilerModel);
@@ -898,7 +898,7 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
                     std::string funcName = match[3];
                     std::string scriptUID = match[2];
 
-                    std::string cleanedSignature = jenova::CleanFunctionSignature(funcSignature, buildResult.compilerModel);
+                    std::string cleanedSignature = jenova::CleanFunctionAndPropertySignature(funcSignature, buildResult.compilerModel);
                     std::vector<std::string> params = jenova::ExtractParameterTypesFromSignature(cleanedSignature, buildResult.compilerModel);
                     std::string returnType = jenova::ExtractReturnTypeFromSignature(cleanedSignature, buildResult.compilerModel);
 
