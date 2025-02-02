@@ -52,6 +52,7 @@ namespace jenova
             internalDefaultSettings["cpp_open_mp_support"]                  = true;                             /* /openmp */
             internalDefaultSettings["cpp_multithreaded"]                    = true;                             /* /MT */
             internalDefaultSettings["cpp_debug_database"]                   = true;                             /* /Zi */
+            internalDefaultSettings["cpp_conformance_mode"]                 = true;                             /* /permissive vs /permissive- */
             internalDefaultSettings["cpp_exception_handling"]               = 2;                                /* 1 : /EHsc 2: /EHa */
             internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /GR /bigobj";        /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
             internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL"; /* REAL_T_IS_DOUBLE Removed for Now */
@@ -217,6 +218,7 @@ namespace jenova
             if (bool(compilerSettings["cpp_open_mp_support"])) compilerArgument += "/openmp ";
             if (bool(compilerSettings["cpp_multithreaded"])) compilerArgument += "/MT ";
             if (bool(compilerSettings["cpp_debug_database"]) && bool(compilerSettings["cpp_generate_debug_info"])) compilerArgument += "/Zi ";
+            compilerArgument += bool(compilerSettings["cpp_conformance_mode"]) ? "/permissive- " : "/permissive ";
             if (int(compilerSettings["cpp_exception_handling"]) == 1) compilerArgument += "/EHsc ";
             if (int(compilerSettings["cpp_exception_handling"]) == 2) compilerArgument += "/EHa ";
             if (QUERY_SDK_LINKING_MODE(Statically)) compilerArgument += "/D \"JENOVA_SDK_STATIC\" ";

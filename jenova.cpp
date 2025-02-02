@@ -1429,6 +1429,16 @@ namespace jenova
 							return false;
 						}
 
+						// Apply Reference File Encoding
+						if (jenova::GlobalSettings::RespectSourceFilesEncoding)
+						{
+							std::string inputFilePath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path(scriptResource->get_path()));
+							if (!jenova::ApplyFileEncodingFromReferenceFile(inputFilePath, AS_STD_STRING(scriptModule.scriptCacheFile)))
+							{
+								jenova_log("[Jenova Builder] Warning : Failed to Apply Encoding to Source File.");
+							}
+						}
+
 						// Add Script Module
 						scriptModules.push_back(scriptModule);
 					}
@@ -3345,6 +3355,8 @@ namespace jenova
 			{
 				// Verbose Addon Export
 				jenova::Output("[color=#729bed][Build][/color] Copying Addons to Build Directory...", exportDirectory.c_str());
+
+				// Export Addons
 				for (const auto& addonConfig : jenova::GetInstalledAddones())
 				{
 					if (addonConfig.Type == "RuntimeModule")
@@ -3364,6 +3376,24 @@ namespace jenova
 							jenova::Warning("Jenova Exporter", "Failed to Copy Addon [%s] Binary File to Build Directory!", addonConfig.Binary.c_str());
 							continue;
 						}
+					}
+				}
+
+				// Verbose Runtime Module Export
+				jenova::Output("[color=#729bed][Build][/color] Copying Jenova Runtime Module to Build Directory...", exportDirectory.c_str());
+
+				// Export Runtime Module
+				if (jenova::GlobalSettings::CopyRuntimeModuleOnExport)
+				{
+					try
+					{
+						std::string targetBinary = exportDirectory + "/" + std::filesystem::path(jenova::GlobalStorage::CurrentJenovaRuntimeModulePath).filename().string();
+						if (std::filesystem::exists(targetBinary)) std::filesystem::remove(targetBinary);
+						std::filesystem::copy_file(jenova::GlobalStorage::CurrentJenovaRuntimeModulePath, targetBinary);
+					}
+					catch (const std::exception&)
+					{
+						jenova::Warning("Jenova Exporter", "Failed to Copy Jenova Runtime Module to Build Directory!");
 					}
 				}
 
@@ -3896,9 +3926,12 @@ namespace jenova
 								std::string scriptSourceCode = jenova::ReadStdStringFromFile(inputFile);
 								if (scriptSourceCode.empty())
 								{
-									jenova_log("[Jenova Deployer] Error :", "Preprocessing Failed, Invalid Input Source.");
+									jenova_log("[Jenova Deployer] Error : Preprocessing Failed, Invalid Input Source.");
 									quick_exit(EXIT_FAILURE);
 								}
+
+								// Remove Encoding From File Content
+								RemoveFileEncodingInStdString(scriptSourceCode);
 
 								// Line Directive
 								std::string referenceSourceFile = inputFile;
@@ -3954,6 +3987,15 @@ namespace jenova
 								{
 									jenova_log("[Jenova Deployer] Error : Failed to Write Preprocessed Source On Disk.");
 									quick_exit(EXIT_FAILURE);
+								}
+
+								// Apply Reference File Encoding
+								if (jenova::GlobalSettings::RespectSourceFilesEncoding)
+								{
+									if (!jenova::ApplyFileEncodingFromReferenceFile(inputFile, outputPath))
+									{
+										jenova_log("[Jenova Deployer] Warning : Failed to Apply Encoding to Source File.");
+									}
 								}
 							}
 
@@ -5697,6 +5739,34 @@ namespace jenova
 			return "";
 		}
 	}
+	bool WriteWideStdStringToFile(const std::wstring& filePath, const std::wstring& str)
+	{
+		std::wofstream outFile(filePath, std::ios::out | std::ios::binary);
+		if (outFile.is_open())
+		{
+			outFile.write(str.c_str(), str.size());
+			outFile.close();
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	std::wstring ReadWideStdStringFromFile(const std::wstring& filePath)
+	{
+		std::wifstream inFile(filePath);
+		if (inFile.is_open())
+		{
+			std::wstring content((std::istreambuf_iterator<wchar_t>(inFile)), std::istreambuf_iterator<wchar_t>());
+			inFile.close();
+			return content;
+		}
+		else
+		{
+			return L"";
+		}
+	}
 	void ReplaceAllMatchesWithString(std::string& targetString, const std::string& from, const std::string& to)
 	{
 		size_t start_pos = 0;
@@ -5838,6 +5908,151 @@ namespace jenova
 			char c2 = (destinationPath[i] == '\\') ? '/' : destinationPath[i];
 			if (c1 != c2) return false;
 		}
+		return true;
+	}
+	bool RemoveFileEncodingInStdString(std::string& fileContent) 
+	{
+		// Define BOMs for UTF Encodings
+		static const unsigned char UTF8_BOM[] = { 0xEF, 0xBB, 0xBF };
+		static const unsigned char UTF16_LE_BOM[] = { 0xFF, 0xFE };
+		static const unsigned char UTF16_BE_BOM[] = { 0xFE, 0xFF };
+		static const unsigned char UTF32_LE_BOM[] = { 0xFF, 0xFE, 0x00, 0x00 };
+		static const unsigned char UTF32_BE_BOM[] = { 0x00, 0x00, 0xFE, 0xFF };
+
+		// Check for UTF-8 BOM
+		if (fileContent.size() >= 3 && std::memcmp(fileContent.data(), UTF8_BOM, 3) == 0)
+		{
+			fileContent.erase(0, 3);
+			return true;
+		}
+
+		// Check for UTF-16 LE BOM
+		if (fileContent.size() >= 2 && std::memcmp(fileContent.data(), UTF16_LE_BOM, 2) == 0)
+		{
+			fileContent.erase(0, 2);
+			return true;
+		}
+
+		// Check for UTF-16 BE BOM
+		if (fileContent.size() >= 2 && std::memcmp(fileContent.data(), UTF16_BE_BOM, 2) == 0)
+		{
+			fileContent.erase(0, 2);
+			return true;
+		}
+
+		// Check for UTF-32 LE BOM
+		if (fileContent.size() >= 4 && std::memcmp(fileContent.data(), UTF32_LE_BOM, 4) == 0)
+		{
+			fileContent.erase(0, 4);
+			return true;
+		}
+
+		// Check for UTF-32 BE BOM
+		if (fileContent.size() >= 4 && std::memcmp(fileContent.data(), UTF32_BE_BOM, 4) == 0)
+		{
+			fileContent.erase(0, 4);
+			return true;
+		}
+
+		// No BOM Detected
+		return false;
+	}
+	bool ApplyFileEncodingFromReferenceFile(const std::string& sourceFile, const std::string& destinationFile)
+	{
+		// Helper Functions
+		auto DetectEncodingBOM = [](const std::vector<unsigned char>& bytes) -> std::string
+		{
+			if (bytes.size() >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+			{
+				return "UTF-8";
+			}
+			else if (bytes.size() >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+			{
+				return "UTF-16LE";
+			}
+			else if (bytes.size() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+			{
+				return "UTF-16BE";
+			}
+			else if (bytes.size() >= 4 && bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0xFE && bytes[3] == 0xFF)
+			{
+				return "UTF-32BE";
+			}
+			else if (bytes.size() >= 4 && bytes[0] == 0xFF && bytes[1] == 0xFE && bytes[2] == 0x00 && bytes[3] == 0x00)
+			{
+				return "UTF-32LE";
+			}
+			return "None"; // No BOM detected
+		};
+		auto GetBOMBytes = [](const std::string& encoding) -> std::vector<unsigned char>
+		{
+			if (encoding == "UTF-8")
+			{
+				return { 0xEF, 0xBB, 0xBF };
+			}
+			else if (encoding == "UTF-16LE")
+			{
+				return { 0xFF, 0xFE };
+			}
+			else if (encoding == "UTF-16BE")
+			{
+				return { 0xFE, 0xFF };
+			}
+			else if (encoding == "UTF-32BE")
+			{
+				return { 0x00, 0x00, 0xFE, 0xFF };
+			}
+			else if (encoding == "UTF-32LE")
+			{
+				return { 0xFF, 0xFE, 0x00, 0x00 };
+			}
+			return {}; // No BOM
+		};
+
+		// Read First 5 bytes of Source File
+		std::ifstream srcFile(sourceFile, std::ios::binary);
+		if (!srcFile.is_open()) return false;
+		std::vector<unsigned char> srcBytes(5);
+		srcFile.read(reinterpret_cast<char*>(srcBytes.data()), 5);
+		srcFile.close();
+
+		// Get Source Encoding
+		std::string sourceEncoding = DetectEncodingBOM(srcBytes);
+
+		// Read First 5 Bytes of Destination File
+		std::ifstream destFile(destinationFile, std::ios::binary);
+		if (!destFile.is_open()) return false;
+		std::vector<unsigned char> destBytes(5);
+		destFile.read(reinterpret_cast<char*>(destBytes.data()), 5);
+		destFile.close();
+
+		// Get Destination Encoding
+		std::string destinationEncoding = DetectEncodingBOM(destBytes);
+
+		// If Destination File has a BOM Replace it, If it Doesn't Add the source BOM at Beginning
+		std::vector<unsigned char> newBOM = GetBOMBytes(sourceEncoding);
+		std::ifstream inDest(destinationFile, std::ios::binary);
+		if (!inDest.is_open()) return false;
+		std::vector<unsigned char> fileContent((std::istreambuf_iterator<char>(inDest)), std::istreambuf_iterator<char>());
+		inDest.close();
+
+		// Replace BOM
+		if (!destinationEncoding.empty() && destinationEncoding != "None")
+		{
+			size_t bomSize = GetBOMBytes(destinationEncoding).size();
+			fileContent.erase(fileContent.begin(), fileContent.begin() + bomSize);
+		}
+
+		// Prepend Source BOM
+		fileContent.insert(fileContent.begin(), newBOM.begin(), newBOM.end());
+
+		// Write Back Updated Content
+		std::ofstream outDest(destinationFile, std::ios::binary);
+		if (!outDest.is_open()) return false;
+		outDest.write(reinterpret_cast<const char*>(fileContent.data()), fileContent.size());
+		outDest.close();
+
+		// All Good
 		return true;
 	}
 	jenova::EncodedData CreateCompressedBase64FromStdString(const std::string& srcStr)

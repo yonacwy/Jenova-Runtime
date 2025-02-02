@@ -150,13 +150,18 @@ namespace jenova::sdk
 	JENOVA_API bool IsGame();
 	JENOVA_API EngineMode GetEngineMode();
 	JENOVA_API godot::Node* GetNodeByPath(const godot::String& nodePath);
+	JENOVA_API godot::Node* FindNodeByName(godot::Node* parent, const godot::String& name);
 	JENOVA_API godot::SceneTree* GetTree();
 	JENOVA_API double GetTime();
 	JENOVA_API void Alert(const char* fmt, ...);
 	JENOVA_API godot::String Format(const char* format, ...);
+	JENOVA_API godot::String Format(const wchar_t* format, ...);
 	JENOVA_API void Output(const char* format, ...);
+	JENOVA_API void Output(const wchar_t* format, ...);
 	JENOVA_API const char* GetCStr(const godot::String& godotStr);
+	JENOVA_API const wchar_t* GetWCStr(const godot::String& godotStr);
 	JENOVA_API bool SetClassIcon(const godot::String& className, const godot::Ref<godot::Texture2D> iconImage);
+	JENOVA_API double MatchScaleFactor(double inputSize);
 	JENOVA_API godot::Error CreateSignalCallback(godot::Object* object, const godot::String& signalName, FunctionPtr callbackPtr);
 	JENOVA_API bool CreateDirectoryMonitor(const godot::String& directoryPath);
 	JENOVA_API bool CreateFileMonitor(const godot::String& filePath);
@@ -202,6 +207,10 @@ namespace jenova::sdk
 	template <typename T> T* GetNode(const godot::String& nodePath)
 	{ 
 		return static_cast<T*>(GetNodeByPath(nodePath));
+	}
+	template <typename T> T* FindNode(godot::Node* parent, const godot::String& nodeName)
+	{
+		return static_cast<T*>(FindNodeByName(parent, nodeName));
 	}
 	template <typename T> T* GlobalPointer(MemoryID id)
 	{ 

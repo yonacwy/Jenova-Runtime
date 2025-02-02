@@ -119,6 +119,18 @@ namespace jenova::sdk
 		if (scene_tree) return scene_tree->get_root()->get_node<godot::Node>(godot::NodePath(path));
 		return nullptr;
 	}
+	godot::Node* FindNodeByName(godot::Node* parent, const godot::String& name)
+	{
+		if (!parent) return nullptr;
+		if (parent->get_name() == name) return parent;
+		for (int i = 0; i < parent->get_child_count(); ++i)
+		{
+			godot::Node* child = parent->get_child(i);
+			godot::Node* result = FindNodeByName(child, name);
+			if (result) return result;
+		}
+		return nullptr;
+	}
 	godot::SceneTree* GetTree()
 	{
 		godot::SceneTree* scene_tree = dynamic_cast<godot::SceneTree*>(godot::Engine::get_singleton()->get_main_loop());
@@ -138,6 +150,15 @@ namespace jenova::sdk
 		va_end(args);
 		return godot::String(buffer);
 	}
+	godot::String Format(const wchar_t* format, ...)
+	{
+		wchar_t buffer[1024];
+		va_list args;
+		va_start(args, format);
+		vswprintf(buffer, sizeof(buffer) / sizeof(wchar_t), format, args);
+		va_end(args);
+		return godot::String(buffer);
+	}
 	void Output(const char* format, ...)
 	{
 		char buffer[1024];
@@ -146,6 +167,15 @@ namespace jenova::sdk
 		vsnprintf(buffer, sizeof(buffer), format, args);
 		va_end(args);
 		godot::UtilityFunctions::print(godot::String("[JENOVA-SDK] > ") + godot::String(buffer));
+	}
+	void Output(const wchar_t* format, ...)
+	{
+		wchar_t buffer[1024];
+		va_list args;
+		va_start(args, format);
+		vswprintf(buffer, sizeof(buffer) / sizeof(wchar_t), format, args);
+		va_end(args);
+		godot::UtilityFunctions::print(godot::String(L"[JENOVA-SDK] > ") + godot::String(buffer));
 	}
 	const char* GetCStr(const godot::String& godotStr)
 	{
@@ -159,6 +189,20 @@ namespace jenova::sdk
 			return strdup(str.c_str());
 		#endif
 	}
+	const wchar_t* GetWCStr(const godot::String& godotStr)
+	{
+		godot::PackedByteArray wchar_buffer = godotStr.to_wchar_buffer();
+		size_t length = wchar_buffer.size() / sizeof(wchar_t);
+		std::wstring str((wchar_t*)wchar_buffer.ptr(), length);
+		if (!str.empty() && str.back() == L'\0') str.pop_back();
+
+		// Bad Approach, Needs Improvement
+		#if defined(_WIN32) || defined(_WIN64)
+				return _wcsdup(str.c_str());
+		#else
+				return wcsdup(str.c_str());
+		#endif
+	}
 	bool SetClassIcon(const godot::String& className, const godot::Ref<godot::Texture2D> iconImage)
 	{
 		if (!godot::ClassDB::class_exists(className)) return false;
@@ -166,6 +210,18 @@ namespace jenova::sdk
 		if (editor_theme->has_icon(className, "EditorIcons")) return false;
 		editor_theme->set_icon(className, "EditorIcons", iconImage);
 		return true;
+	}
+	double MatchScaleFactor(double inputSize)
+	{
+		if (IsEditor())
+		{
+			double scaleFactor = godot::EditorInterface::get_singleton()->get_editor_scale();
+			return inputSize * scaleFactor;
+		}
+		else
+		{
+			return inputSize;
+		}
 	}
 	godot::Error CreateSignalCallback(godot::Object* object, const godot::String& signalName, FunctionPtr callbackPtr)
 	{

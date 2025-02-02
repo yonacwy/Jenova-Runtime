@@ -20,13 +20,13 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.5.1"
+#define APP_VERSION						"0.3.5.2"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 5, 1
+#define APP_VERSION_DATA				0, 3, 5, 2
 #define APP_VERSION_BUILD				"0"
-#define APP_VERSION_NAME				"Genesis"
+#define APP_VERSION_NAME				"Cepter"
 
 #ifndef NO_JENOVA_RUNTIME_SDK
 
@@ -641,6 +641,8 @@ namespace jenova
 		constexpr bool AskAboutOpeningVisualStudio				= true;
 		constexpr bool ForceIncludePackageHeaders				= false;
 		constexpr bool CreateSymbolicAddonModules				= true;
+		constexpr bool CopyRuntimeModuleOnExport				= true;
+		constexpr bool RespectSourceFilesEncoding				= true;
 
 		constexpr size_t PrintOutputBufferSize					= 8192;
 		constexpr size_t BuildOutputBufferSize					= PrintOutputBufferSize;
@@ -790,12 +792,16 @@ namespace jenova
 	String ReadStringFromFile(const String& filePath);
 	bool WriteStdStringToFile(const std::string& filePath, const std::string& str);
 	std::string ReadStdStringFromFile(const std::string& filePath);
+	bool WriteWideStdStringToFile(const std::wstring& filePath, const std::wstring& str);
+	std::wstring ReadWideStdStringFromFile(const std::wstring& filePath);
 	void ReplaceAllMatchesWithString(std::string& targetString, const std::string& from, const std::string& to);
 	std::string ReplaceAllMatchesWithStringAndReturn(std::string targetString, const std::string& from, const std::string& to);
 	ArgumentsArray SplitStdStringToArguments(const std::string& str, char delimiter = ';');
 	ScriptEntityContainer CreateScriptEntityContainer(const String& rootPath);
 	std::string GenerateFilterUniqueIdentifier(std::string& filterName, bool addBrackets = false);
 	bool CompareFilePaths(const std::string& sourcePath, const std::string& destinationPath);
+	bool RemoveFileEncodingInStdString(std::string& fileContent);
+	bool ApplyFileEncodingFromReferenceFile(const std::string& sourceFile, const std::string& destinationFile);
 	EncodedData CreateCompressedBase64FromStdString(const std::string& srcStr);
 	std::string CreateStdStringFromCompressedBase64(const EncodedData& base64);
 	bool WriteMemoryBufferToFile(const std::string& filePath, const MemoryBuffer& memoryBuffer);
