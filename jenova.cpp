@@ -1267,7 +1267,17 @@ namespace jenova
 			void OnBuildSuccess()
 			{
 				// Start Game
-				if (jenova::GlobalStorage::CurrentBuildAndRunMode == jenova::BuildAndRunMode::RunOnBuildSuccess) EditorInterface::get_singleton()->play_main_scene();
+				if (jenova::GlobalStorage::CurrentBuildAndRunMode == jenova::BuildAndRunMode::RunOnBuildSuccess)
+				{
+					if (jenova::GlobalSettings::DisableBuildAndRunWhileDebug)
+					{
+						if (!EditorInterface::get_singleton()->is_playing_scene()) EditorInterface::get_singleton()->play_main_scene();
+					}
+					else
+					{
+						EditorInterface::get_singleton()->play_main_scene();
+					}
+				}
 
 				// If Debug Build Running Notify It
 				if (jenova::GlobalStorage::UseHotReloadAtRuntime && EditorInterface::get_singleton()->is_playing_scene())
@@ -2253,6 +2263,7 @@ namespace jenova
 					jenovaConfiguration["AdditionalLibraryDirectories"] = AS_STD_STRING(String(additionalLibraryDirectories));
 					jenovaConfiguration["AdditionalDependencies"] = AS_STD_STRING(String(additionalDependencies));
 					jenovaConfiguration["GenerateDebugInformation"] = bool(generateDebugInformation);
+					jenovaConfiguration["SDKLinkingMode"] = jenova::GlobalStorage::SDKLinkingMode;
 
 					// Serialize Scripts Count
 					jenovaConfiguration["ScriptsCount"] = scriptEntityContainer.entityCount;
@@ -4408,7 +4419,11 @@ namespace jenova
 								preprocessorDefinitions += "#define JENOVA_COMPILER \"Microsoft Visual C++ Compiler\"\n";
 								preprocessorDefinitions += "#define MSVC_COMPILER\n";
 
-								// Preprocessor Definitions [USER]
+								// Preprocessor Definitions [Linking]
+								if (jenovaConfiguration["SDKLinkingMode"].get<SDKLinkingMode>() == SDKLinkingMode::Statically) preprocessorDefinitions += "#define JENOVA_SDK_STATIC_LINKING\n";
+								if (jenovaConfiguration["SDKLinkingMode"].get<SDKLinkingMode>() == SDKLinkingMode::Dynamically) preprocessorDefinitions += "#define JENOVA_SDK_DYNAMIC_LINKING\n";
+
+								// Preprocessor Definitions [User]
 								auto userPreprocessorDefinitions = jenova::SplitStdStringToArguments(jenovaConfiguration["PreprocessorDefinitions"].get<std::string>(), ';');
 								for (const auto& definition : userPreprocessorDefinitions) if (!definition.empty()) preprocessorDefinitions += "#define " + definition + "\n";
 

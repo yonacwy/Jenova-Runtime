@@ -105,7 +105,11 @@ namespace jenova
             preprocessorDefinitions += "#define JENOVA_COMPILER \"Microsoft Visual C++ Compiler\"\n";
             preprocessorDefinitions += "#define MSVC_COMPILER\n";
 
-            // Preprocessor Definitions [USER]
+            // Preprocessor Definitions [Linking]
+            if (jenova::GlobalStorage::SDKLinkingMode == SDKLinkingMode::Statically) preprocessorDefinitions += "#define JENOVA_SDK_STATIC_LINKING\n";
+            if (jenova::GlobalStorage::SDKLinkingMode == SDKLinkingMode::Dynamically) preprocessorDefinitions += "#define JENOVA_SDK_DYNAMIC_LINKING\n";
+
+            // Preprocessor Definitions [User]
             String userPreprocessorDefinitions = preprocessorSettings["PreprocessorDefinitions"];
             PackedStringArray userPreprocessorDefinitionsList = userPreprocessorDefinitions.split(";");
             for (const auto& definition : userPreprocessorDefinitionsList) if (!definition.is_empty()) preprocessorDefinitions += "#define " + definition + "\n";

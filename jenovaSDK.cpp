@@ -557,5 +557,25 @@ namespace jenova
 		if (!str.empty() && str.back() == '\0') str.pop_back();
 		return str;
 	}
+	bool RegisterRuntimeEventCallback(jenova::FunctionPointer runtimeCallback)
+	{
+		UtilityFunctions::push_error(
+			"API Function `RegisterRuntimeEventCallback` in JenovaSDK is not available when using SDK static linking.\n"
+			"Please ensure dynamic linking is enabled or refer to the SDK documentation for alternative solutions."
+		);
+		return false;
+	}
+	bool UnregisterRuntimeEventCallback(jenova::FunctionPointer runtimeCallback)
+	{
+		UtilityFunctions::push_error(
+			"API Function `UnregisterRuntimeEventCallback` in JenovaSDK is not available when using SDK static linking.\n"
+			"Please ensure dynamic linking is enabled or refer to the SDK documentation for alternative solutions."
+		);
+		return false;
+	}
+	HWND GetMainWindowNativeHandle()
+	{
+		return HWND(DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::HandleType::WINDOW_HANDLE));
+	}
 }
 #endif
