@@ -127,16 +127,31 @@ namespace jenova::sdk
 		HotReload,
 		ForceReload
 	};
-
-	// Function Definitions
-	typedef void(*FileSystemCallback)(const godot::String& targetPath, const FileSystemEvent& fsEvent);
+	enum class RuntimeEvent
+	{
+		Initialized,
+		Started,
+		Stopped,
+		Ready,
+		EnterTree,
+		ExitTree,
+		ReceivedDebuggerMessage
+	};
 
 	// Type Definitions
-	typedef void* FunctionPtr;
-	typedef const char* MemoryID;
-	typedef const char* VariableID;
-	typedef unsigned short TaskID;
-	typedef std::function<void()> TaskFunction;
+	typedef void*						FunctionPtr;
+	typedef void*						NativePtr;
+	typedef const char*					StringPtr;
+	typedef const wchar_t*				WideStringPtr;
+	typedef const char*					MemoryID;
+	typedef const char*					VariableID;
+	typedef unsigned short				TaskID;
+	typedef int short					DriverResourceID;
+	typedef std::function<void()>		TaskFunction;
+
+	// Function Definitions
+	typedef void(*RuntimeCallback)(const RuntimeEvent& runtimeEvent, NativePtr dataPtr, size_t dataSize);
+	typedef void(*FileSystemCallback)(const godot::String& targetPath, const FileSystemEvent& fsEvent);
 
 	// Structures
 	struct Caller
@@ -153,13 +168,13 @@ namespace jenova::sdk
 	JENOVA_API godot::Node* FindNodeByName(godot::Node* parent, const godot::String& name);
 	JENOVA_API godot::SceneTree* GetTree();
 	JENOVA_API double GetTime();
-	JENOVA_API void Alert(const char* fmt, ...);
-	JENOVA_API godot::String Format(const char* format, ...);
-	JENOVA_API godot::String Format(const wchar_t* format, ...);
-	JENOVA_API void Output(const char* format, ...);
-	JENOVA_API void Output(const wchar_t* format, ...);
-	JENOVA_API const char* GetCStr(const godot::String& godotStr);
-	JENOVA_API const wchar_t* GetWCStr(const godot::String& godotStr);
+	JENOVA_API void Alert(StringPtr fmt, ...);
+	JENOVA_API godot::String Format(StringPtr format, ...);
+	JENOVA_API godot::String Format(WideStringPtr format, ...);
+	JENOVA_API void Output(StringPtr format, ...);
+	JENOVA_API void Output(WideStringPtr format, ...);
+	JENOVA_API StringPtr GetCStr(const godot::String& godotStr);
+	JENOVA_API WideStringPtr GetWCStr(const godot::String& godotStr);
 	JENOVA_API bool SetClassIcon(const godot::String& className, const godot::Ref<godot::Texture2D> iconImage);
 	JENOVA_API double MatchScaleFactor(double inputSize);
 	JENOVA_API godot::Error CreateSignalCallback(godot::Object* object, const godot::String& signalName, FunctionPtr callbackPtr);
@@ -172,6 +187,13 @@ namespace jenova::sdk
 	JENOVA_API double GetCheckpointTime(const godot::String& checkPointName);
 	JENOVA_API void DeleteCheckpoint(const godot::String& checkPointName);
 	JENOVA_API double GetCheckpointTimeAndDispose(const godot::String& checkPointName);
+	JENOVA_API bool RegisterRuntimeCallback(RuntimeCallback callbackPtr);
+	JENOVA_API bool UnregisterRuntimeCallback(RuntimeCallback callbackPtr);
+
+	// Graphic Utilities
+	JENOVA_API NativePtr GetGameWindowHandle();
+	JENOVA_API StringPtr GetRenderingDriverName();
+	JENOVA_API NativePtr GetRenderingDriverResource(DriverResourceID resourceType);
 
 	// Hot-Reloading Utilities (Sakura)
 	namespace sakura
@@ -183,10 +205,10 @@ namespace jenova::sdk
 	}
 
 	// Memory Management Utilities (Anzen)
-	JENOVA_API void* GetGlobalPointer(MemoryID id);
-	JENOVA_API void* SetGlobalPointer(MemoryID id, void* ptr);
+	JENOVA_API NativePtr GetGlobalPointer(MemoryID id);
+	JENOVA_API NativePtr SetGlobalPointer(MemoryID id, NativePtr ptr);
 	JENOVA_API void DeleteGlobalPointer(MemoryID id);
-	JENOVA_API void* AllocateGlobalMemory(MemoryID id, size_t size);
+	JENOVA_API NativePtr AllocateGlobalMemory(MemoryID id, size_t size);
 	JENOVA_API void FreeGlobalMemory(MemoryID id);
 
 	// Global Variable Storage Utilities

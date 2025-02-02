@@ -126,6 +126,7 @@ namespace jenova
 			 String CompilerPackageConfigPath							= "jenova/compiler_package";
 			 String GodotKitPackageConfigPath							= "jenova/godot_kit_package";
 			 String SDKLinkingModeConfigPath							= "jenova/sdk_linking_mode";
+			 String ManagedSafeExecutionConfigPath						= "jenova/managed_safe_execution";
 			 String BuildToolButtonEditorConfigPath						= "jenova/build_tool_button_placement";
 
 		private:
@@ -488,6 +489,7 @@ namespace jenova
 						if (!editor_settings->has_setting(CompilerPackageConfigPath)) editor_settings->set(CompilerPackageConfigPath, "Latest");
 						if (!editor_settings->has_setting(GodotKitPackageConfigPath)) editor_settings->set(GodotKitPackageConfigPath, "Latest");
 						if (!editor_settings->has_setting(SDKLinkingModeConfigPath)) editor_settings->set(SDKLinkingModeConfigPath, int32_t(SDKLinkingDefaultMode));
+						if (!editor_settings->has_setting(ManagedSafeExecutionConfigPath)) editor_settings->set(ManagedSafeExecutionConfigPath, true);
 						if (!editor_settings->has_setting(BuildToolButtonEditorConfigPath)) editor_settings->set(BuildToolButtonEditorConfigPath, int32_t(BuildToolButtonDefaultPlacement));
 				
 						// Add the Setting Descriptions to The Editor Settings
@@ -607,6 +609,12 @@ namespace jenova
 						editor_settings->add_property_info(SDKLinkingModeProperty);
 						editor_settings->set_initial_value(SDKLinkingModeConfigPath, int32_t(SDKLinkingDefaultMode), false);
 
+						// Managed Safe Execution (MSE) Property
+						PropertyInfo ManagedSafeExecutionProperty(Variant::BOOL, ManagedSafeExecutionConfigPath,
+							PropertyHint::PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, JenovaEditorSettingsCategory);
+						editor_settings->add_property_info(ManagedSafeExecutionProperty);
+						editor_settings->set_initial_value(ManagedSafeExecutionConfigPath, true, false);
+
 						// Build Tool Button Placement Property
 						PropertyInfo BuildToolButtonPlacementProperty(Variant::INT, BuildToolButtonEditorConfigPath, 
 							PropertyHint::PROPERTY_HINT_ENUM, "Before Main Menu,After Main Menu,Before Stage Selector,After Stage Selector,Before Run Bar,After Run Bar,After Render Method",
@@ -687,6 +695,11 @@ namespace jenova
 				Variant sdkLinkingMode;
 				if (!GetEditorSetting(SDKLinkingModeConfigPath, sdkLinkingMode)) return false;
 				jenova::GlobalStorage::SDKLinkingMode = jenova::SDKLinkingMode(int32_t(sdkLinkingMode));
+
+				// Update Managed Safe Execution
+				Variant useManagedSafeExecution;
+				if (!GetEditorSetting(ManagedSafeExecutionConfigPath, useManagedSafeExecution)) return false;
+				jenova::GlobalStorage::UseManagedSafeExecution = bool(useManagedSafeExecution);
 
 				// All Good
 				return true;
@@ -2259,6 +2272,7 @@ namespace jenova
 				if (setting_key == std::string("compiler_package")) return CompilerPackageConfigPath;
 				if (setting_key == std::string("godot_kit_package")) return GodotKitPackageConfigPath;
 				if (setting_key == std::string("sdk_linking_mode")) return SDKLinkingModeConfigPath;
+				if (setting_key == std::string("managed_safe_execution")) return ManagedSafeExecutionConfigPath;
 				if (setting_key == std::string("build_toolbutton_placement")) return BuildToolButtonEditorConfigPath;
 				return String("jenova/unknown");
 			}
@@ -3529,9 +3543,25 @@ namespace jenova
 		};
 
 		// Runtime Plugins
-		class JenovaRuntime : public Object 
+		class JenovaRuntime : public Node
 		{
-			GDCLASS(JenovaRuntime, Object)
+			GDCLASS(JenovaRuntime, Node)
+
+		public:
+			// Types
+			enum class RuntimeEvent
+			{
+				Initialized,
+				Started,
+				Stopped,
+				Ready,
+				EnterTree,
+				ExitTree,
+				ReceivedDebuggerMessage
+			};
+
+			// Function Definitions
+			typedef void(*RuntimeCallback)(const RuntimeEvent& runtimeEvent, void* dataPtr, size_t dataSize);
 
 		private:
 			// Singleton Instance
@@ -3539,10 +3569,7 @@ namespace jenova
 
 		protected:
 			// Method Binding
-			static void _bind_methods()
-			{
-
-			}
+			static void _bind_methods() { }
 
 		public:
 			// Initializer/Deinitializer
@@ -3554,19 +3581,34 @@ namespace jenova
 				// Initialize Singleton
 				singleton = memnew(JenovaRuntime);
 
-				// Start Runtime
-				if (!singleton->StartRuntime())
+				// Register Singleton
+				Engine::get_singleton()->register_singleton("JenovaRuntime", singleton);
+
+				// Initialize Runtime
+				if (!singleton->InitializeRuntime())
 				{
-					jenova::Error("Jenova Runtime", "Fatal Error :: Jenova Runtime Failed to Start!");
+					jenova::Error("Jenova Runtime", "Fatal Error :: Jenova Runtime Failed to Initialize!");
 					quick_exit(jenova::ErrorCode::RUNTIME_INIT_FAILED);
 				}
 
 				// Verbose
 				jenova::Output("Jenova Runtime (%s%s%s) Initialized.", APP_VERSION, APP_VERSION_MIDDLEFIX, APP_VERSION_POSTFIX);
 			}
-			static void deinit()
+			static void start()
 			{
 				// Start Runtime
+				if (!singleton->StartRuntime())
+				{
+					jenova::Error("Jenova Runtime", "Fatal Error :: Jenova Runtime Failed to Start!");
+					quick_exit(jenova::ErrorCode::RUNTIME_START_FAILED);
+				}
+			}
+			static void deinit()
+			{
+				// Unregister Singleton
+				Engine::get_singleton()->unregister_singleton("JenovaRuntime");
+
+				// Stop Runtime
 				if (!singleton->StopRuntime())
 				{
 					jenova::Error("Jenova Runtime", "Fatal Error :: Jenova Runtime Failed to Stop!");
@@ -3574,7 +3616,7 @@ namespace jenova
 				}
 
 				// Release Singleton
-				if (singleton) memdelete(singleton);
+				if (singleton && !enteredSceneTree) memdelete(singleton);
 
 				// Verbose
 				jenova::Output("Jenova Runtime (%s%s%s) Uninitialized.", APP_VERSION, APP_VERSION_MIDDLEFIX, APP_VERSION_POSTFIX);
@@ -3586,16 +3628,49 @@ namespace jenova
 				return singleton;
 			}
 
-		public:
+			// Events
+			void _ready() override
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Ready, nullptr, 0);
+			}
+			void _enter_tree() override
+			{
+				// Update Tree State
+				enteredSceneTree = true;
+
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::EnterTree, nullptr, 0);
+			}
+			void _exit_tree() override
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::ExitTree, nullptr, 0);
+			}
+
 			// Methods
-			bool StartRuntime()
+			bool InitializeRuntime()
 			{
 				// Register Debugger Message Receiver
 				if (QUERY_ENGINE_MODE(Debug))
 				{
 					EngineDebugger::get_singleton()->register_message_capture("Jenova-Runtime", callable_mp(this, &JenovaRuntime::OnDebuggerMessageReceived));
-					jenova::Output("Debugging Tools Detected, Runtime will be running in Debug Mode.");
+					jenova::OutputColored("#3e4ec7", "Debugging Tools Detected, Runtime will be running in Debug Mode.");
 				}
+
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Initialized, nullptr, 0);
+
+				// All Good
+				return true;
+			}
+			bool StartRuntime()
+			{
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Started, nullptr, 0);
+
+				// Add Runtime to Tree
+				jenova::GetSceneTree()->get_root()->add_child(this);
 
 				// All Good
 				return true;
@@ -3608,14 +3683,21 @@ namespace jenova
 					EngineDebugger::get_singleton()->unregister_message_capture("Jenova-Runtime");
 				}
 
+				// Rise Events
+				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Stopped, nullptr, 0);
+
 				// All Good
 				return true;
 			}
-			void StartNetworkListener(const Dictionary& listenerSettings);
-			void StartNetworkPeer(const Dictionary& peerSettings);
+			void StartNetworkListener(const Dictionary& listenerSettings)
+			{
+			}
+			void StartNetworkPeer(const Dictionary& peerSettings)
+			{
+			}
 
 		private:
-			// Events
+			// Signals
 			bool OnDebuggerMessageReceived(const String& msgCommand, const Array& args)
 			{
 				// Handle Remote Commands
@@ -3631,6 +3713,11 @@ namespace jenova
 				// All Good
 				return true;
 			}
+
+		public:
+			// Data
+			inline static bool enteredSceneTree = false;
+			inline static std::vector<RuntimeCallback> runtimeCallbacks;
 		};
 
 		// Callbacks
@@ -3757,7 +3844,7 @@ namespace jenova
 					if (jenova::GlobalSettings::RegisterGlobalCrashHandler) SetUnhandledExceptionFilter(jenova::JenovaGlobalCrashHandler);
 				#endif
 
-				// Uninitialize Runtime
+				// Initialize Runtime
 				JenovaRuntime::init();
 			}
 		}
@@ -4111,6 +4198,7 @@ namespace jenova
 		bool DeveloperModeActivated = jenova::GlobalSettings::VerboseEnabled;
 		bool UseHotReloadAtRuntime = true;
 		bool UseMonospaceFontForTerminal = true;
+		bool UseManagedSafeExecution = true;
 
 		// Values
 		int TerminalDefaultFontSize = 12;
@@ -7689,6 +7777,26 @@ namespace jenova
 
 		// Not Found
 		return preprocessedFile;
+	}
+	bool RegisterRuntimeEventCallback(jenova::FunctionPointer runtimeCallback)
+	{
+		auto callback = (jenova::plugin::JenovaRuntime::RuntimeCallback)runtimeCallback;
+		auto& callbacks = jenova::plugin::JenovaRuntime::runtimeCallbacks;
+		if (std::find(callbacks.begin(), callbacks.end(), callback) != callbacks.end()) return false;
+		callbacks.push_back(callback);
+		return true;
+	}
+	bool UnregisterRuntimeEventCallback(jenova::FunctionPointer runtimeCallback)
+	{
+		auto callback = (jenova::plugin::JenovaRuntime::RuntimeCallback)runtimeCallback;
+		auto& callbacks = jenova::plugin::JenovaRuntime::runtimeCallbacks;
+		auto it = std::find(callbacks.begin(), callbacks.end(), callback);
+		if (it != callbacks.end())
+		{
+			callbacks.erase(it);
+			return true;
+		}
+		return false;
 	}
 	#pragma endregion
 	

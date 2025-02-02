@@ -141,7 +141,7 @@ namespace jenova::sdk
 		int64_t time_msec = godot::Time::get_singleton()->get_ticks_msec();
 		return static_cast<double>(time_msec) / 1000.0f;
 	}
-	godot::String Format(const char* format, ...)
+	godot::String Format(StringPtr format, ...)
 	{
 		char buffer[1024];
 		va_list args;
@@ -150,7 +150,7 @@ namespace jenova::sdk
 		va_end(args);
 		return godot::String(buffer);
 	}
-	godot::String Format(const wchar_t* format, ...)
+	godot::String Format(WideStringPtr format, ...)
 	{
 		wchar_t buffer[1024];
 		va_list args;
@@ -159,7 +159,7 @@ namespace jenova::sdk
 		va_end(args);
 		return godot::String(buffer);
 	}
-	void Output(const char* format, ...)
+	void Output(StringPtr format, ...)
 	{
 		char buffer[1024];
 		va_list args;
@@ -168,7 +168,7 @@ namespace jenova::sdk
 		va_end(args);
 		godot::UtilityFunctions::print(godot::String("[JENOVA-SDK] > ") + godot::String(buffer));
 	}
-	void Output(const wchar_t* format, ...)
+	void Output(WideStringPtr format, ...)
 	{
 		wchar_t buffer[1024];
 		va_list args;
@@ -177,7 +177,7 @@ namespace jenova::sdk
 		va_end(args);
 		godot::UtilityFunctions::print(godot::String(L"[JENOVA-SDK] > ") + godot::String(buffer));
 	}
-	const char* GetCStr(const godot::String& godotStr)
+	StringPtr GetCStr(const godot::String& godotStr)
 	{
 		std::string str((char*)godotStr.utf8().ptr(), godotStr.utf8().size());
 		if (!str.empty() && str.back() == '\0') str.pop_back();
@@ -189,7 +189,7 @@ namespace jenova::sdk
 			return strdup(str.c_str());
 		#endif
 	}
-	const wchar_t* GetWCStr(const godot::String& godotStr)
+	WideStringPtr GetWCStr(const godot::String& godotStr)
 	{
 		godot::PackedByteArray wchar_buffer = godotStr.to_wchar_buffer();
 		size_t length = wchar_buffer.size() / sizeof(wchar_t);
@@ -366,7 +366,7 @@ namespace jenova::sdk
 namespace jenova::sdk
 {
 	// Helpers Utilities
-	void Alert(const char* fmt, ...)
+	void Alert(StringPtr fmt, ...)
 	{
 		char buffer[1024];
 		va_list args;
@@ -429,20 +429,49 @@ namespace jenova::sdk
 	{
 		return JenovaTinyProfiler::GetCheckpointTimeAndDispose(AS_STD_STRING(checkPointName));
 	}
+	bool RegisterRuntimeCallback(RuntimeCallback callbackPtr)
+	{
+		return jenova::RegisterRuntimeEventCallback(callbackPtr);
+	}
+	bool UnregisterRuntimeCallback(RuntimeCallback callbackPtr)
+	{
+		return jenova::UnregisterRuntimeEventCallback(callbackPtr);
+	}
+
+	// Graphic Utilities
+	NativePtr GetGameWindowHandle()
+	{
+		return NativePtr(jenova::GetMainWindowNativeHandle());
+	}
+	StringPtr GetRenderingDriverName()
+	{
+		auto projectSetting = ProjectSettings::get_singleton();
+		#if defined(_WIN32) || defined(_WIN64)
+			return GetCStr(String(projectSetting->get_setting("rendering/rendering_device/driver.windows")));
+		#else
+			return GetCStr(String(projectSetting->get_setting("rendering/rendering_device/driver")));
+		#endif
+	}
+	NativePtr GetRenderingDriverResource(DriverResourceID resourceType)
+	{
+		godot::RenderingDevice* device = godot::RenderingServer::get_singleton()->get_rendering_device();
+		if (device) return reinterpret_cast<NativePtr>(device->get_driver_resource(godot::RenderingDevice::DriverResource(resourceType), RID(), 0));
+		return nullptr;
+	}
 
 	// Memory Management Utilities (Anzen)
-	void* GetGlobalPointer(MemoryID id)
+	NativePtr GetGlobalPointer(MemoryID id)
 	{
 		auto it = globalMemoryMap.find(id);
 		if (it != globalMemoryMap.end()) return it->second;
 		return nullptr;
 	}
-	void* SetGlobalPointer(MemoryID id, void* ptr)
+	NativePtr SetGlobalPointer(MemoryID id, NativePtr ptr)
 	{
 		auto it = globalMemoryMap.find(id);
 		if (it != globalMemoryMap.end())
 		{
-			void* oldPtr = it->second;
+			NativePtr oldPtr = it->second;
 			it->second = ptr;
 			return oldPtr;
 		}
@@ -455,9 +484,9 @@ namespace jenova::sdk
 	{
 		globalMemoryMap.erase(id);
 	}
-	void* AllocateGlobalMemory(MemoryID id, size_t size)
+	NativePtr AllocateGlobalMemory(MemoryID id, size_t size)
 	{
-		void* mem = jenova::AllocateMemory(size);
+		NativePtr mem = jenova::AllocateMemory(size);
 		if (!mem) return nullptr;
 		globalMemoryMap[id] = mem;
 		return mem;
@@ -509,7 +538,7 @@ namespace jenova
 		Following APIs Are Replicates from jenova.hpp
 		And Are Only Available in Static Build of SDK.
 	*/
-	void Output(const char* fmt, ...)
+	void Output(sdk::StringPtr fmt, ...)
 	{
 		char buffer[1024];
 		va_list args;

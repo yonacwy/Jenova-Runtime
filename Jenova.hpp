@@ -20,13 +20,13 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.5.3"
+#define APP_VERSION						"0.3.5.4"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 5, 3
+#define APP_VERSION_DATA				0, 3, 5, 4
 #define APP_VERSION_BUILD				"0"
-#define APP_VERSION_NAME				"Cepter"
+#define APP_VERSION_NAME				"Bloom"
 
 #ifndef NO_JENOVA_RUNTIME_SDK
 
@@ -321,6 +321,7 @@ namespace jenova
 	typedef struct { uint32_t LowDateTime, HighDateTime; } FileTime;
 	typedef struct SmartString { std::string* str; ~SmartString() { if (str) delete str; }} SmartString;
 	typedef struct SmartWstring { std::wstring* wstr; ~SmartWstring() { if (wstr) delete wstr; }} SmartWstring;
+	typedef void* FunctionPointer;
 
 	// Enumerators
 	enum class TargetPlatform
@@ -702,6 +703,7 @@ namespace jenova
 		extern bool												DeveloperModeActivated;
 		extern bool												UseHotReloadAtRuntime;
 		extern bool												UseMonospaceFontForTerminal;
+		extern bool												UseManagedSafeExecution;
 		extern int												TerminalDefaultFontSize;
 	}
 
@@ -709,8 +711,9 @@ namespace jenova
 	namespace ErrorCode
 	{
 		constexpr int RUNTIME_INIT_FAILED						= 0xE0C0;
-		constexpr int RUNTIME_DEINIT_FAILED						= 0xE0C1;
-		constexpr int INTERPRETER_INIT_FAILED					= 0xE0C2;
+		constexpr int RUNTIME_START_FAILED						= 0xE0C1;
+		constexpr int RUNTIME_DEINIT_FAILED						= 0xE0C2;
+		constexpr int INTERPRETER_INIT_FAILED					= 0xE0C3;
 	}
 
 	// Operating System Abstraction Layer
@@ -846,6 +849,8 @@ namespace jenova
 	bool ProcessCommandLineArguments();
 	godot::SceneTree* GetSceneTree();
 	std::string FindScriptPathFromPreprocessedFile(const std::string& preprocessedFile);
+	bool RegisterRuntimeEventCallback(jenova::FunctionPointer runtimeCallback);
+	bool UnregisterRuntimeEventCallback(jenova::FunctionPointer runtimeCallback);
 	#pragma endregion
 
 	// Core Reimplementation

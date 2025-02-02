@@ -844,6 +844,7 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
             serializer["ModuleBinarySize"] = buildResult.builtModuleData.size();
             serializer["InterpreterBackend"] = JenovaInterpreter::GetInterpreterBackend();
             serializer["DeveloperMode"] = jenova::GlobalStorage::DeveloperModeActivated;
+            serializer["ManagedSafeExecution"] = jenova::GlobalStorage::UseManagedSafeExecution;
 
             // Dump Metadata If Developer Mode Activated
             if (jenova::GlobalStorage::DeveloperModeActivated)
@@ -1045,6 +1046,13 @@ bool JenovaInterpreter::UpdateConfigurationsFromMetaData(const jenova::Serialize
         {
             hasDebugInformation = true;
             moduleDiskPath = std::filesystem::absolute(moduleMetaData["BuildPath"].get<std::string>()).string();
+        }
+
+        // Update Global Storage From Metadata
+        if (!QUERY_ENGINE_MODE(Editor))
+        {
+            if (moduleMetaData.contains("DeveloperMode")) jenova::GlobalStorage::DeveloperModeActivated = moduleMetaData["DeveloperMode"].get<bool>();
+            if (moduleMetaData.contains("ManagedSafeExecution")) jenova::GlobalStorage::UseManagedSafeExecution = moduleMetaData["ManagedSafeExecution"].get<bool>();
         }
 
         // Update Module Binary Size

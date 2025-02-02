@@ -111,6 +111,13 @@ static void gdextension_script_instance_call(GDExtensionScriptInstanceDataPtr p_
 		// Create Invoker
 		auto invoke_callp = [&]() { *ret = instance->callp(*method, args, p_argument_count, *r_error); };
 
+		// Skip Managed Safe Execution If Disabled
+		if (!jenova::GlobalStorage::UseManagedSafeExecution)
+		{
+			invoke_callp();
+			return;
+		}
+
 		// Safe Call By Invocation
 		__try { invoke_callp(); }
 		__except (jenova::JenovaExecutionCrashHandler(GetExceptionInformation()))
