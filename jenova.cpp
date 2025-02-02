@@ -4136,6 +4136,9 @@ namespace jenova
 		}
 		static void OnRuntimeStarted()
 		{
+			// Start Runtime
+			JenovaRuntime::start();
+
 			// Load Module At Runtime Start 
 			if (jenova::GlobalSettings::DefaultModuleLoadStage == ModuleLoadStage::LoadModuleAtRuntimeStart) JenovaInterpreter::BootInterpreter();
 		}
@@ -6254,7 +6257,14 @@ namespace jenova
 	}
 	bool WriteWideStdStringToFile(const std::wstring& filePath, const std::wstring& str)
 	{
-		std::wofstream outFile(jenova::Format("%S", filePath.c_str()).c_str(), std::ios::out | std::ios::binary);
+		// Create Stream
+		#ifdef TARGET_PLATFORM_WINDOWS 
+			std::wofstream outFile(filePath, std::ios::out | std::ios::binary);
+		#else
+			std::wofstream outFile(jenova::Format("%S", filePath.c_str()).c_str(), std::ios::out | std::ios::binary);
+		#endif
+
+		// Write File
 		if (outFile.is_open())
 		{
 			outFile.write(str.c_str(), str.size());
@@ -6268,7 +6278,14 @@ namespace jenova
 	}
 	std::wstring ReadWideStdStringFromFile(const std::wstring& filePath)
 	{
-		std::wifstream inFile(jenova::Format("%S", filePath.c_str()).c_str());
+		// Create Stream
+		#ifdef TARGET_PLATFORM_WINDOWS 
+			std::wifstream inFile(filePath);
+		#else
+			std::wifstream inFile(jenova::Format("%S", filePath.c_str()).c_str());
+		#endif
+
+		// Read File
 		if (inFile.is_open())
 		{
 			std::wstring content((std::istreambuf_iterator<wchar_t>(inFile)), std::istreambuf_iterator<wchar_t>());
