@@ -798,46 +798,6 @@ namespace jenova
 				// All Good
 				return true;
 			}
-			bool InitializeGodotSDKData()
-			{
-				// Get Project Path
-				String projectPath = ProjectSettings::get_singleton()->globalize_path("res://");
-				std::string godotSDKPath = std::filesystem::absolute(AS_STD_STRING(projectPath) + "/Jenova/GodotSDK").string();
-
-				// Clear Data
-				jenova::GlobalStorage::CurrentJenovaGodotSDKGeneratedData.clear();
-
-				// Collect Files And Generate Data
-				try
-				{
-					if (std::filesystem::exists(godotSDKPath) && std::filesystem::is_directory(godotSDKPath))
-					{
-						for (const auto& entry : std::filesystem::recursive_directory_iterator(godotSDKPath))
-						{
-							if (entry.is_regular_file() && entry.path().extension() == ".hpp")
-							{
-								std::filesystem::path relativePath = std::filesystem::relative(entry.path(), godotSDKPath);
-								std::string includePath = "#include <" + relativePath.string();
-								std::replace(includePath.begin(), includePath.end(), '\\', '/');
-								jenova::GlobalStorage::CurrentJenovaGodotSDKGeneratedData += includePath + ">\n";
-							}
-						}
-					}
-					else
-					{
-						// Failed
-						return false;
-					}
-				}
-				catch (const std::filesystem::filesystem_error& e)
-				{
-					// Failed
-					return false;
-				}
-
-				// All Good
-				return true;
-			}
 			bool InitializeEditorMenu()
 			{
 				// Get Editor Node
@@ -1341,17 +1301,6 @@ namespace jenova
 						DisposeCompiler();
 						return false;
 					}
-				}
-
-				// Create GodotSDK Auto-Header
-				if (!jenova::GlobalStorage::CurrentJenovaGodotSDKGeneratedData.empty())
-				{
-					// Write Database to Disk
-					std::string headerCachePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + jenova::GlobalSettings::JenovaGodotSDKHeaderCacheFile;
-					std::fstream headerCacheWritter;
-					headerCacheWritter.open(headerCachePath, std::ios::binary | std::ios::out);
-					headerCacheWritter.write(jenova::GlobalStorage::CurrentJenovaGodotSDKGeneratedData.data(), jenova::GlobalStorage::CurrentJenovaGodotSDKGeneratedData.size());
-					headerCacheWritter.close();
 				}
 
 				// Collect Current Used Script
@@ -4114,7 +4063,6 @@ namespace jenova
 		// Database
 		std::string CurrentJenovaCacheDirectory = "";
 		std::string CurrentJenovaGeneratedConfiguration = "";
-		std::string CurrentJenovaGodotSDKGeneratedData = "";
 		std::string CurrentJenovaRuntimeModulePath = "";
 
 		// Flags

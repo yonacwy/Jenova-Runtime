@@ -111,14 +111,6 @@ namespace jenova
             // Add Final Preprocessor Definitions
             scriptSourceCode = scriptSourceCode.insert(0, preprocessorDefinitions + "\n");
 
-            // Add Entire Godot SDK Headers
-            if (scriptSourceCode.contains(jenova::GlobalSettings::ScriptGodotSDKdIdentifier))
-            {
-                std::string headerCachePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + jenova::GlobalSettings::JenovaGodotSDKHeaderCacheFile;
-                String headerCacheInclude(jenova::Format("#include \"%s\"", headerCachePath.c_str()).c_str());
-                scriptSourceCode = scriptSourceCode.replace(jenova::GlobalSettings::ScriptGodotSDKdIdentifier, headerCacheInclude);
-            }
-
             // Replecements
             scriptSourceCode = scriptSourceCode.replace(jenova::GlobalSettings::ScriptToolIdentifier, "#define TOOL_SCRIPT");
             scriptSourceCode = scriptSourceCode.replace(jenova::GlobalSettings::ScriptBlockBeginIdentifier, "namespace JNV_" + cppScript->GetScriptIdentity() + " {");

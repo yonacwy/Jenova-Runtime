@@ -68,8 +68,7 @@ PackedStringArray CPPScriptLanguage::_get_reserved_words() const
 		jenova::GlobalSettings::ScriptVMEndIdentifier,
 		jenova::GlobalSettings::ScriptSignalCallbackIdentifier,
 		jenova::GlobalSettings::ScriptPropertyIdentifier,
-		jenova::GlobalSettings::ScriptClassNameIdentifier,
-		jenova::GlobalSettings::ScriptGodotSDKdIdentifier
+		jenova::GlobalSettings::ScriptClassNameIdentifier
 	};
 	return reserved_words;
 }
@@ -85,8 +84,7 @@ bool CPPScriptLanguage::_is_control_flow_keyword(const String &p_keyword) const
 		jenova::GlobalSettings::ScriptVMEndIdentifier,
 		jenova::GlobalSettings::ScriptSignalCallbackIdentifier,
 		jenova::GlobalSettings::ScriptPropertyIdentifier,
-		jenova::GlobalSettings::ScriptClassNameIdentifier,
-		jenova::GlobalSettings::ScriptGodotSDKdIdentifier
+		jenova::GlobalSettings::ScriptClassNameIdentifier
 	};
 	return control_flow_keywords.find(p_keyword.utf8().get_data()) != control_flow_keywords.end();
 }

@@ -20,11 +20,11 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.5.0"
+#define APP_VERSION						"0.3.5.1"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 5, 0
+#define APP_VERSION_DATA				0, 3, 5, 1
 #define APP_VERSION_BUILD				"0"
 #define APP_VERSION_NAME				"Genesis"
 
@@ -660,7 +660,6 @@ namespace jenova
 		constexpr char* ScriptSignalCallbackIdentifier			= "JENOVA_CALLBACK";
 		constexpr char* ScriptPropertyIdentifier				= "JENOVA_PROPERTY";
 		constexpr char* ScriptClassNameIdentifier				= "JENOVA_CLASS_NAME";
-		constexpr char* ScriptGodotSDKdIdentifier				= "JENOVA_GODOT_SDK";
 		constexpr char* DefaultModuleDatabaseFile				= "JenovaRuntime.jdb";
 		constexpr char* DefaultModuleConfigFile					= "JenovaRuntime.cfg";
 		constexpr char* DefaultJenovaBootPath					= "res://J.E.N.O.V.A/";
@@ -694,7 +693,6 @@ namespace jenova
 		extern jenova::SDKLinkingMode							SDKLinkingMode;
 		extern std::string										CurrentJenovaCacheDirectory;
 		extern std::string										CurrentJenovaGeneratedConfiguration;
-		extern std::string										CurrentJenovaGodotSDKGeneratedData;
 		extern std::string										CurrentJenovaRuntimeModulePath;
 		extern bool												DeveloperModeActivated;
 		extern bool												UseHotReloadAtRuntime;

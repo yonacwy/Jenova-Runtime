@@ -47,9 +47,6 @@
 #define JENOVA_EXPORT extern "C" JENOVA_API_EXPORT
 #define JENOVA_CALLBACK static_cast<void(*)(void)>([]()
 
-// Jenova Godot SDK
-#define JENOVA_GODOT_SDK
-
 // Jenova Configuration Macros
 #define JENOVA_TOOL_SCRIPT
 
