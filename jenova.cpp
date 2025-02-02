@@ -160,6 +160,7 @@ namespace jenova
 			PopupMenu* toolsMenu = nullptr;
 			Control* jenovaTerminal = nullptr;
 			RichTextLabel* jenovaLogOutput = nullptr;
+			Ref<Mutex> buildSystemMutex;
 			Ref<Shortcut> developerModeShortcut;
 			std::vector<VisualStudioInstance> vsInstances;
 
@@ -360,6 +361,9 @@ namespace jenova
 				get_editor_interface()->get_editor_settings()->connect("settings_changed", callable_mp(this, &JenovaEditorPlugin::OnEditorSettingsChanged));
 				get_editor_interface()->get_base_control()->connect("theme_changed", callable_mp(this, &JenovaEditorPlugin::OnEditorThemeChanged));
 
+				// Initialize Objects
+				buildSystemMutex.instantiate();
+
 				// Verbose
 				jenova::VerboseByID(__LINE__, "Editor Plugin Initialized At %p", jenovaEditorPlugin);
 
@@ -374,6 +378,9 @@ namespace jenova
 				// Disconnect Signals
 				get_editor_interface()->get_editor_settings()->disconnect("settings_changed", callable_mp(this, &JenovaEditorPlugin::OnEditorSettingsChanged));
 				get_editor_interface()->get_base_control()->disconnect("theme_changed", callable_mp(this, &JenovaEditorPlugin::OnEditorThemeChanged));
+
+				// Release Objects
+				buildSystemMutex.unref();
 
 				// Verbose
 				jenova::VerboseByID(__LINE__, "Editor Plugin Uninitialized");
@@ -560,7 +567,7 @@ namespace jenova
 
 						// External Changes Trigger Mode Property
 						PropertyInfo ExternalChangesTriggerModeProperty(Variant::INT, ExternalChangesTriggerModeConfigPath, 
-							PropertyHint::PROPERTY_HINT_ENUM, "Build Project On Script Reload,Build Project On Watchdog Invoke,Don't Take Any Action",
+							PropertyHint::PROPERTY_HINT_ENUM, "Build Project On Script Reload,Build Project On Script Change,Bootstrap Project On Watchdog Invoke,Don't Take Any Action",
 							PROPERTY_USAGE_DEFAULT, JenovaEditorSettingsCategory);
 						editor_settings->add_property_info(ExternalChangesTriggerModeProperty);
 						editor_settings->set_initial_value(ExternalChangesTriggerModeConfigPath, int32_t(ExternalChangesDefaultTriggerMode), false);
@@ -1261,6 +1268,17 @@ namespace jenova
 			{
 				// Start Game
 				if (jenova::GlobalStorage::CurrentBuildAndRunMode == jenova::BuildAndRunMode::RunOnBuildSuccess) EditorInterface::get_singleton()->play_main_scene();
+
+				// If Debug Build Running Notify It
+				if (jenova::GlobalStorage::UseHotReloadAtRuntime && EditorInterface::get_singleton()->is_playing_scene())
+				{
+					Array currentSessions = ((Ref<EditorDebuggerPlugin>)debuggerPlugin)->get_sessions();
+					for (size_t i = 0; i < currentSessions.size(); i++)
+					{
+						Ref<EditorDebuggerSession> debuggerSession = currentSessions[i];
+						if (debuggerSession.is_valid() && debuggerSession->is_active()) debuggerSession->send_message("Jenova-Runtime:Reload");
+					}
+				}
 			}
 
 			// Project Actions
@@ -1269,48 +1287,51 @@ namespace jenova
 				// Check If Editor Running Project
 				if (EditorInterface::get_singleton()->is_playing_scene())
 				{
-					jenova::Error("Jenova Builder", "Jenova cannot build while the Editor is running project, Stop the project and try again.");
-				
-					// Prompt User for Retry
-					ConfirmationDialog* dialog = memnew(ConfirmationDialog);
-					dialog->set_title("[ Build Error ]");
-					dialog->set_text("Jenova cannot build while the Editor is running project. \nWould you like to stop the project and try again?");
-					dialog->get_ok_button()->set_text("Confirm");
-					dialog->get_cancel_button()->set_text("Abort Build");
-				
-					// Define Internal UI Callback
-					class OnConfirmedEvent : public RefCounted
+					if (!jenova::GlobalStorage::UseHotReloadAtRuntime)
 					{
-					private:
-						JenovaEditorPlugin* pluginInstance;
-				
-					public:
-						OnConfirmedEvent(JenovaEditorPlugin* _plugin) { pluginInstance = _plugin; }
-						void ProcessEvent()
+						jenova::Error("Jenova Builder", "Jenova cannot build while the Editor is running project, Stop the project and try again.");
+
+						// Prompt User for Retry
+						ConfirmationDialog* dialog = memnew(ConfirmationDialog);
+						dialog->set_title("[ Build Error ]");
+						dialog->set_text("Jenova cannot build while the Editor is running project. \nWould you like to stop the project and try again?");
+						dialog->get_ok_button()->set_text("Confirm");
+						dialog->get_cancel_button()->set_text("Abort Build");
+
+						// Define Internal UI Callback
+						class OnConfirmedEvent : public RefCounted
 						{
-							EditorInterface::get_singleton()->stop_playing_scene();
-							pluginInstance->BuildProject();
-							memdelete(this);
-						}
-					};
+						private:
+							JenovaEditorPlugin* pluginInstance;
 
-					// Create & Assign UI Callback to Dialog
-					dialog->connect("confirmed", callable_mp(memnew(OnConfirmedEvent(this)), &OnConfirmedEvent::ProcessEvent));
-					dialog->connect("confirmed", callable_mp((Node*)dialog, &ConfirmationDialog::queue_free));
-					dialog->connect("canceled", callable_mp((Node*)dialog, &ConfirmationDialog::queue_free));
+						public:
+							OnConfirmedEvent(JenovaEditorPlugin* _plugin) { pluginInstance = _plugin; }
+							void ProcessEvent()
+							{
+								EditorInterface::get_singleton()->stop_playing_scene();
+								pluginInstance->BuildProject();
+								memdelete(this);
+							}
+						};
 
-					// Add Dialog to Engine & Show
-					add_child(dialog);
-					dialog->popup_centered();
+						// Create & Assign UI Callback to Dialog
+						dialog->connect("confirmed", callable_mp(memnew(OnConfirmedEvent(this)), &OnConfirmedEvent::ProcessEvent));
+						dialog->connect("confirmed", callable_mp((Node*)dialog, &ConfirmationDialog::queue_free));
+						dialog->connect("canceled", callable_mp((Node*)dialog, &ConfirmationDialog::queue_free));
 
-					// Relaunched Ignore Faliure
-					return true;
+						// Add Dialog to Engine & Show
+						add_child(dialog);
+						dialog->popup_centered();
+
+						// Relaunched Ignore Faliure
+						return true;
+					}
 				}
 			
 				// Switch to Jenova Terminal Tab
 				if (jenova::GlobalStorage::CurrentEditorVerboseOutput == jenova::EditorVerboseOutput::JenovaTerminal && jenovaTerminal)
 				{
-					this->make_bottom_panel_item_visible(jenovaTerminal);
+					if (!EditorInterface::get_singleton()->is_playing_scene()) this->make_bottom_panel_item_visible(jenovaTerminal);
 				}
 
 				// Stop Interpreter Execution
@@ -1935,17 +1956,6 @@ namespace jenova
 
 				// Call Build Success
 				OnBuildSuccess();
-
-				// If Debug Build Running Notify It
-				if (jenova::GlobalStorage::UseHotReloadAtRuntime && EditorInterface::get_singleton()->is_playing_scene())
-				{
-					Array currentSessions = ((Ref<EditorDebuggerPlugin>)debuggerPlugin)->get_sessions();
-					for (size_t i = 0; i < currentSessions.size(); i++)
-					{
-						Ref<EditorDebuggerSession> debuggerSession = currentSessions[i];
-						if (debuggerSession.is_valid() && debuggerSession->is_active()) debuggerSession->send_message("Jenova-Runtime:Reload");
-					}
-				}
 
 				// All Good
 				return true;
@@ -3519,7 +3529,60 @@ namespace jenova
 						}
 					}
 				}
+
+				// Handle Changed Files
+				if (callbackEvent == jenova::AssetMonitor::CallbackEvent::Modified)
+				{
+					// Handle Changes to C++/Header Scripts in Project
+					if (targetPath.get_extension() == jenova::GlobalSettings::JenovaScriptExtension || targetPath.get_extension() == jenova::GlobalSettings::HandlePreLaunchErrors)
+					{
+						// Check If 
+						std::string projectPath = AS_STD_STRING(jenova::GetJenovaProjectDirectory());
+						if (std::filesystem::absolute(AS_STD_STRING(targetPath)).string().find(std::filesystem::absolute(projectPath).string()) != 0) return;
+
+						// Update Global Storage
+						if (!jenova::UpdateGlobalStorageFromEditorSettings()) return;
+
+						// Trigger Recompile If Source Change Detected
+						if (jenova::GlobalStorage::CurrentChangesTriggerMode == jenova::ChangesTriggerMode::TriggerOnScriptChange)
+						{
+							// Wait for Files to Written [Find A Better Method]
+							OS::get_singleton()->delay_msec(30);
+
+							// Update Script Object Source
+							String updatedScriptPath = ProjectSettings::get_singleton()->localize_path(targetPath);
+							Ref<Resource> updatedScript = ResourceLoader::get_singleton()->load(updatedScriptPath);
+							if (updatedScript->get_class() == jenova::GlobalSettings::JenovaScriptType)
+							{
+								Ref<CPPScript> cppScript = Object::cast_to<CPPScript>(updatedScript.ptr());
+								cppScript->ReloadScriptSourceCode();
+							}
+							if (updatedScript->get_class() == jenova::GlobalSettings::JenovaHeaderType)
+							{
+								Ref<CPPHeader> cppHeader = Object::cast_to<CPPScript>(updatedScript.ptr());
+								cppHeader->ReloadHeaderSourceCode();
+							}
+
+							// Cooldown Time
+							static std::chrono::steady_clock::time_point lastScriptChangeTime = std::chrono::steady_clock::time_point();
+
+							// Trigger Cooldown
+							JenovaEditorPlugin::get_singleton()->buildSystemMutex->lock();
+							auto now = std::chrono::steady_clock::now();
+							if (now - lastScriptChangeTime >= std::chrono::milliseconds(jenova::GlobalSettings::ScriptChangeCooldown))
+							{
+								// Update Last Script Change Time
+								lastScriptChangeTime = now;
+
+								// Queue Project Build
+								jenova::QueueProjectBuild();
+							}
+							JenovaEditorPlugin::get_singleton()->buildSystemMutex->unlock();
+						}
+					}
+				}
 			}
+
 		};
 		class JenovaExportPlugin : public EditorExportPlugin 
 		{
@@ -5595,6 +5658,11 @@ namespace jenova
 		// Return Path
 		return jenovaCacheDirectory;
 	}
+	String GetJenovaProjectDirectory()
+	{
+		std::string projectPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path("res://"));
+		return String(projectPath.c_str());
+	}
 	String RemoveCommentsFromSource(const String& sourceCode) 
 	{
 		String comment_pattern = R"(\/\/[^\n]*|\/\*[\s\S]*?\*\/)";
@@ -7487,7 +7555,7 @@ namespace jenova
 				if (lineStartPos != std::string::npos)
 				{
 					scriptSource.replace(lineStartPos, line.length(), jenova::Format("%s* __prop_%s = nullptr;", args[0].c_str(), args[1].c_str()));
-					paramHandlers += jenova::Format("#define %s *__prop_%s\n", args[1].c_str(), args[1].c_str());
+					paramHandlers += jenova::Format("#define %s (*__prop_%s)\n", args[1].c_str(), args[1].c_str());
 				}
 			}
 		}
@@ -7506,16 +7574,15 @@ namespace jenova
 	{
 		std::string sourceStdStr = AS_STD_STRING(scriptSource);
 		jenova::SerializedData propertiesMetadata = ProcessAndExtractPropertiesFromScript(sourceStdStr, AS_STD_STRING(scriptUID));
-		scriptSource = String(sourceStdStr.c_str());
+		if (scriptSource.parse_utf8(scriptSource.utf8().get_data(), scriptSource.length()) != OK) scriptSource = String::utf8(sourceStdStr.c_str());
+		else scriptSource = String(sourceStdStr.c_str());
 		return propertiesMetadata;
 	}
 	Variant::Type GetVariantTypeFromStdString(const std::string& typeName)
 	{
-		// Remove Reference & Pointer Symbols & Namespace
-		std::string typeNameCleaned(typeName);
-		jenova::ReplaceAllMatchesWithString(typeNameCleaned, "*", "");
-		jenova::ReplaceAllMatchesWithString(typeNameCleaned, "&", "");
-		jenova::ReplaceAllMatchesWithString(typeNameCleaned, "godot::", "");
+		// Clean Type Name
+		std::string typeNameCleaned = typeName;
+		CleanVariantTypeName(typeNameCleaned);
 
 		// Atomic types
 		if (typeNameCleaned == "bool") return Variant::Type::BOOL;
@@ -7607,13 +7674,18 @@ namespace jenova
 			return jenova::ScriptPropertyContainer();
 		}
 	}
-	void* AllocateVariantBasedProperty(const std::string& typeName)
+	void CleanVariantTypeName(std::string& typeName)
 	{
 		// Remove Reference & Pointer Symbols & Namespace
-		std::string typeNameCleaned(typeName);
-		jenova::ReplaceAllMatchesWithString(typeNameCleaned, "*", "");
-		jenova::ReplaceAllMatchesWithString(typeNameCleaned, "&", "");
-		jenova::ReplaceAllMatchesWithString(typeNameCleaned, "godot::", "");
+		jenova::ReplaceAllMatchesWithString(typeName, "*", "");
+		jenova::ReplaceAllMatchesWithString(typeName, "&", "");
+		jenova::ReplaceAllMatchesWithString(typeName, "godot::", "");
+	}
+	void* AllocateVariantBasedProperty(const std::string& typeName)
+	{
+		// Clean Type Name
+		std::string typeNameCleaned = typeName;
+		CleanVariantTypeName(typeNameCleaned);
 
 		// Atomic types
 		if (typeNameCleaned == "bool") return new bool();
@@ -7664,98 +7736,99 @@ namespace jenova
 		// Default case (unsupported type)
 		return nullptr;
 	}
-	bool SetPropertyPointerValueFromVariant(void* propertyPointer, const Variant& variantValue)
+	bool SetPropertyPointerValueFromVariant(jenova::PropertyPointer propertyPointer, const Variant& variantValue)
 	{
 		// Get Property Information
 		Variant::Type variantType = variantValue.get_type();
 
 		// Set Values based on type
-		switch (variantType) {
-		case Variant::Type::BOOL: 
+		switch (variantType)
+		{
+		case Variant::Type::BOOL:
 		{
 			bool* valuePtr = static_cast<bool*>(propertyPointer);
 			*valuePtr = bool(variantValue);
 			return true;
 		}
-		case Variant::Type::INT: 
+		case Variant::Type::INT:
 		{
 			int64_t* valuePtr = static_cast<int64_t*>(propertyPointer);
 			*valuePtr = int64_t(variantValue);
 			return true;
 		}
-		case Variant::Type::FLOAT: 
+		case Variant::Type::FLOAT:
 		{
 			double* valuePtr = static_cast<double*>(propertyPointer);
 			*valuePtr = double(variantValue);
 			return true;
 		}
-		case Variant::Type::STRING: 
+		case Variant::Type::STRING:
 		{
 			godot::String* valuePtr = static_cast<godot::String*>(propertyPointer);
 			*valuePtr = godot::String(variantValue);
 			return true;
 		}
-		case Variant::Type::VECTOR2: 
+		case Variant::Type::VECTOR2:
 		{
 			godot::Vector2* valuePtr = static_cast<godot::Vector2*>(propertyPointer);
 			*valuePtr = godot::Vector2(variantValue);
 			return true;
 		}
-		case Variant::Type::VECTOR2I: 
+		case Variant::Type::VECTOR2I:
 		{
 			godot::Vector2i* valuePtr = static_cast<godot::Vector2i*>(propertyPointer);
 			*valuePtr = godot::Vector2i(variantValue);
 			return true;
 		}
-		case Variant::Type::RECT2: 
+		case Variant::Type::RECT2:
 		{
 			godot::Rect2* valuePtr = static_cast<godot::Rect2*>(propertyPointer);
 			*valuePtr = godot::Rect2(variantValue);
 			return true;
 		}
-		case Variant::Type::RECT2I: 
+		case Variant::Type::RECT2I:
 		{
 			godot::Rect2i* valuePtr = static_cast<godot::Rect2i*>(propertyPointer);
 			*valuePtr = godot::Rect2i(variantValue);
 			return true;
 		}
-		case Variant::Type::VECTOR3: 
+		case Variant::Type::VECTOR3:
 		{
 			godot::Vector3* valuePtr = static_cast<godot::Vector3*>(propertyPointer);
 			*valuePtr = godot::Vector3(variantValue);
 			return true;
 		}
-		case Variant::Type::VECTOR3I: 
+		case Variant::Type::VECTOR3I:
 		{
 			godot::Vector3i* valuePtr = static_cast<godot::Vector3i*>(propertyPointer);
 			*valuePtr = godot::Vector3i(variantValue);
 			return true;
 		}
-		case Variant::Type::TRANSFORM2D: 
+		case Variant::Type::TRANSFORM2D:
 		{
 			godot::Transform2D* valuePtr = static_cast<godot::Transform2D*>(propertyPointer);
 			*valuePtr = godot::Transform2D(variantValue);
 			return true;
 		}
-		case Variant::Type::VECTOR4: 
+		case Variant::Type::VECTOR4:
 		{
 			godot::Vector4* valuePtr = static_cast<godot::Vector4*>(propertyPointer);
 			*valuePtr = godot::Vector4(variantValue);
 			return true;
 		}
-		case Variant::Type::VECTOR4I: 
+		case Variant::Type::VECTOR4I:
 		{
 			godot::Vector4i* valuePtr = static_cast<godot::Vector4i*>(propertyPointer);
 			*valuePtr = godot::Vector4i(variantValue);
 			return true;
 		}
-		case Variant::Type::PLANE: 
+		case Variant::Type::PLANE:
 		{
 			godot::Plane* valuePtr = static_cast<godot::Plane*>(propertyPointer);
 			*valuePtr = godot::Plane(variantValue);
 			return true;
 		}
-		case Variant::Type::QUATERNION: 
+		case Variant::Type::QUATERNION:
 		{
 			godot::Quaternion* valuePtr = static_cast<godot::Quaternion*>(propertyPointer);
 			*valuePtr = godot::Quaternion(variantValue);
@@ -7890,6 +7963,135 @@ namespace jenova
 		default:
 			return false; // Unsupported type
 		}
+	}
+	bool GetVariantFromPropertyPointer(const jenova::PropertyPointer propertyPointer, godot::Variant& variantValue, const godot::Variant::Type& variantType)
+	{
+		// Validate Pointer
+		if (!propertyPointer) return false;
+
+		// Get Variant from Property Pointer
+		switch (variantType)
+		{
+		case godot::Variant::BOOL:
+			variantValue = *static_cast<const bool*>(propertyPointer);
+			break;
+		case godot::Variant::INT:
+			variantValue = *static_cast<const int64_t*>(propertyPointer);
+			break;
+		case godot::Variant::FLOAT:
+			variantValue = *static_cast<const double*>(propertyPointer);
+			break;
+		case godot::Variant::STRING:
+			variantValue = *static_cast<const godot::String*>(propertyPointer);
+			break;
+		case godot::Variant::VECTOR2:
+			variantValue = *static_cast<const godot::Vector2*>(propertyPointer);
+			break;
+		case godot::Variant::VECTOR2I:
+			variantValue = *static_cast<const godot::Vector2i*>(propertyPointer);
+			break;
+		case godot::Variant::RECT2:
+			variantValue = *static_cast<const godot::Rect2*>(propertyPointer);
+			break;
+		case godot::Variant::RECT2I:
+			variantValue = *static_cast<const godot::Rect2i*>(propertyPointer);
+			break;
+		case godot::Variant::VECTOR3:
+			variantValue = *static_cast<const godot::Vector3*>(propertyPointer);
+			break;
+		case godot::Variant::VECTOR3I:
+			variantValue = *static_cast<const godot::Vector3i*>(propertyPointer);
+			break;
+		case godot::Variant::TRANSFORM2D:
+			variantValue = *static_cast<const godot::Transform2D*>(propertyPointer);
+			break;
+		case godot::Variant::VECTOR4:
+			variantValue = *static_cast<const godot::Vector4*>(propertyPointer);
+			break;
+		case godot::Variant::VECTOR4I:
+			variantValue = *static_cast<const godot::Vector4i*>(propertyPointer);
+			break;
+		case godot::Variant::PLANE:
+			variantValue = *static_cast<const godot::Plane*>(propertyPointer);
+			break;
+		case godot::Variant::QUATERNION:
+			variantValue = *static_cast<const godot::Quaternion*>(propertyPointer);
+			break;
+		case godot::Variant::AABB:
+			variantValue = *static_cast<const godot::AABB*>(propertyPointer);
+			break;
+		case godot::Variant::BASIS:
+			variantValue = *static_cast<const godot::Basis*>(propertyPointer);
+			break;
+		case godot::Variant::TRANSFORM3D:
+			variantValue = *static_cast<const godot::Transform3D*>(propertyPointer);
+			break;
+		case godot::Variant::PROJECTION:
+			variantValue = *static_cast<const godot::Projection*>(propertyPointer);
+			break;
+		case godot::Variant::COLOR:
+			variantValue = *static_cast<const godot::Color*>(propertyPointer);
+			break;
+		case godot::Variant::STRING_NAME:
+			variantValue = *static_cast<const godot::StringName*>(propertyPointer);
+			break;
+		case godot::Variant::NODE_PATH:
+			variantValue = *static_cast<const godot::NodePath*>(propertyPointer);
+			break;
+		case godot::Variant::RID:
+			variantValue = *static_cast<const godot::RID*>(propertyPointer);
+			break;
+		case godot::Variant::OBJECT:
+			variantValue = static_cast<godot::Object*>(const_cast<void*>(propertyPointer));
+			break;
+		case godot::Variant::CALLABLE:
+			variantValue = *static_cast<const godot::Callable*>(propertyPointer);
+			break;
+		case godot::Variant::SIGNAL:
+			variantValue = *static_cast<const godot::Signal*>(propertyPointer);
+			break;
+		case godot::Variant::DICTIONARY:
+			variantValue = *static_cast<const godot::Dictionary*>(propertyPointer);
+			break;
+		case godot::Variant::ARRAY:
+			variantValue = *static_cast<const godot::Array*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_BYTE_ARRAY:
+			variantValue = *static_cast<const godot::PackedByteArray*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_INT32_ARRAY:
+			variantValue = *static_cast<const godot::PackedInt32Array*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_INT64_ARRAY:
+			variantValue = *static_cast<const godot::PackedInt64Array*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_FLOAT32_ARRAY:
+			variantValue = *static_cast<const godot::PackedFloat32Array*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_FLOAT64_ARRAY:
+			variantValue = *static_cast<const godot::PackedFloat64Array*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_STRING_ARRAY:
+			variantValue = *static_cast<const godot::PackedStringArray*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_VECTOR2_ARRAY:
+			variantValue = *static_cast<const godot::PackedVector2Array*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_VECTOR3_ARRAY:
+			variantValue = *static_cast<const godot::PackedVector3Array*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_COLOR_ARRAY:
+			variantValue = *static_cast<const godot::PackedColorArray*>(propertyPointer);
+			break;
+		case godot::Variant::PACKED_VECTOR4_ARRAY:
+			variantValue = *static_cast<const godot::PackedVector4Array*>(propertyPointer);
+			break;
+		default:
+			return false;
+		}
+
+		// All Good
+		return true;
 	}
 	std::string ParseClassNameFromScriptSource(const std::string& sourceCode)
 	{

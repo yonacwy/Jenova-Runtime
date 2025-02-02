@@ -46,6 +46,7 @@ public:
     static bool UpdatePropertyStorageFromMetaData(const jenova::SerializedData& metaData);
     static bool FlushPropertyStorage();
     static jenova::PropertyAddress GetPropertyAddress(const std::string& propertyName, std::string& scriptUID);
+    static jenova::PropertyPointer GetPropertyPointer(const String& propertyName, const String& scriptUID);
     static bool SetPropertyValueFromVariant(const String& propertyName, const Variant& propertyValue, const String& scriptUID);
     static jenova::InterpreterBackend GetInterpreterBackend();
     static void SetInterpreterBackend(jenova::InterpreterBackend newBackend);

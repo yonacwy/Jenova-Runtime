@@ -247,6 +247,11 @@ void CPPScriptLanguage::_reload_all_scripts()
 {
 	jenova::VerboseByID(__LINE__, "_reload_all_scripts Called");
 }
+void CPPScriptLanguage::_reload_scripts(const Array& p_scripts, bool p_soft_reload)
+{
+	// Called when a script gets edited while game is running
+	jenova::VerboseByID(__LINE__, "_reload_scripts Called");
+}
 void CPPScriptLanguage::_reload_tool_script(const Ref<Script>& p_script, bool p_soft_reload)
 {
 	jenova::VerboseByID(__LINE__, "_reload_tool_script Called");
@@ -499,6 +504,7 @@ TypedArray<Dictionary> CPPHeaderLanguage::_debug_get_current_stack_info()
 	return TypedArray<Dictionary>();
 }
 void CPPHeaderLanguage::_reload_all_scripts() {}
+void CPPHeaderLanguage::_reload_scripts(const Array& p_scripts, bool p_soft_reload) {}
 void CPPHeaderLanguage::_reload_tool_script(const Ref<Script>& p_script, bool p_soft_reload) {}
 PackedStringArray CPPHeaderLanguage::_get_recognized_extensions() const
 {

@@ -98,10 +98,16 @@ Error CPPScript::_reload(bool p_keep_state)
 	{
 		scriptMutex->lock();
 		auto now = std::chrono::steady_clock::now();
-		if (now - lastScriptReloadTime < std::chrono::milliseconds(jenova::GlobalSettings::ScriptReloadCooldown)) return Error::ERR_UNAVAILABLE;
-		lastScriptReloadTime = now;
+		if (now - lastScriptReloadTime >= std::chrono::milliseconds(jenova::GlobalSettings::ScriptReloadCooldown))
+		{
+			lastScriptReloadTime = now;
+			if (jenova::QueueProjectBuild())
+			{
+				scriptMutex->unlock();
+				return Error::OK;
+			}
+		}
 		scriptMutex->unlock();
-		if (jenova::QueueProjectBuild()) return Error::OK;
 	}
 	return Error::ERR_UNAVAILABLE;
 }
@@ -231,6 +237,10 @@ bool CPPScript::SetScriptIdentity(jenova::ScriptIdentifier newIdentity)
 	scriptObjectIdentity = newIdentity;
 	return true;
 }
+void CPPScript::ReloadScriptSourceCode()
+{
+	source_code = FileAccess::get_file_as_string(this->get_path());
+}
 
 // CPPScript Initializer/Destructor
 CPPScript::CPPScript()
@@ -302,6 +312,10 @@ Dictionary CPPHeader::_get_constants() const { return Dictionary(); }
 TypedArray<StringName> CPPHeader::_get_members() const { return TypedArray<StringName>(); }
 bool CPPHeader::_is_placeholder_fallback_enabled() const { return false; }
 Variant CPPHeader::_get_rpc_config() const { return Variant(); }
+void CPPHeader::ReloadHeaderSourceCode()
+{
+	source_code = FileAccess::get_file_as_string(this->get_path());
+}
 CPPHeader::CPPHeader()
 {
 	this->source_code = "#pragma once\n";

@@ -20,11 +20,11 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.5.5"
+#define APP_VERSION						"0.3.5.6"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 5, 5
+#define APP_VERSION_DATA				0, 3, 5, 6
 #define APP_VERSION_BUILD				"0"
 #define APP_VERSION_NAME				"Bloom"
 
@@ -322,6 +322,7 @@ namespace jenova
 	typedef struct SmartString { std::string* str; ~SmartString() { if (str) delete str; }} SmartString;
 	typedef struct SmartWstring { std::wstring* wstr; ~SmartWstring() { if (wstr) delete wstr; }} SmartWstring;
 	typedef void* FunctionPointer;
+	typedef void* PropertyPointer;
 
 	// Enumerators
 	enum class TargetPlatform
@@ -393,6 +394,7 @@ namespace jenova
 	enum class ChangesTriggerMode
 	{
 		TriggerOnScriptReload,
+		TriggerOnScriptChange,
 		TriggerOnWatchdogInvoke,
 		DoNothing
 	};
@@ -655,14 +657,17 @@ namespace jenova
 		constexpr bool RespectSourceFilesEncoding				= true;
 		constexpr bool RegisterGlobalCrashHandler				= false;
 		constexpr bool CreateDumpOnExecutionCrash				= false;
+		constexpr bool UpdatePropertiesAfterCall				= true;
 
 		constexpr size_t PrintOutputBufferSize					= 8192;
 		constexpr size_t BuildOutputBufferSize					= PrintOutputBufferSize;
 		constexpr size_t FormatBufferSize						= 4096;
-		constexpr size_t ScriptReloadCooldown					= 1000;
+		constexpr size_t ScriptReloadCooldown					= 200;
+		constexpr size_t ScriptChangeCooldown					= 200;
 
 		constexpr char* JenovaRuntimeModuleName					= "Jenova.Runtime";
 		constexpr char* JenovaScriptExtension					= "cpp";
+		constexpr char* JenovaHeaderExtension					= "hpp";
 		constexpr char* JenovaScriptType						= "CPPScript";
 		constexpr char* JenovaHeaderType						= "CPPHeader";
 		constexpr char* JenovaCacheDirectory					= "/Jenova_Cache/";
@@ -782,6 +787,7 @@ namespace jenova
 	bool UpdateGlobalStorageFromEditorSettings();
 	std::string GetNotificationString(int p_what);
 	String GetJenovaCacheDirectory();
+	String GetJenovaProjectDirectory();
 	String RemoveCommentsFromSource(const String& sourceCode);
 	bool ContainsExactString(const String& srcStr, const String& matchStr);
 	std::string GetDemangledFunctionSignature(std::string mangledName, CompilerModel compilerModel);
@@ -846,8 +852,10 @@ namespace jenova
 	jenova::SerializedData ProcessAndExtractPropertiesFromScript(OutParam String& scriptSource, const String& scriptUID);
 	Variant::Type GetVariantTypeFromStdString(const std::string& typeName);
 	jenova::ScriptPropertyContainer CreatePropertyContainerFromMetadata(const jenova::SerializedData& propertyMetadata, const std::string& scriptUID);
+	void CleanVariantTypeName(std::string& typeName);
 	void* AllocateVariantBasedProperty(const std::string& typeName);
-	bool SetPropertyPointerValueFromVariant(void* propertyPointer, const Variant& variantValue);
+	bool SetPropertyPointerValueFromVariant(jenova::PropertyPointer propertyPointer, const Variant& variantValue);
+	bool GetVariantFromPropertyPointer(const jenova::PropertyPointer propertyPointer, godot::Variant& variantValue, const Variant::Type& variantType);
 	std::string ParseClassNameFromScriptSource(const std::string& sourceCode);
 	jenova::ScriptFileState BackupScriptFileState(const std::string& scriptFilePath);
 	bool RestoreScriptFileState(const std::string& scriptFilePath, const jenova::ScriptFileState& scriptFileState);

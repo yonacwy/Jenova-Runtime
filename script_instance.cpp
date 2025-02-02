@@ -249,7 +249,32 @@ Variant CPPScriptInstance::callp(const StringName &p_method, const Variant **p_a
 	}
 	if (hasMethod)
 	{
+		// Invoke Function & Call
 		Variant callResult = JenovaInterpreter::CallFunction(this->owner, AS_STD_STRING(p_method), AS_STD_STRING(scriptInstanceIdentity), p_args, p_argument_count);
+
+		// Update Properties
+		if (jenova::GlobalSettings::UpdatePropertiesAfterCall)
+		{
+			// Update Interpreter Properties
+			if (this->instanceProperties.size() != 0)
+			{
+				Array instancePropertiesKeys = instanceProperties.keys();
+				for (size_t i = 0; i < instancePropertiesKeys.size(); i++)
+				{
+					Variant variantValue = Variant::NIL;
+					jenova::PropertyPointer propertyPointer = JenovaInterpreter::GetPropertyPointer(instancePropertiesKeys[i], scriptInstanceIdentity);
+					if (!jenova::GetVariantFromPropertyPointer(propertyPointer, variantValue, instanceProperties[instancePropertiesKeys[i]].get_type()))
+					{
+						jenova::Error("Jenova Interpreter", "Failed to Update Property Storage Value From Interpreter Property!");
+						r_error.error = GDEXTENSION_CALL_ERROR_INVALID_ARGUMENT;
+						return Variant();
+					}
+					instanceProperties[instancePropertiesKeys[i]] = variantValue;
+				}
+			}
+		}
+
+		// Return Result
 		r_error.error = GDEXTENSION_CALL_OK;
 		return callResult;
 	}

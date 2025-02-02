@@ -73,8 +73,6 @@ public:
 	virtual bool _is_placeholder_fallback_enabled() const override;
 	virtual Variant _get_rpc_config() const override;
 
-	// Base Method Overrides
-
 public:
 	// Methods
 	void SetDefaultSourceCode();
@@ -82,6 +80,7 @@ public:
 	jenova::ScriptIdentifier GetScriptIdentity();
 	bool HasValidScriptIdentity() const;
 	bool SetScriptIdentity(jenova::ScriptIdentifier identity);
+	void ReloadScriptSourceCode();
 
 	// Extra
 	bool is_built_in() const
@@ -141,6 +140,9 @@ public:
 	virtual bool _is_placeholder_fallback_enabled() const override;
 	virtual Variant _get_rpc_config() const override;
 public:
+	// Methods
+	void ReloadHeaderSourceCode();
+
 	// Intializer
 	CPPHeader();
 };

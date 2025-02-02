@@ -1170,20 +1170,31 @@ jenova::PropertyAddress JenovaInterpreter::GetPropertyAddress(const std::string&
     // Property was not found
     return 0;
 }
-bool JenovaInterpreter::SetPropertyValueFromVariant(const String& propertyName, const Variant& propertyValue, const String& scriptUID)
+jenova::PropertyPointer JenovaInterpreter::GetPropertyPointer(const String& propertyName, const String& scriptUID)
 {
     // Create Property Key
     std::string propertyKey = AS_STD_STRING(scriptUID + String("_") + propertyName.get_file());
-        
+
     // Validate Property
-    if (!propertyStorage.contains(propertyKey)) return false;
+    if (!propertyStorage.contains(propertyKey)) return nullptr;
 
     // Get Property Pointer from Storage
-    void* propertyPtr = propertyStorage[propertyKey];
+    jenova::PropertyPointer propertyPtr = propertyStorage[propertyKey];
+
+    // Return Property Pointer
+    return propertyPtr;
+}
+bool JenovaInterpreter::SetPropertyValueFromVariant(const String& propertyName, const Variant& propertyValue, const String& scriptUID)
+{
+    // Get Property Pointer from Storage
+    jenova::PropertyPointer propertyPtr = GetPropertyPointer(propertyName, scriptUID);
+
+    // Validate Property Pointer
+    if (propertyPtr == nullptr) return false;
 
     // Set Property Value from Variant
     if (!jenova::SetPropertyPointerValueFromVariant(propertyPtr, propertyValue)) return false;
-    
+
     // Get Property Address
     jenova::PropertyAddress propertyAddress = JenovaInterpreter::GetPropertyAddress(AS_STD_STRING(propertyName.get_file()), AS_STD_STRING(scriptUID));
     if (!propertyAddress) return false;
