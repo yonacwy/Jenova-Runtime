@@ -20,11 +20,11 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.5.2"
+#define APP_VERSION						"0.3.5.3"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 5, 2
+#define APP_VERSION_DATA				0, 3, 5, 3
 #define APP_VERSION_BUILD				"0"
 #define APP_VERSION_NAME				"Cepter"
 
@@ -77,6 +77,7 @@
 #ifdef TARGET_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <DbgHelp.h>
+#include <psapi.h>
 #endif
 
 // Linux SDK
@@ -643,6 +644,8 @@ namespace jenova
 		constexpr bool CreateSymbolicAddonModules				= true;
 		constexpr bool CopyRuntimeModuleOnExport				= true;
 		constexpr bool RespectSourceFilesEncoding				= true;
+		constexpr bool RegisterGlobalCrashHandler				= false;
+		constexpr bool CreateDumpOnExecutionCrash				= false;
 
 		constexpr size_t PrintOutputBufferSize					= 8192;
 		constexpr size_t BuildOutputBufferSize					= PrintOutputBufferSize;
@@ -841,14 +844,19 @@ namespace jenova
 	void CopyAddonBinariesToEngineDirectory(bool createSymbolic = false);
 	bool ExecutePackageScript(const std::string& packageScriptFile);
 	bool ProcessCommandLineArguments();
+	godot::SceneTree* GetSceneTree();
+	std::string FindScriptPathFromPreprocessedFile(const std::string& preprocessedFile);
 	#pragma endregion
 
 	// Core Reimplementation
 	void* CoreMemoryMove(void* dest, const void* src, std::size_t count);
 
-	// Handlers
+	// Crash Handlers
 	#ifdef TARGET_PLATFORM_WINDOWS
-	static LONG WINAPI JenovaCrashHandler(EXCEPTION_POINTERS* exceptionInfo);
+	bool GenerateMiniMemoryDump(EXCEPTION_POINTERS* exceptionInfo);
+	std::string GetExceptionDescription(EXCEPTION_POINTERS* exceptionInfo);
+	static LONG WINAPI JenovaGlobalCrashHandler(EXCEPTION_POINTERS* exceptionInfo);
+	LONG WINAPI JenovaExecutionCrashHandler(EXCEPTION_POINTERS* exceptionInfo);
 	#endif
 
 	// Imported Libraries

@@ -36,14 +36,14 @@ namespace jenova
             // Initialize Tool Chain Settings
             internalDefaultSettings["instance_name"]                        = compilerInstanceName;
             internalDefaultSettings["instance_version"]                     = 1.0f;
-            internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMSVCCompiler"; // Placeholder
+            internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMSVCCompiler";
             internalDefaultSettings["cpp_compiler_binary"]                  = "/Bin/cl.exe";
             internalDefaultSettings["cpp_linker_binary"]                    = "/Bin/link.exe";
             internalDefaultSettings["cpp_include_path"]                     = "/Include";
             internalDefaultSettings["cpp_library_path"]                     = "/Lib";
             internalDefaultSettings["cpp_symbols_path"]                     = "/Symbols";
             internalDefaultSettings["cpp_jenovasdk_path"]                   = "/Jenova/JenovaSDK";
-            internalDefaultSettings["cpp_godotsdk_path"]                    = "/Jenova/GodotSDK"; // Placeholder
+            internalDefaultSettings["cpp_godotsdk_path"]                    = "/Jenova/GodotSDK";
 
             // MSVC Compiler Settings
             internalDefaultSettings["cpp_language_standards"]               = "cpp20";                          /* /std:c++20 [cpp20, cpp17] */
@@ -54,8 +54,8 @@ namespace jenova
             internalDefaultSettings["cpp_debug_database"]                   = true;                             /* /Zi */
             internalDefaultSettings["cpp_conformance_mode"]                 = true;                             /* /permissive vs /permissive- */
             internalDefaultSettings["cpp_exception_handling"]               = 2;                                /* 1 : /EHsc 2: /EHa */
-            internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /GR /bigobj";        /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
-            internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL"; /* REAL_T_IS_DOUBLE Removed for Now */
+            internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /GR /bigobj";            /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
+            internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL";
 
             // MSVC Linker Settings
             internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug .jnv for Final*/
@@ -69,7 +69,7 @@ namespace jenova
             internalDefaultSettings["cpp_add_manifest"]                     = true;                             /* /MANIFEST */
             internalDefaultSettings["cpp_dynamic_base"]                     = true;                             /* /DYNAMICBASE */
             internalDefaultSettings["cpp_debug_symbol"]                     = true;                             /* /DEBUG:FULL */
-            internalDefaultSettings["cpp_extra_linker"]                     = "/OPT:ICF /OPT:NOREF  /LTCG";     /* Extra Linker Options */
+            internalDefaultSettings["cpp_extra_linker"]                     = "/OPT:ICF /OPT:NOREF /LTCG";      /* Extra Linker Options */
 
             // All Good
             return true;

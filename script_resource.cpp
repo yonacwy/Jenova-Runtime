@@ -20,17 +20,17 @@ static Ref<CPPScriptResourceLoader>		cpp_loader;
 static Ref<CPPScriptResourceSaver>		cpp_saver;
 
 // Script Resource Loader Implementation
-void CPPScriptResourceLoader::init() 
+void CPPScriptResourceLoader::init()
 {
 	cpp_loader.instantiate();
 	ResourceLoader::get_singleton()->add_resource_format_loader(cpp_loader);
 }
-void CPPScriptResourceLoader::deinit() 
+void CPPScriptResourceLoader::deinit()
 {
 	ResourceLoader::get_singleton()->remove_resource_format_loader(cpp_loader);
 	cpp_loader.unref();
 }
-Variant CPPScriptResourceLoader::_load(const String &p_path, const String &original_path, bool use_sub_threads, int32_t cache_mode) const 
+Variant CPPScriptResourceLoader::_load(const String& p_path, const String& original_path, bool use_sub_threads, int32_t cache_mode) const
 {
 	Ref<CPPScript> cppScript = memnew(CPPScript);
 	cppScript->_set_source_code(FileAccess::get_file_as_string(p_path));
@@ -40,18 +40,18 @@ Variant CPPScriptResourceLoader::_load(const String &p_path, const String &origi
 
 	return cppScript;
 }
-PackedStringArray CPPScriptResourceLoader::_get_recognized_extensions() const 
+PackedStringArray CPPScriptResourceLoader::_get_recognized_extensions() const
 {
 	PackedStringArray array;
 	array.push_back(jenova::GlobalSettings::JenovaScriptExtension);
 	return array;
 }
-bool CPPScriptResourceLoader::_handles_type(const StringName &type) const 
+bool CPPScriptResourceLoader::_handles_type(const StringName& type) const
 {
 	String type_str = type;
 	return type_str == jenova::GlobalSettings::JenovaScriptType || type_str == "Script";
 }
-String CPPScriptResourceLoader::_get_resource_type(const String &p_path) const 
+String CPPScriptResourceLoader::_get_resource_type(const String& p_path) const
 {
 	String el = p_path.get_extension().to_lower();
 	if (el == jenova::GlobalSettings::JenovaScriptExtension) return jenova::GlobalSettings::JenovaScriptType;
@@ -59,12 +59,12 @@ String CPPScriptResourceLoader::_get_resource_type(const String &p_path) const
 }
 
 // Script Resource Loader Implementation
-void CPPScriptResourceSaver::init() 
+void CPPScriptResourceSaver::init()
 {
 	cpp_saver.instantiate();
 	ResourceSaver::get_singleton()->add_resource_format_saver(cpp_saver);
 }
-void CPPScriptResourceSaver::deinit() 
+void CPPScriptResourceSaver::deinit()
 {
 	ResourceSaver::get_singleton()->remove_resource_format_saver(cpp_saver);
 	cpp_saver.unref();
@@ -102,13 +102,13 @@ bool CPPScriptResourceSaver::_recognize(const Ref<Resource>& p_resource) const
 {
 	return Object::cast_to<CPPScript>(p_resource.ptr()) != nullptr;
 }
-PackedStringArray CPPScriptResourceSaver::_get_recognized_extensions(const Ref<Resource>& p_resource) const 
+PackedStringArray CPPScriptResourceSaver::_get_recognized_extensions(const Ref<Resource>& p_resource) const
 {
 	PackedStringArray array;
 	if (Object::cast_to<CPPScript>(p_resource.ptr()) != nullptr) array.push_back(jenova::GlobalSettings::JenovaScriptExtension);
 	return array;
 }
-bool CPPScriptResourceSaver::_recognize_path(const Ref<Resource>& p_resource, const String& p_path) const 
+bool CPPScriptResourceSaver::_recognize_path(const Ref<Resource>& p_resource, const String& p_path) const
 {
 	return Object::cast_to<CPPScript>(p_resource.ptr()) != nullptr;
 }

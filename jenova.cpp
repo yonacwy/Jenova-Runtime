@@ -3754,7 +3754,7 @@ namespace jenova
 
 				// Set the Custom Crash Handler
 				#ifdef TARGET_PLATFORM_WINDOWS 
-					SetUnhandledExceptionFilter(jenova::JenovaCrashHandler);
+					if (jenova::GlobalSettings::RegisterGlobalCrashHandler) SetUnhandledExceptionFilter(jenova::JenovaGlobalCrashHandler);
 				#endif
 
 				// Uninitialize Runtime
@@ -7657,6 +7657,39 @@ namespace jenova
 		// All Good
 		return true;
 	}
+	godot::SceneTree* GetSceneTree()
+	{
+		godot::SceneTree* scene_tree = dynamic_cast<godot::SceneTree*>(godot::Engine::get_singleton()->get_main_loop());
+		return scene_tree;
+	}
+	std::string FindScriptPathFromPreprocessedFile(const std::string& preprocessedFile)
+	{
+		// Script UID Extractor
+		auto ExtractUID = [](const std::string& path) -> std::string 
+		{
+			std::smatch match;
+			std::regex idRegex("_([a-f0-9]{20})\\.cpp$");
+			if (std::regex_search(path, match, idRegex) && match.size() > 1) return match[1].str();
+			return "";
+		};
+
+		// Collect All Scripts for UID Match
+		jenova::ResourceCollection cppResources;
+		if (!jenova::CollectScriptsFromFileSystemAndScenes("res://", "cpp", cppResources)) return preprocessedFile;
+		std::string scriptUID = ExtractUID(preprocessedFile);
+		for (auto const& cppResource : cppResources)
+		{
+			if (cppResource->is_class(jenova::GlobalSettings::JenovaScriptType))
+			{
+				Ref<CPPScript> cppScript = Object::cast_to<CPPScript>(cppResource.ptr());
+				if (!cppScript->HasValidScriptIdentity()) cppScript->GenerateScriptIdentity();
+				if (AS_STD_STRING(cppScript->GetScriptIdentity()) == scriptUID) return AS_STD_STRING(cppScript->get_path());
+			}
+		}
+
+		// Not Found
+		return preprocessedFile;
+	}
 	#pragma endregion
 	
 	// Core Reimplementation
@@ -7678,42 +7711,133 @@ namespace jenova
 		return dest;
 	}
 
-	// Handlers
+	// Crash Handlers
 	#ifdef TARGET_PLATFORM_WINDOWS
-	LONG WINAPI JenovaCrashHandler(EXCEPTION_POINTERS* exceptionInfo)
+	bool GenerateMiniMemoryDump(EXCEPTION_POINTERS* exceptionInfo)
 	{
-		//// Generate Crash Dump [Windows Only] ////
-		
-		// Create a Directory Named "JenovaCrashData" in the Windows Temp Directory
+		// Create a directory named "JenovaCrashData" in the Windows temp directory
 		wchar_t tempPath[MAX_PATH];
 		GetTempPath(MAX_PATH, tempPath);
 		std::wstring crashDir = std::wstring(tempPath) + L"JenovaCrashData\\";
 		CreateDirectory(crashDir.c_str(), NULL);
 
-		// Generate A Random Hash ID for the Crash Dump File
-		std::string crashHash = jenova::GenerateRandomHashString();
+		// Generate a random hash ID for the crash dump file
+		std::string crashHash = GenerateRandomHashString();
 		wchar_t dumpFileName[MAX_PATH];
 		wsprintf(dumpFileName, L"%sJenovaCore_Crash_Dump_%hs.dmp", crashDir.c_str(), crashHash.c_str());
 
-		// Open the Dump File for Writing
-		HANDLE dumpFileHandle = CreateFile(dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (dumpFileHandle != INVALID_HANDLE_VALUE)
+		// Open the dump file for writing
+		HANDLE hDumpFile = CreateFile(dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hDumpFile != INVALID_HANDLE_VALUE)
 		{
-			// Set Up the MiniDumpWriteDump Options
+			// Set up the MiniDumpWriteDump options
 			MINIDUMP_EXCEPTION_INFORMATION dumpInfo;
 			dumpInfo.ThreadId = GetCurrentThreadId();
 			dumpInfo.ExceptionPointers = exceptionInfo;
 			dumpInfo.ClientPointers = TRUE;
 
-			// Write the Mini Dump File
-			MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), dumpFileHandle, MiniDumpNormal, &dumpInfo, NULL, NULL);
+			// Write the mini dump file
+			MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hDumpFile, MiniDumpNormal, &dumpInfo, NULL, NULL);
 
-			// Close the Dump File Handle
-			CloseHandle(dumpFileHandle);
+			// Close the dump file handle
+			CloseHandle(hDumpFile);
+
+			// All Good
+			return true;
 		}
+
+		// Something Went Wrong
+		return false;
+	}
+	std::string GetExceptionDescription(EXCEPTION_POINTERS* exceptionInfo) 
+	{
+		// Create Stream & Get Record
+		std::ostringstream exceptionDetails;
+		PEXCEPTION_RECORD record = exceptionInfo->ExceptionRecord;
+
+		// Detect Exception Type
+		switch (record->ExceptionCode)
+		{
+		case EXCEPTION_ACCESS_VIOLATION:
+			exceptionDetails << "Access Violation";
+			if (record->NumberParameters >= 2)
+			{
+				exceptionDetails << " - ";
+				exceptionDetails << (record->ExceptionInformation[0] == 0 ? "Read" : "Write");
+				exceptionDetails << " at address 0x" << std::hex << std::setw(16) << std::setfill('0') << record->ExceptionInformation[1];
+			}
+			break;
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+			exceptionDetails << "Array Bounds Exceeded";
+			break;
+		case EXCEPTION_BREAKPOINT:
+			exceptionDetails << "Breakpoint";
+			break;
+		case EXCEPTION_DATATYPE_MISALIGNMENT:
+			exceptionDetails << "Datatype Misalignment";
+			break;
+		case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+			exceptionDetails << "Floating Point Divide by Zero";
+			break;
+		case EXCEPTION_INT_DIVIDE_BY_ZERO:
+			exceptionDetails << "Integer Divide by Zero";
+			break;
+		case EXCEPTION_STACK_OVERFLOW:
+			exceptionDetails << "Stack Overflow";
+			break;
+		default:
+			exceptionDetails << "Unknown Exception Code: 0x" << std::hex << std::setw(16) << record->ExceptionCode;
+			break;
+		}
+
+		// Return Generated Exception Description
+		return exceptionDetails.str();
+	}
+	LONG WINAPI JenovaGlobalCrashHandler(EXCEPTION_POINTERS* exceptionInfo)
+	{
+		// Generate Crash Dump
+		jenova::GenerateMiniMemoryDump(exceptionInfo);
 
 		// Show Crash Dialog
 		MessageBoxA(0, "Jenova™ Core Crashed! Sorry about that... Hmm...\nNot really, Coding is hard man! :)", "Jenova :: Fatal Error", MB_ICONERROR);
+
+		// Suppress the Exception
+		return EXCEPTION_EXECUTE_HANDLER;
+	}
+	LONG WINAPI JenovaExecutionCrashHandler(EXCEPTION_POINTERS* exceptionInfo)
+	{
+		// Generate Crash Dump If Requested
+		if (jenova::GlobalSettings::CreateDumpOnExecutionCrash) jenova::GenerateMiniMemoryDump(exceptionInfo);
+
+		// Get Function Information from Symbol
+		std::string functionName, functionFile;
+		int functionLine = 0; DWORD displacement; IMAGEHLP_LINE64 line = { 0 };
+		HANDLE process = GetCurrentProcess();
+		SymInitialize(process, NULL, TRUE);
+		DWORD64 address = (DWORD64)exceptionInfo->ExceptionRecord->ExceptionAddress;
+		char symbolBuffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)] = { 0 };
+		PSYMBOL_INFO symbol = (PSYMBOL_INFO)symbolBuffer;
+		symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+		symbol->MaxNameLen = MAX_SYM_NAME;
+		functionName = SymFromAddr(process, address, 0, symbol) ? symbol->Name : "Unknown Function";
+		functionName = std::regex_replace(functionName, std::regex("^JNV_[a-f0-9]+::"), "JenovaScript::");
+		line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+		if (SymGetLineFromAddr64(process, address, &displacement, &line))
+		{
+			functionFile = FindScriptPathFromPreprocessedFile(line.FileName);
+			functionLine = line.LineNumber;
+		}
+		else
+		{
+			functionFile = "Unknown File";
+			functionLine = 0;
+		}
+		SymCleanup(process);
+
+		// Print Access Violation Error
+		std::string errorMessage = jenova::Format("Jenova Runtime Execution Error :: %s", jenova::GetExceptionDescription(exceptionInfo).c_str());
+		std::string instructionPtr = jenova::Format("Instruction ADdress : 0x%010X", exceptionInfo->ExceptionRecord->ExceptionAddress);
+		godot::_err_print_error(functionName.c_str(), functionFile.c_str(), functionLine, errorMessage.c_str());
 
 		// Suppress the Exception
 		return EXCEPTION_EXECUTE_HANDLER;

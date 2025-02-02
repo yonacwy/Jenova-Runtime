@@ -178,10 +178,9 @@ godot::String CPPScriptInstance::to_string(bool *r_is_valid)
 	*r_is_valid = true;
 	return String(jenova::Format("<JenovaScript:%s>", AS_C_STRING(get_identity())).c_str());
 }
-void CPPScriptInstance::notification(int32_t p_what, bool p_reversed) 
+void CPPScriptInstance::notification(int p_notification, bool p_reversed)
 {
-	jenova::VerboseByID(__LINE__, "CPPScriptInstance::notification (%s) [%d:%s]", AS_C_STRING(scriptInstanceIdentity), p_what, jenova::GetNotificationString(p_what).c_str());
-	if (p_what == Object::NOTIFICATION_PREDELETE) isDeleting = true;
+	if (p_notification == Object::NOTIFICATION_PREDELETE) isDeleting = true;
 }
 Variant CPPScriptInstance::callp(const StringName &p_method, const Variant **p_args, const int p_argument_count, GDExtensionCallError &r_error) 
 {
