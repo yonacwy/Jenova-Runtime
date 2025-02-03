@@ -15,6 +15,7 @@
 // Jenova SDK
 #include "Jenova.hpp"
 
+// Script Instance Base Implementation
 static GDExtensionBool gdextension_script_instance_set(GDExtensionScriptInstanceDataPtr p_instance, GDExtensionConstStringNamePtr p_name, GDExtensionConstVariantPtr p_value)
 {
 	ScriptInstanceExtension* instance = reinterpret_cast<ScriptInstanceExtension*>(p_instance);
@@ -206,6 +207,7 @@ static GDExtensionInt gdextension_script_instance_get_method_argument_count(GDEx
 	}
 }
 
+// Script Instance Info
 GDExtensionScriptInstanceInfo3 ScriptInstanceExtension::script_instance_info =
 {
 	&gdextension_script_instance_set,
@@ -236,6 +238,7 @@ GDExtensionScriptInstanceInfo3 ScriptInstanceExtension::script_instance_info =
 	&gdextension_script_instance_free,
 };
 
+// Script Instance Class Category
 bool ScriptInstanceExtension::get_class_category(GDExtensionPropertyInfo& r_class_category) const
 {
 	Ref<Script> script = get_script();

@@ -64,7 +64,7 @@ private:
     static inline bool                          allowExecution          = false;
     static inline bool                          isExecuting             = false;
     static inline jenova::ModuleHandle          moduleHandle            = nullptr;
-    static inline jenova::FunctionAddress       moduleBaseAddress       = 0;
+    static inline jenova::ModuleAddress         moduleBaseAddress       = 0;
     static inline nlohmann::json                moduleMetaData          = "{}";
     static inline size_t                        moduleBinarySize        = 0;
     static inline Ref<Mutex>                    interpreterMutex        = nullptr;

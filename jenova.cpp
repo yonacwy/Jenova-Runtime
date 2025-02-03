@@ -3921,7 +3921,7 @@ namespace jenova
 				// Register Singleton
 				Engine::get_singleton()->register_singleton("JenovaRuntime", singleton);
 
-				// Start Runtime
+				// Initialize Runtime
 				if (!singleton->InitializeRuntime())
 				{
 					jenova::Error("Jenova Runtime", "Fatal Error :: Jenova Runtime Failed to Initialize!");
@@ -4011,11 +4011,17 @@ namespace jenova
 				// Rise Events
 				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Initialized, nullptr, 0);
 
+				// Update Runtime State
+				isInitialized = true;
+
 				// All Good
 				return true;
 			}
 			bool StartRuntime()
 			{
+				// Validate Runtime
+				if (!isInitialized) return true;
+
 				// Connect Signals
 				jenova::GetSceneTree()->connect("process_frame", callable_mp(this, &JenovaRuntime::OnFrameBegin));
 				RenderingServer::get_singleton()->connect("frame_pre_draw", callable_mp(this, &JenovaRuntime::OnFrameEnd));
@@ -4026,6 +4032,9 @@ namespace jenova
 
 				// Rise Events
 				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Started, nullptr, 0);
+
+				// Update Runtime State
+				isStarted = true;
 
 				// All Good
 				return true;
@@ -4038,8 +4047,19 @@ namespace jenova
 					EngineDebugger::get_singleton()->unregister_message_capture("Jenova-Runtime");
 				}
 
+				// Disconnect Signals
+				if (isStarted && jenova::GetSceneTree() && RenderingServer::get_singleton())
+				{
+					jenova::GetSceneTree()->disconnect("process_frame", callable_mp(this, &JenovaRuntime::OnFrameBegin));
+					RenderingServer::get_singleton()->disconnect("frame_pre_draw", callable_mp(this, &JenovaRuntime::OnFrameEnd));
+					RenderingServer::get_singleton()->disconnect("frame_post_draw", callable_mp(this, &JenovaRuntime::OnFramePresent));
+				}
+
 				// Rise Events
 				for (const auto& runtimeCallback : runtimeCallbacks) runtimeCallback(RuntimeEvent::Stopped, nullptr, 0);
+
+				// Update Runtime State
+				isStarted = false;
 
 				// All Good
 				return true;
@@ -4091,6 +4111,8 @@ namespace jenova
 
 		public:
 			// Data
+			inline static bool isInitialized = false;
+			inline static bool isStarted = false;
 			inline static bool enteredSceneTree = false;
 			inline static std::vector<RuntimeCallback> runtimeCallbacks;
 		};
@@ -4255,7 +4277,10 @@ namespace jenova
 				CPPHeaderResourceSaver::deinit();
 
 				// Unload Module
-				VALIDATE_FUNCTION(JenovaInterpreter::UnloadModule());
+				if (JenovaInterpreter::GetModuleBaseAddress() != 0)
+				{
+					VALIDATE_FUNCTION(JenovaInterpreter::UnloadModule());
+				}
 
 				// Release Interpreter
 				VALIDATE_FUNCTION(JenovaInterpreter::ReleaseInterpreter());
@@ -6136,7 +6161,6 @@ namespace jenova
 			while (strm.avail_in != 0)
 			{
 				int res = inflate(&strm, Z_NO_FLUSH);
-				assert(res == Z_OK);
 				if (strm.avail_out == 0)
 				{
 					buffer.insert(buffer.end(), temp_buffer.get(), temp_buffer.get() + BUFSIZE);
