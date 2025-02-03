@@ -1222,8 +1222,6 @@ void* JenovaInterpreter::SolveVirtualFunction(jenova::ModuleHandle moduleHandle,
 // Jenova Interpreter Implementation :: Module Database
 bool JenovaInterpreter::CreateModuleDatabase(const std::string& moduleDatabaseName, const uint8_t* moduleDataPtr, const size_t moduleSize, const jenova::SerializedData& metaData)
 {
-    // [!] Maybe using sql-lite In Future?
-
     // Verbose
     jenova::VerboseByID(__LINE__, "Caching Jenova Compiled Module In Database...");
 
@@ -1235,6 +1233,7 @@ bool JenovaInterpreter::CreateModuleDatabase(const std::string& moduleDatabaseNa
     jenova::ModuleDatabaseHeader moduleDatabaseHeader;
     moduleDatabaseHeader.moduleSize = moduleSize;
     moduleDatabaseHeader.metaDataSize = metaData.size();
+    moduleDatabaseHeader.databaseType = jenova::ModuleCacheType::OpenSource;
 
     // Set Database Version
     const unsigned char appVersionData[4] = { APP_VERSION_DATA };
@@ -1313,6 +1312,16 @@ bool JenovaInterpreter::DeployFromDatabase(const std::string& moduleDatabaseName
     if (memcmp(magicNumber, databaseHeader->magicNumber, sizeof magicNumber) != 0)
     {
         jenova::Error("Jenova Interpreter", "Jenova Module Database is Invalid!");
+        return false;
+    }
+
+    // Validate Package Cache Type
+    if (databaseHeader->databaseType != jenova::ModuleCacheType::OpenSource)
+    {
+        std::string moduleDatbaseType = "Unknown";
+        if (databaseHeader->databaseType == jenova::ModuleCacheType::Proprietary) moduleDatbaseType = "Proprietary";
+        jenova::Error("Jenova Interpreter", "Unable to Load Jenova Module Database.\n" \
+            "Module Built with %s version of Jenova Framework while Runtime is Open-Source version.", moduleDatbaseType.c_str());
         return false;
     }
 

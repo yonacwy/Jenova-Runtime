@@ -20,13 +20,13 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.5.8"
+#define APP_VERSION						"0.3.5.9"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 5, 8
+#define APP_VERSION_DATA				0, 3, 5, 9
 #define APP_VERSION_BUILD				"0"
-#define APP_VERSION_NAME				"Bloom"
+#define APP_VERSION_NAME				"Luna"
 
 #ifndef NO_JENOVA_RUNTIME_SDK
 
@@ -478,6 +478,12 @@ namespace jenova
 		Dynamically,
 		Statically
 	};
+	enum class ModuleCacheType : short
+	{
+		Proprietary						= 0x5250,
+		OpenSource						= 0x534F,
+		Unknown							= 0x0000,
+	};
 
 	// Flags
 	enum CompilerFeature : CompilerFeatures
@@ -573,8 +579,9 @@ namespace jenova
 		size_t metaDataSize						= 0;
 		size_t encodedDataSize					= 0;
 		float compressionRatio					= 100.0f;
+		ModuleCacheType databaseType			= ModuleCacheType::Unknown;
 		unsigned char databaseVersion[4]		= { 0 };
-		unsigned char reserved[16]				= { 0 };
+		unsigned char reserved[14]				= { 0 };
 	};
 	struct ScriptCaller
 	{

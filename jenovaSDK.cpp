@@ -181,6 +181,40 @@ namespace jenova::sdk
 		va_end(args);
 		godot::UtilityFunctions::print(godot::String(L"[JENOVA-SDK] > ") + godot::String(buffer));
 	}
+	void DebugOutput(StringPtr format, ...)
+	{
+		char buffer[1024];
+		va_list args;
+		va_start(args, format);
+		vsnprintf(buffer, sizeof(buffer), format, args);
+		va_end(args);
+		std::string debugMessage = "[JENOVA-SDK] ::> ";
+		debugMessage += buffer;
+
+		// Debug Print
+		#if defined(_WIN32) || defined(_WIN64)
+			OutputDebugStringA(debugMessage.c_str());
+		#else
+			std::clog << debugMessage << std::endl;
+		#endif
+	}
+	void DebugOutput(WideStringPtr format, ...)
+	{
+		wchar_t buffer[1024];
+		va_list args;
+		va_start(args, format);
+		vswprintf(buffer, sizeof(buffer) / sizeof(wchar_t), format, args);
+		va_end(args);
+		std::wstring debugMessage = L"[JENOVA-SDK] ::> ";
+		debugMessage += buffer;
+
+		// Debug Print
+		#if defined(_WIN32) || defined(_WIN64)
+			OutputDebugStringW(debugMessage.c_str());
+		#else
+			std::wclog << debugMessage << std::endl;
+		#endif
+	}
 	StringPtr GetCStr(const godot::String& godotStr)
 	{
 		std::string str((char*)godotStr.utf8().ptr(), godotStr.utf8().size());

@@ -180,6 +180,8 @@ namespace jenova::sdk
 	JENOVA_API godot::String Format(WideStringPtr format, ...);
 	JENOVA_API void Output(StringPtr format, ...);
 	JENOVA_API void Output(WideStringPtr format, ...);
+	JENOVA_API void DebugOutput(StringPtr format, ...);
+	JENOVA_API void DebugOutput(WideStringPtr format, ...);
 	JENOVA_API StringPtr GetCStr(const godot::String& godotStr);
 	JENOVA_API WideStringPtr GetWCStr(const godot::String& godotStr);
 	JENOVA_API bool SetClassIcon(const godot::String& className, const godot::Ref<godot::Texture2D> iconImage);
