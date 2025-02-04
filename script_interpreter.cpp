@@ -113,15 +113,24 @@ bool JenovaInterpreter::LoadModule(const uint8_t* moduleDataPtr, const size_t mo
     // Load And Map Module to Memory
     if (hasDebugInformation)
     {
+        // Load Module As Virtual
         moduleHandle = JenovaLoader::LoadModuleAsVirtual((void*)moduleDataPtr, moduleSize, "Jenova.Module.dll", moduleDiskPath.c_str(), 0);
-        jenova::LoadSymbolForModule(jenova::GetCurrentProcessHandle(), jenova::LongWord(moduleHandle), moduleDiskPath + "\\Jenova.Module.pdb", moduleSize);
+
+        // Load Debug Symbol If MSE Disabled
+        if (!jenova::GlobalStorage::UseManagedSafeExecution)
+        {
+            jenova::LoadSymbolForModule(jenova::GetCurrentProcessHandle(), jenova::LongWord(moduleHandle), moduleDiskPath + "\\Jenova.Module.pdb", moduleSize);
+        }
     }
     else
     {
+        // Load Module As Regular
         moduleHandle = JenovaLoader::LoadModule((void*)moduleDataPtr, moduleSize, 0);
     }
     if (!moduleHandle) return false;
-    moduleBaseAddress = intptr_t(moduleHandle);
+
+    // Get Module Base Address
+    moduleBaseAddress = JenovaLoader::GetModuleBaseAddress(moduleHandle);
     if (!moduleBaseAddress) return false;
 
     // Update Property Storage From Metadata
@@ -320,7 +329,7 @@ std::string JenovaInterpreter::GetFunctionReturn(const std::string& functionName
 uintptr_t JenovaInterpreter::GetResolvedParameterPointer(const godot::Object* objectPtr, const godot::Variant* functionParameter, const std::string& parameterType)
 {
     void* valueAddress = (void*)functionParameter;
-    return uintptr_t(valueAddress);
+    return reinterpret_cast<uintptr_t>(valueAddress);
 }
 bool JenovaInterpreter::IsFunctionReturnable(const std::string& returnType)
 {
@@ -428,17 +437,40 @@ Variant JenovaInterpreter::CallFunction(const godot::Object* objectPtr, const st
                 // Pushing Parameters
                 if (resolvedParametersCount > 0)
                 {
-                    // Handle First 4 Parameters in Registers
-                    if (resolvedParametersCount > 0) assembler.mov(asmjit::x86::rcx, resolvedParameters[0]);
-                    if (resolvedParametersCount > 1) assembler.mov(asmjit::x86::rdx, resolvedParameters[1]);
-                    if (resolvedParametersCount > 2) assembler.mov(asmjit::x86::r8, resolvedParameters[2]);
-                    if (resolvedParametersCount > 3) assembler.mov(asmjit::x86::r9, resolvedParameters[3]);
-
-                    // Push Remaining Parameters Directly to the Stack
-                    for (int i = 4; i < resolvedParametersCount; ++i)
+                    // Microsoft Windows x64 Architecture
+                    if (QUERY_PLATFORM(Windows))
                     {
-                        int offset = 32 + ((i - 4) * stackAdjusterSize); // Offset starts at 32 bytes after the 4th parameter
-                        assembler.mov(asmjit::x86::qword_ptr(asmjit::x86::rsp, offset), resolvedParameters[i]);
+                        // Handle First 4 Parameters in Registers
+                        if (resolvedParametersCount > 0) assembler.mov(asmjit::x86::rcx, resolvedParameters[0]);
+                        if (resolvedParametersCount > 1) assembler.mov(asmjit::x86::rdx, resolvedParameters[1]);
+                        if (resolvedParametersCount > 2) assembler.mov(asmjit::x86::r8, resolvedParameters[2]);
+                        if (resolvedParametersCount > 3) assembler.mov(asmjit::x86::r9, resolvedParameters[3]);
+
+                        // Push Remaining Parameters Directly to Stack
+                        for (int i = 4; i < resolvedParametersCount; ++i)
+                        {
+                            int offset = 32 + ((i - 4) * stackAdjusterSize); // Offset starts at 32 bytes after the 4th parameter
+                            assembler.mov(asmjit::x86::qword_ptr(asmjit::x86::rsp, offset), resolvedParameters[i]);
+                        }
+                    }
+
+                    // System V AMD64 ABI Architecture
+                    if (QUERY_PLATFORM(Linux))
+                    {
+                        // Handle First 6 Parameters in Registers
+                        if (resolvedParametersCount > 0) assembler.mov(asmjit::x86::rdi, resolvedParameters[0]);
+                        if (resolvedParametersCount > 1) assembler.mov(asmjit::x86::rsi, resolvedParameters[1]);
+                        if (resolvedParametersCount > 2) assembler.mov(asmjit::x86::rdx, resolvedParameters[2]);
+                        if (resolvedParametersCount > 3) assembler.mov(asmjit::x86::rcx, resolvedParameters[3]);
+                        if (resolvedParametersCount > 4) assembler.mov(asmjit::x86::r8, resolvedParameters[4]);
+                        if (resolvedParametersCount > 5) assembler.mov(asmjit::x86::r9, resolvedParameters[5]);
+
+                        // Push Remaining Parameters Directly to Stack
+                        for (int i = 6; i < resolvedParametersCount; ++i)
+                        {
+                            int offset = 32 + ((i - 6) * stackAdjusterSize); // Offset starts at 32 bytes after the 6th parameter
+                            assembler.mov(asmjit::x86::qword_ptr(asmjit::x86::rsp, offset), resolvedParameters[i]);
+                        }
                     }
                 }
 
@@ -902,24 +934,27 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
                 std::smatch match;
                 if (std::regex_search(line, match, funcPattern))
                 {
+                    // Get Extracted Data
                     std::string funcSignature = match[1];
                     std::string funcName = match[3];
                     std::string scriptUID = match[2];
 
+                    // Extract Function Information
                     std::string cleanedSignature = jenova::CleanFunctionAndPropertySignature(funcSignature, buildResult.compilerModel);
                     std::vector<std::string> params = jenova::ExtractParameterTypesFromSignature(cleanedSignature, buildResult.compilerModel);
                     std::string returnType = jenova::ExtractReturnTypeFromSignature(cleanedSignature, buildResult.compilerModel);
 
-                    if (!serializer["Scripts"].contains(scriptUID))
-                    {
-                        serializer["Scripts"][scriptUID]["methods"] = nlohmann::json::object();
-                    }
+                    // If the function has no parameters, Add A Dummy Parameter
+                    if (params.empty()) params.push_back("void");
 
-                    serializer["Scripts"][scriptUID]["methods"][funcName] = {
-                        {"ParamCount", params.size()},
-                        {"Params", params},
-                        {"ReturnType", returnType}
-                    };
+                    // Add Function
+                    if (!serializer["Scripts"].contains(scriptUID)) serializer["Scripts"][scriptUID]["methods"] = nlohmann::json::object();
+
+                    // Add Parameter Count & Return Type
+                    serializer["Scripts"][scriptUID]["methods"][funcName] = { {"ParamCount", params.size()}, {"ReturnType", returnType} };
+
+                    // Add Parameter Types
+                    for (size_t i = 0; i < params.size(); ++i) serializer["Scripts"][scriptUID]["methods"][funcName][jenova::Format("Param%02d", i + 1)] = params[i];
                 }
             }
 

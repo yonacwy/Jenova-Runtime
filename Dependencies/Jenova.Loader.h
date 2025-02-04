@@ -88,6 +88,10 @@ public:
 	{
 		return LoadLibraryMemoryExA(bufferPtr, bufferSize, moduleName, modulePath, LOAD_FLAGS_USE_DLL_NAME);
 	}
+	static jenova::ModuleAddress GetModuleBaseAddress(jenova::ModuleHandle moduleHandle)
+	{
+		return jenova::ModuleAddress(moduleHandle);
+	}
 	static void* GetVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName)
 	{
 		return jenova::GetModuleFunction(moduleHandle, functionName);
@@ -131,8 +135,15 @@ public:
 	{
 		return MOJOELF_dlopen_mem(bufferPtr, bufferSize, nullptr);
 	}
+	static jenova::ModuleAddress GetModuleBaseAddress(jenova::ModuleHandle moduleHandle)
+	{
+		struct link_map* map;
+		dlinfo(moduleHandle, RTLD_DI_LINKMAP, &map);
+		return jenova::ModuleAddress(map->l_addr);
+	}
 	static void* GetVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName)
 	{
+
 		return MOJOELF_dlsym(moduleHandle, functionName);
 	}
 	static bool ReleaseModule(jenova::ModuleHandle moduleHandle)

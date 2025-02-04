@@ -111,6 +111,8 @@ Developed By Hamid.Memar
 		<Unit filename="task_system.h" />
 		<Unit filename="tiny_profiler.cpp" />
 		<Unit filename="tiny_profiler.h" />
+		<Unit filename="gdextension_exporter.cpp" />
+		<Unit filename="gdextension_exporter.h" />
 		<Extensions />
 	</Project>
 </CodeBlocks_project_file>

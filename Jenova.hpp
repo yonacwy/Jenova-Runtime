@@ -33,34 +33,34 @@
 // Define Target Platform
 #if defined(_WIN64) || defined(_WIN32)
 #define TARGET_PLATFORM_WINDOWS 1
-#define TARGET_PLATFORM_CURRENT TargetPlatform::Windows
+#define TARGET_PLATFORM_CURRENT jenova::TargetPlatform::Windows
 #define APP_ARCH "Win64"
 #elif defined(__linux__)
 #define TARGET_PLATFORM_LINUX 1
-#define TARGET_PLATFORM_CURRENT TargetPlatform::Linux
+#define TARGET_PLATFORM_CURRENT jenova::TargetPlatform::Linux
 #define APP_ARCH "Linux64"
 #elif defined(__APPLE__) && defined(__MACH__)
 #include <TargetConditionals.h>
 #if TARGET_OS_IPHONE
 #define TARGET_PLATFORM_IOS 1
-#define TARGET_PLATFORM_CURRENT TargetPlatform::iOS
+#define TARGET_PLATFORM_CURRENT jenova::TargetPlatform::iOS
 #define APP_ARCH "iOS"
 #elif TARGET_OS_MAC
 #define TARGET_PLATFORM_MACOS 1
-#define TARGET_PLATFORM_CURRENT TargetPlatform::MacOS
+#define TARGET_PLATFORM_CURRENT jenova::TargetPlatform::MacOS
 #define APP_ARCH "MacOS"
 #endif
 #elif defined(__ANDROID__)
 #define TARGET_PLATFORM_ANDROID 1
-#define TARGET_PLATFORM_CURRENT TargetPlatform::Android
+#define TARGET_PLATFORM_CURRENT jenova::TargetPlatform::Android
 #define APP_ARCH "Android"
 #elif defined(__EMSCRIPTEN__)
 #define TARGET_PLATFORM_WEB 1
-#define TARGET_PLATFORM_CURRENT TargetPlatform::Web
+#define TARGET_PLATFORM_CURRENT jenova::TargetPlatform::Web
 #define APP_ARCH "Web"
 #else
 #define TARGET_PLATFORM_UNKNOWN 1
-#define TARGET_PLATFORM_CURRENT TargetPlatform::Unknown
+#define TARGET_PLATFORM_CURRENT jenova::TargetPlatform::Unknown
 #define APP_ARCH "Unknown"
 #endif
 

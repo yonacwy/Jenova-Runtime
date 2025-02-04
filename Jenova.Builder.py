@@ -49,7 +49,8 @@ sources = [
     "tiny_profiler.cpp",
     "task_system.cpp",
     "package_manager.cpp",
-    "asset_monitor.cpp"
+    "asset_monitor.cpp",
+    "gdextension_exporter.cpp"
 ]
 
 # Configuration
@@ -83,7 +84,7 @@ def print_banner():
 ===========================================================================
     """
     rgb_print("#42f569", banner)
-    rgb_print("#37b2fa", ".:: Jenova Build System v1.2 ::.\n")
+    rgb_print("#37b2fa", ".:: Jenova Build System v1.3 ::.\n")
 def compute_md5(file_path):
     hasher = hashlib.md5()
     with open(file_path, "rb") as f:
