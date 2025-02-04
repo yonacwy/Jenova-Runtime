@@ -753,7 +753,7 @@ namespace jenova
         bool SolveCompilerSettings(const Dictionary& compilerSettings)
         {
             // Get Project Path
-            String projectPath = ProjectSettings::get_singleton()->globalize_path("res://");
+            String projectPath = jenova::GetJenovaProjectDirectory();
         
             // Collect Compiler & GodotKit Packages
             String selectedCompilerPath = jenova::GetInstalledCompilerPathFromPackages(compilerSettings["cpp_toolchain_path"], GetCompilerModel());
@@ -1499,7 +1499,7 @@ namespace jenova
         bool SolveCompilerSettings(const Dictionary& compilerSettings)
         {
             // Get Project Path
-            String projectPath = ProjectSettings::get_singleton()->globalize_path("res://");
+            String projectPath = jenova::GetJenovaProjectDirectory();
                     
             // Collect Compiler & GodotKit Packages
             String selectedCompilerPath = jenova::GetInstalledCompilerPathFromPackages(compilerSettings["cpp_toolchain_path"], GetCompilerModel());

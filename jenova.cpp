@@ -968,10 +968,10 @@ namespace jenova
 			bool RegisterAssetMonitors()
 			{
 				// Register Project Directory Monitor
-				if (!JenovaAssetMonitor::get_singleton()->AddDirectory(ProjectSettings::get_singleton()->globalize_path("res://"))) return false;
+				if (!JenovaAssetMonitor::get_singleton()->AddDirectory(jenova::GetJenovaProjectDirectory())) return false;
 
 				// Register Jenova Cache Directory Monitor
-				if (!JenovaAssetMonitor::get_singleton()->AddDirectory(GetJenovaCacheDirectory())) return false;
+				if (!JenovaAssetMonitor::get_singleton()->AddDirectory(jenova::GetJenovaCacheDirectory())) return false;
 
 				// Register Callback
 				if (!JenovaAssetMonitor::get_singleton()->RegisterCallback(JenovaEditorPlugin::OnAssetChanged)) return false;
@@ -2789,7 +2789,7 @@ namespace jenova
 			bool OpenProjectInVisualStudio()
 			{
 				// Get Project Path
-				std::string projectPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path("res://"));
+				std::string projectPath = AS_STD_STRING(jenova::GetJenovaProjectDirectory());
 
 				// Open Project in Visual Studio
 				std::string solutionFile = projectPath + jenova::GlobalSettings::VisualStudioSolutionFile;
@@ -2864,7 +2864,7 @@ namespace jenova
 				}
 
 				// Get Project Path
-				std::string projectPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path("res://"));
+				std::string projectPath = AS_STD_STRING(jenova::GetJenovaProjectDirectory());
 
 				// Create .vscode Directory
 				std::string vsCodeDirectory = projectPath + ".vscode";
@@ -3045,7 +3045,7 @@ namespace jenova
 			bool OpenProjectInVisualStudioCode()
 			{
 				// Get Project Path
-				std::string projectPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path("res://"));
+				std::string projectPath = AS_STD_STRING(jenova::GetJenovaProjectDirectory());
 
 				// Open Project in VSCode
 				std::string vscodeExecutable = "code";
@@ -5708,8 +5708,7 @@ namespace jenova
 	}
 	String GetJenovaProjectDirectory()
 	{
-		std::string projectPath = AS_STD_STRING(ProjectSettings::get_singleton()->globalize_path("res://"));
-		return String(projectPath.c_str());
+		return ProjectSettings::get_singleton()->globalize_path("res://");
 	}
 	String RemoveCommentsFromSource(const String& sourceCode) 
 	{

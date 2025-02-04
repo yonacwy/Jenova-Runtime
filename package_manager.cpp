@@ -570,8 +570,8 @@ bool JenovaPackageManager::ObtainInstalledPackages()
 	// Clear Current List
 	installedPackages.clear();
 
-	// Create Installed Package File Path [Maybe Using FileAccess + Asset Path?]
-	String projectPath = ProjectSettings::get_singleton()->globalize_path("res://");
+	// Create Installed Package File Path
+	String projectPath = jenova::GetJenovaProjectDirectory();
 	String installedPackageFile = projectPath + "Jenova/" + jenova::GlobalSettings::JenovaInstalledPackagesFile;
 
 	// Validate Package Database File
@@ -624,8 +624,8 @@ bool JenovaPackageManager::ObtainInstalledPackages()
 }
 bool JenovaPackageManager::CacheInstalledPackages()
 {
-	// Create Installed Package File Path [Maybe Using FileAccess + Asset Path? ]
-	String projectPath = ProjectSettings::get_singleton()->globalize_path("res://");
+	// Create Installed Package File Path
+	String projectPath = jenova::GetJenovaProjectDirectory();
 	String installedPackageFile = projectPath + "Jenova/" + jenova::GlobalSettings::JenovaInstalledPackagesFile;
 
 	// Serialize Package Database
@@ -1180,7 +1180,7 @@ bool JenovaPackageManager::CanClose() const
 bool JenovaPackageManager::PreparePackageManager()
 {
 	// Get Project Path
-	String projectPath = ProjectSettings::get_singleton()->globalize_path("res://");
+	String projectPath = jenova::GetJenovaProjectDirectory();
 
 	// Create Package Directory If Not Exists
 	String packageRepositoryPath = projectPath + jenova::GlobalSettings::JenovaPackageRepositoryPath;
