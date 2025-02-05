@@ -7850,7 +7850,7 @@ namespace jenova
 		if (typeNameCleaned == "StringName") return new godot::StringName();
 		if (typeNameCleaned == "NodePath") return new godot::NodePath();
 		if (typeNameCleaned == "RID") return new godot::RID();
-		if (typeNameCleaned == "Object") return new godot::Object * ();
+		if (typeNameCleaned == "Object") return new Variant();
 		if (typeNameCleaned == "Callable") return new godot::Callable();
 		if (typeNameCleaned == "Signal") return new godot::Signal();
 		if (typeNameCleaned == "Dictionary") return new godot::Dictionary();
@@ -7868,8 +7868,8 @@ namespace jenova
 		if (typeNameCleaned == "PackedColorArray") return new godot::PackedColorArray();
 		if (typeNameCleaned == "PackedVector4Array") return new godot::PackedVector4Array();
 
-		// Default case (unsupported type)
-		return nullptr;
+		// Default Case [Material, Animation etc.]
+		return new Variant();
 	}
 	bool SetPropertyPointerValueFromVariant(jenova::PropertyPointer propertyPointer, const Variant& variantValue)
 	{
@@ -8013,8 +8013,8 @@ namespace jenova
 		}
 		case Variant::Type::OBJECT:
 		{
-			godot::Object** valuePtr = static_cast<godot::Object**>(propertyPointer);
-			*valuePtr = Object::cast_to<godot::Object>(variantValue);
+			godot::Variant* valuePtr = static_cast<godot::Variant*>(propertyPointer);
+			*valuePtr = godot::Variant(variantValue);
 			return true;
 		}
 		case Variant::Type::CALLABLE:
@@ -8096,7 +8096,10 @@ namespace jenova
 			return true;
 		}
 		default:
-			return false; // Unsupported type
+			// Default Case [Material, Animation etc.]
+			godot::Variant* valuePtr = static_cast<godot::Variant*>(propertyPointer);
+			*valuePtr = godot::Variant(variantValue);
+			return true;
 		}
 	}
 	bool GetVariantFromPropertyPointer(const jenova::PropertyPointer propertyPointer, godot::Variant& variantValue, const godot::Variant::Type& variantType)
@@ -8177,7 +8180,7 @@ namespace jenova
 			variantValue = *static_cast<const godot::RID*>(propertyPointer);
 			break;
 		case godot::Variant::OBJECT:
-			variantValue = static_cast<godot::Object*>(const_cast<void*>(propertyPointer));
+			variantValue = *static_cast<godot::Variant*>(propertyPointer);
 			break;
 		case godot::Variant::CALLABLE:
 			variantValue = *static_cast<const godot::Callable*>(propertyPointer);
@@ -8222,7 +8225,9 @@ namespace jenova
 			variantValue = *static_cast<const godot::PackedVector4Array*>(propertyPointer);
 			break;
 		default:
-			return false;
+			// Default Case [Material, Animation etc.]
+			variantValue = *static_cast<godot::Variant*>(propertyPointer);
+			break;
 		}
 
 		// All Good
