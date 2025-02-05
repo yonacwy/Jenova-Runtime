@@ -1000,7 +1000,7 @@ namespace jenova
             {
                 // Cache Doesn't Exist, Generate It
                 std::string cacheDatabaseFilePath = this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile;
-                if (!jenova::CreateBuildCacheDatabase(cacheDatabaseFile, scriptModulesContainer.scriptModules, compilerSettings["CppHeaderFiles"], true))
+                if (!jenova::CreateBuildCacheDatabase(cacheDatabaseFilePath, scriptModulesContainer.scriptModules, compilerSettings["CppHeaderFiles"], true))
                 {
                     result.compileResult = false;
                     result.hasError = true;
