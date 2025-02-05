@@ -107,6 +107,7 @@ bool JenovaPackageManager::OpenPackageManager(const String& packageDatabaseURL)
 	currentWindow->set_flag(Window::Flags::FLAG_POPUP, true);
 
 	// Show Window [Must Be Here]
+	currentWindow->hide();
 	currentWindow->popup_exclusive_centered(EditorInterface::get_singleton()->get_base_control());
 	if (!currentWindow->get_flag(Window::Flags::FLAG_POPUP)) EditorInterface::get_singleton()->get_base_control()->get_tree()->set_pause(true);
 	currentWindow->set_owner(EditorInterface::get_singleton()->get_base_control()->get_window());

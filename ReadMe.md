@@ -46,7 +46,7 @@ Jenova Core has following dependencies :
 > [!NOTE]
 > - Edit **base64.hpp** namespace to `base64`
 > - Only header file `libtcc.h` is required from TinyCC beside static library
-> - In **FileWatch.hpp** change `_callback(file.first, file.second);` to `_callback(_path + file.first, file.second);`
+> - In **FileWatch.hpp** change `_callback(file.first, file.second);` to `_callback(_path + "/" + file.first, file.second);`
 
 > - **Pre-Built Windows x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-latest-Dependencies-Win64.7z).**
 >
@@ -74,7 +74,7 @@ python3 ./Jenova.Builder.py --compiler clang --skip-banner
 python3 ./Jenova.Builder.py --compiler gcc --skip-banner
 ```
 
-The Jenova Runtime source code is fully compatible with both Clang++ and G++. Additionally, [Visual Studio Code](https://code.visualstudio.com/) compatibility files are provided.
+The Jenova Runtime source code is fully compatible with both Clang++ (18+) and G++ (13+). Additionally, [Visual Studio Code](https://code.visualstudio.com/) compatibility files are provided.
 
 ## Open Source vs Proprietary
 While the public source code of Jenova is ~90% identical to the proprietary version, a few specific features have been removed or disabled.

@@ -999,7 +999,8 @@ namespace jenova
             if (!std::filesystem::exists(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile))
             {
                 // Cache Doesn't Exist, Generate It
-                if (!jenova::CreateBuildCacheDatabase(this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile, scriptModulesContainer.scriptModules, compilerSettings["CppHeaderFiles"], true))
+                std::string cacheDatabaseFilePath = this->jenovaCachePath + jenova::GlobalSettings::JenovaBuildCacheDatabaseFile;
+                if (!jenova::CreateBuildCacheDatabase(cacheDatabaseFile, scriptModulesContainer.scriptModules, compilerSettings["CppHeaderFiles"], true))
                 {
                     result.compileResult = false;
                     result.hasError = true;
@@ -1074,7 +1075,7 @@ namespace jenova
                 }
 
                 // Generate Command for Each Script Module
-                std::string compilerArgument = compilerSettings["cpp_compiler_binary"].operator String().utf8().get_data();
+                std::string compilerArgument = AS_STD_STRING(String(compilerSettings["cpp_compiler_binary"]));
 
                 // Compile Without Linking
                 compilerArgument += " -c ";
@@ -1096,6 +1097,7 @@ namespace jenova
                 compilerArgument += GeneratePreprocessDefinitions(compilerSettings["cpp_definitions"]);
 
                 // Include Paths
+                compilerArgument += "-I./ ";
                 compilerArgument += "-I\"" + this->includePath + "\" ";
                 compilerArgument += "-I\"" + this->jenovaSDKPath + "\" ";
                 compilerArgument += "-I\"" + this->godotSDKPath + "\" ";
@@ -1139,6 +1141,8 @@ namespace jenova
                         close(pipefd[1]);
 
                         // Execute compiler command
+                        setenv("LANG", "C.UTF-8", 1);
+                        setenv("LC_ALL", "C.UTF-8", 1);
                         execl("/bin/sh", "sh", "-c", compilerArgument.c_str(), nullptr);
                     }
                     else
@@ -1146,14 +1150,14 @@ namespace jenova
                         // Parent process: Capture output
                         close(pipefd[1]); // Close unused write end
                         char buffer[128];
-                        std::string result;
+                        std::string resultOutput;
 
                         // Read output from the pipe
                         ssize_t bytesRead;
                         while ((bytesRead = read(pipefd[0], buffer, sizeof(buffer) - 1)) > 0)
                         {
                             buffer[bytesRead] = '\0';
-                            result += buffer;
+                            resultOutput += buffer;
                         }
 
                         // Close the read end
@@ -1165,9 +1169,24 @@ namespace jenova
                         taskResults[currentTaskIndex] = WIFEXITED(status) ? WEXITSTATUS(status) : 1;
 
                         // Log the output
-                        if (!result.empty())
+                        if (!resultOutput.empty())
                         {
-                            jenova::Output("GCC Compile Error : %s", result.c_str());
+                            // Replace UTF-8 Smart Quotes With ASCII Equivalents
+                            std::string sanitized;
+                            for (size_t i = 0; i < resultOutput.size(); i++)
+                            {
+                                if (i + 2 < resultOutput.size() && static_cast<unsigned char>(resultOutput[i]) == 0xE2 && static_cast<unsigned char>(resultOutput[i + 1]) == 0x80)
+                                {
+                                    if (static_cast<unsigned char>(resultOutput[i + 2]) == 0x98 || static_cast<unsigned char>(resultOutput[i + 2]) == 0x99)
+                                    {
+                                        sanitized += '\'';
+                                        i += 2;
+                                        continue;
+                                    }
+                                }
+                                sanitized += resultOutput[i];
+                            }
+                            jenova::Error("Jenova Compiler", "Compile Error : %s", sanitized.c_str());
                         }
                         if (taskResults[currentTaskIndex] != 0)
                         {
@@ -1296,7 +1315,7 @@ namespace jenova
             };
 
             // Generate Linker Arguments
-            std::string linkerArgument = linkerSettings["cpp_linker_binary"].operator String().utf8().get_data();
+            std::string linkerArgument = AS_STD_STRING(String(linkerSettings["cpp_linker_binary"]));
             linkerArgument += " -o \"" + outputModule + "\" ";
             if (result.hasDebugInformation && bool(linkerSettings["cpp_debug_symbol"])) linkerArgument += "-ggdb ";
             linkerArgument += "-Wl,-Map=\"" + outputMap + "\" ";
@@ -1323,6 +1342,9 @@ namespace jenova
 
             // Strip Symbols
             if (bool(linkerSettings["cpp_strip_symbol"])) linkerArgument += "-Wl,--strip-all ";
+
+            // Add Dependency Path
+            linkerArgument += "-Wl,-rpath,./Jenova ";
 
             // Add Extra Options
             linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_extra_linker"])) + " ";
@@ -1368,6 +1390,8 @@ namespace jenova
                 close(pipefd[1]);
 
                 // Execute linker command
+                setenv("LANG", "C.UTF-8", 1);
+                setenv("LC_ALL", "C.UTF-8", 1);
                 execl("/bin/sh", "sh", "-c", linkerArgument.c_str(), nullptr);
 
                 // If execl fails
@@ -1398,7 +1422,22 @@ namespace jenova
                 // Log the linker output
                 if (!resultOutput.empty())
                 {
-                    jenova::Output("Linker Output: %s", resultOutput.c_str());
+                    // Replace UTF-8 Smart Quotes With ASCII Equivalents
+                    std::string sanitized;
+                    for (size_t i = 0; i < resultOutput.size(); i++)
+                    {
+                        if (i + 2 < resultOutput.size() && static_cast<unsigned char>(resultOutput[i]) == 0xE2 && static_cast<unsigned char>(resultOutput[i + 1]) == 0x80)
+                        {
+                            if (static_cast<unsigned char>(resultOutput[i + 2]) == 0x98 || static_cast<unsigned char>(resultOutput[i + 2]) == 0x99)
+                            {
+                                sanitized += '\'';
+                                i += 2;
+                                continue;
+                            }
+                        }
+                        sanitized += resultOutput[i];
+                    }
+                    jenova::Error("Jenova Linker", "Linker Error: %s", sanitized.c_str());
                 }
                 if (!result.buildResult)
                 {

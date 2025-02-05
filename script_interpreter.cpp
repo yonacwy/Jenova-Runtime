@@ -974,19 +974,20 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
                 {
                     std::string propSignature = match[1];
                     std::string propName = match[3].str();
-                    propName = propName.substr(8); // Remove "__prop_"
                     std::string scriptUID = match[2];
 
+                    // Clean Property Name
+                    jenova::ReplaceAllMatchesWithString(propName, "__prop_", "");
+
+                    // Ignore Classed Properties
+                    if (propName.find("@") != std::string::npos) continue;
+
+                    // Extract Property Type From Signature
                     std::string propType = jenova::ExtractPropertyTypeFromSignature(propSignature, buildResult.compilerModel);
 
-                    if (!serializer["Scripts"].contains(scriptUID))
-                    {
-                        serializer["Scripts"][scriptUID]["properties"] = nlohmann::json::object();
-                    }
-
-                    serializer["Scripts"][scriptUID]["properties"][propName] = {
-                        {"Type", propType}
-                    };
+                    // Set Data
+                    if (!serializer["Scripts"].contains(scriptUID)) serializer["Scripts"][scriptUID]["properties"] = nlohmann::json::object();
+                    serializer["Scripts"][scriptUID]["properties"][propName] = {{"Type", propType}};
                 }
             }
 
@@ -1027,11 +1028,28 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
                 {
                     uint64_t offset = std::stoull(match[1], nullptr, 16);
                     std::string scriptUID = match[2];
-                    std::string propName = match[3].str().substr(8); // Remove "__prop_"
+                    std::string propName = match[3].str();
+
+                    // Clean Property Name
+                    jenova::ReplaceAllMatchesWithString(propName, "__prop_", "");
 
                     if (serializer["Scripts"].contains(scriptUID) && serializer["Scripts"][scriptUID]["properties"].contains(propName))
                     {
                         serializer["Scripts"][scriptUID]["properties"][propName]["Offset"] = offset;
+                    }
+                }
+            }
+
+            // Add Properties Definitions
+            for (const auto& scriptModule : scriptModules)
+            {
+                if (scriptModule.scriptPropertiesFile.is_empty()) continue;
+                if (std::filesystem::exists(AS_STD_STRING(scriptModule.scriptPropertiesFile)))
+                {
+                    std::string propDatabase = jenova::ReadStdStringFromFile(AS_STD_STRING(scriptModule.scriptPropertiesFile));
+                    if (!propDatabase.empty())
+                    {
+                        serializer["Scripts"][AS_STD_STRING(scriptModule.scriptUID)]["database"]["properties"] = nlohmann::json::parse(propDatabase);
                     }
                 }
             }
@@ -1120,7 +1138,7 @@ bool JenovaInterpreter::UpdatePropertyStorageFromMetaData(const jenova::Serializ
         // Get Scripts
         nlohmann::json moduleScripts = moduleMetaData["Scripts"];
 
-        // Add Functions to List
+        // Extract Properties from Metadata
         for (const auto& moduleScript : moduleScripts.items())
         {
             std::string scriptUID = moduleScript.key();

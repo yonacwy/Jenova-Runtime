@@ -2391,6 +2391,7 @@ namespace jenova
 				vs_selector_window->set_flag(Window::Flags::FLAG_POPUP, true);
 
 				// Show Window [Must Be Here]
+				vs_selector_window->hide();
 				vs_selector_window->popup_exclusive_centered(EditorInterface::get_singleton()->get_base_control());
 				if (!vs_selector_window->get_flag(Window::Flags::FLAG_POPUP)) EditorInterface::get_singleton()->get_base_control()->get_tree()->set_pause(true);
 
@@ -3092,6 +3093,7 @@ namespace jenova
 				configure_build_window->set_flag(Window::Flags::FLAG_POPUP, true);
 
 				// Show Window [Must Be Here]
+				configure_build_window->hide();
 				configure_build_window->popup_exclusive_centered(EditorInterface::get_singleton()->get_base_control());
 
 				// Get Editor Theme
@@ -3236,6 +3238,7 @@ namespace jenova
 				module_exporter_window->set_flag(Window::Flags::FLAG_POPUP, true);
 
 				// Show Window [Must Be Here]
+				module_exporter_window->hide();
 				module_exporter_window->popup_exclusive_centered(EditorInterface::get_singleton()->get_base_control());
 
 				// Get Editor Theme
@@ -3347,6 +3350,7 @@ namespace jenova
 				jenva_about_window->set_flag(Window::Flags::FLAG_POPUP, true);
 
 				// Show Window [Must Be Here]
+				jenva_about_window->hide();
 				jenva_about_window->popup_exclusive_centered(EditorInterface::get_singleton()->get_base_control());
 
 				// Create UI Stage
@@ -4219,7 +4223,9 @@ namespace jenova
 				ClassDB::register_class<CPPScriptResourceSaver>();
 				ClassDB::register_class<CPPHeaderResourceLoader>();
 				ClassDB::register_class<CPPHeaderResourceSaver>();
-				ClassDB::register_class<JenovaScriptManager>();
+
+				// Register Internal Classes
+				ClassDB::register_internal_class<JenovaScriptManager>();
 
 				// Initialize Classes
 				CPPScriptLanguage::init();
@@ -4806,10 +4812,14 @@ namespace jenova
 		// Linux Implementation	
 		#ifdef TARGET_PLATFORM_LINUX
 			const char* value = getenv(entityName);
-			if (!value) return 0;
-			strncpy(bufferPtr, value, bufferSize);
-			bufferPtr[bufferSize - 1] = '\0';
-			return strlen(bufferPtr);
+			if (!value) return -1;
+			size_t valueLen = strlen(value);
+			if (bufferPtr && bufferSize > 0)
+			{
+				strncpy(bufferPtr, value, bufferSize - 1);
+				bufferPtr[bufferSize - 1] = '\0'; 
+			}
+			return valueLen;
 		#endif
 
 		// Not Implemented
@@ -4828,6 +4838,39 @@ namespace jenova
 		#endif
 
 		// Not Implemented
+		return true;
+	}
+	bool AddEnvironmentPath(const char* path, const char* pathCollection)
+	{
+		// Get Size of Current Path Collection
+		size_t requiredSize = jenova::GetEnvironmentEntity(pathCollection, nullptr, 0);
+		if (requiredSize < 0) requiredSize = 0;
+
+		// Retrieve Current Path Collection
+		std::string oldPath;
+		if (requiredSize > 0)
+		{
+			char* buffer = new char[requiredSize + 1];
+			if (jenova::GetEnvironmentEntity(pathCollection, buffer, requiredSize + 1) > 0) oldPath = buffer;
+			delete[] buffer;
+		}
+
+		// If Path Already Exists Abort Process
+		if (!oldPath.empty() && oldPath.find(path) != std::string::npos) return true;
+
+		// Construct New Path Value
+		std::string newPath = path;
+		if (!oldPath.empty())
+		{
+			if (QUERY_PLATFORM(Windows)) newPath += ";";
+			if (QUERY_PLATFORM(Linux)) newPath += ":";
+			newPath += oldPath;
+		}
+
+		// Update Environment Variable
+		if (!jenova::SetEnvironmentEntity(pathCollection, newPath.c_str())) return false;
+
+		// All Good
 		return true;
 	}
 	jenova::GenericHandle GetCurrentProcessHandle()
@@ -4911,6 +4954,38 @@ namespace jenova
 		va_list args;
 		va_start(args, fmt);
 		vsnprintf(buffer, sizeof(buffer), fmt, args);
+		va_end(args);
+
+		// Suppress if Disabled
+		if (jenova::GlobalStorage::CurrentEditorVerboseOutput == jenova::EditorVerboseOutput::Disabled) return;
+
+		// Handle Verbose In Different Modes
+		if (QUERY_ENGINE_MODE(Editor))
+		{
+			// Jenova Terminal Log
+			if (jenova::GlobalStorage::CurrentEditorVerboseOutput == jenova::EditorVerboseOutput::JenovaTerminal)
+			{
+				if (jenova::plugin::JenovaEditorPlugin::get_singleton())
+				{
+					jenova::plugin::JenovaEditorPlugin::get_singleton()->call_deferred("VerboseLog", String(" [color=#ed266c]>[/color] ") + String(buffer));
+					return;
+				}
+			}
+
+			// Standard Log
+			UtilityFunctions::print_rich(String("[b][JENOVA][/b] [color=#ed266c]>[/color] ") + String(buffer));
+		}
+		else
+		{
+			UtilityFunctions::print(String("[JENOVA] > ") + String(buffer));
+		}
+	}
+	void Output(const wchar_t* fmt, ...)
+	{
+		wchar_t buffer[1024];
+		va_list args;
+		va_start(args, fmt);
+		vswprintf(buffer, sizeof(buffer) / sizeof(wchar_t), fmt, args);
 		va_end(args);
 
 		// Suppress if Disabled

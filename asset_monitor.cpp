@@ -112,30 +112,22 @@ bool JenovaAssetMonitor::AddDirectory(const String& directoryPath)
 	#else
 	auto assetMonitor = new filewatch::FileWatch<std::string>(AS_STD_STRING(directoryPath), [](const std::string& path, const filewatch::Event change_type)
 	{
-		if (change_type == filewatch::Event::modified)
+		// Helper Functions
+		auto CleanPath = [&](std::string& filepath) -> std::string
 		{
-			auto lastWriteTime = std::chrono::system_clock::time_point(
-				std::chrono::duration_cast<std::chrono::system_clock::duration>(std::filesystem::last_write_time(path).time_since_epoch()
-				)
-			);
+			std::regex pattern(R"((.*?)(-[A-Za-z0-9]{6})(\.[^.]+)?)");
+			std::smatch match;
+			if (std::regex_match(filepath, match, pattern)) { return match[1].str() + match[3].str(); }
+			return filepath;
+		};
 
-			if (lastRead.find(path) == lastRead.end() ||
-				std::chrono::duration_cast<std::chrono::milliseconds>(lastWriteTime - lastRead[path]).count() > 100)
-			{
-				lastRead[path] = lastWriteTime;
-				for (const auto& callback : monitorCallbacks)
-					callback(String(path.c_str()), jenova::AssetMonitor::CallbackEvent(change_type));
-				JenovaAssetMonitor::get_singleton()->emit_signal("callback", String(path.c_str()),
-					GetCallbackEventStringName(jenova::AssetMonitor::CallbackEvent(change_type)));
-			}
-		}
-		else
-		{
-			for (const auto& callback : monitorCallbacks)
-				callback(String(path.c_str()), jenova::AssetMonitor::CallbackEvent(change_type));
-			JenovaAssetMonitor::get_singleton()->emit_signal("callback", String(path.c_str()),
-				GetCallbackEventStringName(jenova::AssetMonitor::CallbackEvent(change_type)));
-		}
+		// Somehow Paths On Linux Have a Hash At End Sometimes, Need to Be cleaned
+		std::string solvedPath = path;
+		solvedPath = CleanPath(solvedPath);
+
+		// Rise Callback
+		for (const auto& callback : monitorCallbacks) callback(String(solvedPath.c_str()), jenova::AssetMonitor::CallbackEvent(change_type));
+		JenovaAssetMonitor::get_singleton()->emit_signal("callback", String(solvedPath.c_str()), GetCallbackEventStringName(jenova::AssetMonitor::CallbackEvent(change_type)));
 	});
 	#endif
 

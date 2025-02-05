@@ -84,6 +84,7 @@
 #ifdef TARGET_PLATFORM_LINUX
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/mman.h>
 #include <utime.h>
 #include <fcntl.h>
 #include <dlfcn.h>
@@ -751,6 +752,7 @@ namespace jenova
 	bool FreeMemory(void* memoryPtr);
 	int GetEnvironmentEntity(const char* entityName, char* bufferPtr, size_t bufferSize);
 	bool SetEnvironmentEntity(const char* entityName, const char* entityValue);
+	bool AddEnvironmentPath(const char* path, const char* pathCollection);
 	jenova::GenericHandle GetCurrentProcessHandle();
 	bool CreateSymbolicFile(const char* srcFile, const char* dstFile);
 	#pragma endregion
@@ -761,6 +763,7 @@ namespace jenova
 	std::string Format(const char* fmt, ...);
 	std::string FormatSafe(const char* fmt, ...);
 	void Output(const char* fmt, ...);
+	void Output(const wchar_t* fmt, ...);
 	void OutputColored(const char* colorHash, const char* fmt, ...);
 	void Verbose(const char* fmt, ...);
 	void VerboseByID(int id, const char* fmt, ...);
