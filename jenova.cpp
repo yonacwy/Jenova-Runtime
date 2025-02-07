@@ -3642,7 +3642,7 @@ namespace jenova
 				jenova::Output("[color=#729bed][Build][/color] Building Jenova Runtime...");
 
 				// Set Export Directory
-				exportDirectory = std::filesystem::absolute(std::filesystem::path(AS_STD_STRING(p_path)).parent_path()).string() + "\\";
+				exportDirectory = std::filesystem::absolute(std::filesystem::path(AS_STD_STRING(p_path)).parent_path()).string() + "/";
 
 				// Validate Editor Plugin Instance
 				if (jenovaEditorPlugin == nullptr)
@@ -3692,8 +3692,14 @@ namespace jenova
 			}
 			void _export_end() override
 			{
+				// Create Jenova Export Directory
+				std::string jenovaExportDirectory = "./";
+				if (QUERY_PLATFORM(Windows)) jenovaExportDirectory = exportDirectory;
+				if (QUERY_PLATFORM(Linux)) jenovaExportDirectory = exportDirectory + "/Jenova/";
+				if (!std::filesystem::exists(jenovaExportDirectory)) std::filesystem::create_directories(jenovaExportDirectory);
+
 				// Verbose Addon Export
-				jenova::Output("[color=#729bed][Build][/color] Copying Addons to Build Directory...", exportDirectory.c_str());
+				if (jenova::GetInstalledAddones().size() != 0) jenova::Output("[color=#729bed][Build][/color] Copying Addons to Build Directory...");
 
 				// Export Addons
 				for (const auto& addonConfig : jenova::GetInstalledAddones())
@@ -3703,9 +3709,9 @@ namespace jenova
 						std::string binaryPath = addonConfig.Path + "/" + addonConfig.Binary;
 						try
 						{
-							if (std::filesystem::exists(binaryPath) && std::filesystem::exists(exportDirectory))
+							if (std::filesystem::exists(binaryPath))
 							{
-								std::string targetPath = exportDirectory + "/" + addonConfig.Binary;
+								std::string targetPath = jenovaExportDirectory + addonConfig.Binary;
 								if (std::filesystem::exists(targetPath)) std::filesystem::remove(targetPath);
 								std::filesystem::copy_file(binaryPath, targetPath);
 							}
@@ -3718,15 +3724,15 @@ namespace jenova
 					}
 				}
 
-				// Verbose Runtime Module Export
-				jenova::Output("[color=#729bed][Build][/color] Copying Jenova Runtime Module to Build Directory...", exportDirectory.c_str());
-
 				// Export Runtime Module
 				if (jenova::GlobalSettings::CopyRuntimeModuleOnExport)
 				{
+					// Verbose Runtime Module Export
+					jenova::Output("[color=#729bed][Build][/color] Copying Jenova Runtime Module to Build Directory...");
+
 					try
 					{
-						std::string targetBinary = exportDirectory + "/" + std::filesystem::path(jenova::GlobalStorage::CurrentJenovaRuntimeModulePath).filename().string();
+						std::string targetBinary = jenovaExportDirectory + std::filesystem::path(jenova::GlobalStorage::CurrentJenovaRuntimeModulePath).filename().string();
 						if (std::filesystem::exists(targetBinary)) std::filesystem::remove(targetBinary);
 						std::filesystem::copy_file(jenova::GlobalStorage::CurrentJenovaRuntimeModulePath, targetBinary);
 					}
