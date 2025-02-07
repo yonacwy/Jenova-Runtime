@@ -1,0 +1,69 @@
+
+# Developed by Hamid.Memar
+
+name: Build Jenova Runtime (Windows-x64)
+
+on: [push]
+
+jobs:
+  build:
+    name: Deploy Jenova Runtime for Windows64
+    runs-on: windows-latest
+    strategy:
+      max-parallel: 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Up Visual Studio 2022 And MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install 7-zip Extractor
+        run: choco install 7zip -y
+
+      - name: Download and Extract Pre-Built Dependencies
+        run: |
+          Invoke-WebRequest -Uri https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-latest-Dependencies-Win64.7z -OutFile Jenova-Runtime-latest-Dependencies-Win64.7z
+          7z x Jenova-Runtime-latest-Dependencies-Win64.7z -oLibs
+          Remove-Item Jenova-Runtime-latest-Dependencies-Win64.7z
+
+      - name: Download and Extract Action Dependencies
+        run: |
+          Invoke-WebRequest -Uri https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-latest-GitHub-Action-Dependencies-Win64.7z -OutFile Jenova-Runtime-latest-GitHub-Action-Dependencies-Win64.7z
+          7z x Jenova-Runtime-latest-GitHub-Action-Dependencies-Win64.7z -oDependencies
+          Remove-Item Jenova-Runtime-latest-GitHub-Action-Dependencies-Win64.7z
+          
+      - name: Install libVSWhere NuGet Packages
+        run: nuget restore Dependencies/libvswhere/libvswhere.sln
+
+      - name: Build libVSWhere using VS2022
+        run: |
+          msbuild Dependencies/libvswhere/libvswhere.sln /p:Configuration=Release /p:Platform=x64
+          
+      - name: Build libTinyCC using VS2022
+        run: |
+          msbuild Dependencies/libtcc/win32/vs2022/tcc.sln /p:Configuration=Release /p:Platform=x64
+
+      - name: Build Jenova Runtime using VS2022
+        run: |
+          msbuild Jenova.sln /p:Configuration=Release /p:Platform=x64
+
+      - name: Prepare Jenova SDK and Extension
+        run: |
+          New-Item -ItemType Directory -Path packaging/Jenova/JenovaSDK -Force
+          New-Item -ItemType File -Path packaging/Jenova/JenovaSDK/.gdignore -Force
+          Copy-Item JenovaSDK.h packaging/Jenova/JenovaSDK/
+          Copy-Item Jenova.Runtime.gdextension packaging/Jenova/
+          Copy-Item Win64/Jenova.Runtime.Win64.dll packaging/Jenova/
+          Copy-Item Win64/Jenova.Runtime.Win64.pdb packaging/Jenova/
+          Copy-Item Win64/Jenova.Runtime.Win64.lib -Destination packaging/Jenova/JenovaSDK/Jenova.SDK.x64.lib
+
+      - name: Upload Jenova Runtime Snapshot Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: jenova-runtime-snapshot-win64
+          path: packaging/
+          retention-days: 30
