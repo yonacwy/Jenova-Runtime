@@ -1,8 +1,17 @@
 # Projekt J.E.N.O.V.A :: Jenova Runtime (Core)
 
-This repository contains the source code for **Jenova Runtime** developed for Godot 4 and It's a part of **[Projekt J.E.N.O.V.A](https://github.com/Jenova-Framework/J.E.N.O.V.A)**
+This repository contains source code of **Jenova Runtime** developed for Godot 4 and It's a part of **[Projekt J.E.N.O.V.A](https://github.com/Jenova-Framework/J.E.N.O.V.A)**
 
 ![image](https://github.com/user-attachments/assets/013eed25-7047-407d-aef8-b964203e73b0)
+
+<div align="center">
+  <span>
+    <img src="https://github.com/Jenova-Framework/Jenova-Runtime/actions/workflows/windows-x64-msvc.yml/badge.svg" alt="Jenova Runtime (Windows-x64)">
+  </span>
+  <span>
+    <img src="https://github.com/Jenova-Framework/Jenova-Runtime/actions/workflows/linux-x64-gcc.yml/badge.svg" alt="Jenova Runtime (Linux-64)">
+  </span>
+</div>
 
 ## Overview
 
@@ -12,18 +21,15 @@ By using Jenova Framework you can easily program your entire game or application
 
 ### Structure of Projekt J.E.N.O.V.A
 - **Jenova Framework**: The framework contains Jenova Runtime and JenovaSDK.
-- **Jenova Runtime (Core)**: The heart of the framework, It includes the Jenova Interpreter, Jenova Compiler Interface, Jenova Packer, etc.
+- **Jenova Runtime (Core)**: The heart of the framework, It includes the Jenova Interpreter, Jenova Compiler Interface, Jenova Packer etc.
 - **JenovaSDK**: An optional component of Jenova Runtime, providing helpers and APIs for hot-reloading, global allocation/access, etc.
 
 Full feature list can be found [here](https://github.com/Jenova-Framework/J.E.N.O.V.A#%EF%B8%8F-current-features).
 
-> [!IMPORTANT]
-> This source code is licensed under MIT license.
-
 ## Issue/Bug Reports and Questions
-If you want to report an issue or bug create a new thread at [Issues](https://github.com/Jenova-Framework/Jenova-Runtime/issues).
-
-If you have any questions you can create a new thread at [Discussions](https://github.com/Jenova-Framework/J.E.N.O.V.A/discussions).
+- If you want to report an issue or bug create a new thread at [Issues](https://github.com/Jenova-Framework/Jenova-Runtime/issues).
+- If you have any questions you can create a new thread at [Discussions](https://github.com/Jenova-Framework/J.E.N.O.V.A/discussions).
+- More details on the build process can be found at [Documentation](https://jenova-framework.github.io/docs/pages/Advanced/Build-Guide/).
 
 ## Dependencies
 
@@ -43,13 +49,13 @@ Jenova Core has following dependencies :
 - [ArgParse++](https://github.com/p-ranav/argparse)
 - [Base64++](https://github.com/zaphoyd/websocketpp/blob/master/websocketpp/base64/base64.hpp)
 
-> [!NOTE]
+> [!IMPORTANT]
 > - Edit **base64.hpp** namespace to `base64`
 > - Only header file `libtcc.h` is required from TinyCC beside static library
 > - In **FileWatch.hpp** change `_callback(file.first, file.second);` to `_callback(_path + "/" + file.first, file.second);`
 
+> ### Pre-Built Dependencies
 > - **Pre-Built Windows x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-latest-Dependencies-Win64.7z).**
->
 > - **Pre-Built Linux x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-latest-Dependencies-Linux64.7z).**
 
 ## Build System
@@ -58,6 +64,9 @@ Jenova Core has following dependencies :
 Building Jenova Runtime for Windows x64 requires Visual Studio 2022 with C++20 Support.
 
 Proprietary Pre-built Windows x64 binaries can be obtained from [here](https://github.com/Jenova-Framework/J.E.N.O.V.A/releases).
+
+> [!TIP]
+> If you want to use pre-built dependencies to build Jenova Runtime on Windows x64 you may need to build `libVSWhere` and `libTinyCC` libraries yourself as these libraries must match your compiler's exact version. Check the [Windows x64 Workflow](https://github.com/Jenova-Framework/Jenova-Runtime/blob/master/.github/workflows/windows-x64-msvc.yml) for more details.
 
 ### Linux x64
 
@@ -74,7 +83,7 @@ python3 ./Jenova.Builder.py --compiler clang --skip-banner
 python3 ./Jenova.Builder.py --compiler gcc --skip-banner
 ```
 
-The Jenova Runtime source code is fully compatible with both Clang++ (18+) and G++ (13+). Additionally, [Visual Studio Code](https://code.visualstudio.com/) compatibility files are provided.
+Jenova Runtime source code is fully compatible with both Clang++ (18+) and G++ (13+). Additionally, [Visual Studio Code](https://code.visualstudio.com/) compatibility files are provided.
 
 ## Open Source vs Proprietary
 While the public source code of Jenova is ~90% identical to the proprietary version, a few specific features have been removed or disabled.
