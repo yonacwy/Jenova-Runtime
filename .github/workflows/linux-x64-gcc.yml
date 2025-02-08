@@ -25,7 +25,7 @@ jobs:
         run: |
           echo $CONDA/bin >> $GITHUB_PATH
 
-      - name: Install Dependencies
+      - name: Install Python Dependencies
         run: |
           conda install -y -c defaults -c conda-forge python=3.10 colored flake8 pytest gcc_linux-64 gxx_linux-64
 
@@ -38,9 +38,14 @@ jobs:
           sudo update-alternatives --config gcc
           gcc --version
 
-      - name: Install Python Libraries
+      - name: Install libSSL 1.1.1
         run: |
-          pip install colored
+          sudo apt-get remove libssl3
+          sudo apt-get remove libssl-dev
+          wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.23_amd64.deb
+          wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl-dev_1.1.1f-1ubuntu2.23_amd64.deb
+          sudo dpkg -i libssl1.1_1.1.1f-1ubuntu2.23_amd64.deb
+          sudo dpkg -i libssl-dev_1.1.1f-1ubuntu2.23_amd64.deb
 
       - name: Install 7-zip Extractor
         run: |
@@ -55,6 +60,10 @@ jobs:
       - name: Build Jenova Runtime using GCC13
         run: |
           python3 ./Jenova.Builder.py --compiler gcc --skip-banner
+
+      - name: Verbose Compiled Binary Dependencies
+        run: |
+          ldd Linux64/Jenova.Runtime.Linux64.so
 
       - name: Prepare Jenova SDK and Extension
         run: |
