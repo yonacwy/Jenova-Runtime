@@ -20,11 +20,11 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.6.0"
+#define APP_VERSION						"0.3.6.1"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 6, 0
+#define APP_VERSION_DATA				0, 3, 6, 1
 #define APP_VERSION_BUILD				"0"
 #define APP_VERSION_NAME				"Luna"
 
@@ -66,8 +66,8 @@
 
 // Jenova API Import/Export
 #if defined(_WIN32) || defined(_WIN64)
-#define JENOVA_API_EXPORT _declspec(dllexport)
-#define JENOVA_API_IMPORT _declspec(dllimport)
+#define JENOVA_API_EXPORT __declspec(dllexport)
+#define JENOVA_API_IMPORT __declspec(dllimport)
 #else
 #define JENOVA_API_EXPORT __attribute__((visibility("default")))
 #define JENOVA_API_IMPORT 
@@ -291,6 +291,7 @@ namespace jenova
 	typedef void* FileHandle;
 	typedef String ScriptIdentifier;
 	typedef uint32_t CompilerFeatures;
+	typedef uint32_t LoaderFlags;
 	typedef std::string RootPath;
 	typedef std::string EncodedData;
 	typedef std::string DecodedData;
@@ -495,6 +496,12 @@ namespace jenova
 		CanGenerateMappingData			= 0x01 << 3,
 		CanGenerateModule				= 0x01 << 4
 	};
+	enum LoaderFlag : LoaderFlags
+	{
+		LoadInDebugMode					= 0x01 << 0,
+		InitializeProtector				= 0x01 << 1,
+	};
+
 
 	// Structures
 	struct ScriptModule
@@ -882,6 +889,8 @@ namespace jenova
 	jenova::SerializedData GenerateRuntimeModuleConfiguration();
 	jenova::SerializedData ObtainRuntimeModuleConfiguration();
 	bool ResolveAndLoadAddonModulesAtRuntime();
+	std::string CreateTemporaryModuleCache(const uint8_t* moduleDataPtr, const size_t moduleSize);
+	bool ReleaseTemporaryModuleCache();
 	#pragma endregion
 
 	// Core Reimplementation

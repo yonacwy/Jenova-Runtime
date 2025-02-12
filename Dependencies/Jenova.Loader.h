@@ -82,10 +82,20 @@ public:
 	}
 	static jenova::ModuleHandle LoadModule(void* bufferPtr, size_t bufferSize, int flags = 0)
 	{
+		// Update Flags
+		loaderFlags = flags;
 		return LoadLibraryMemory(bufferPtr);
 	}
-	static jenova::ModuleHandle LoadModuleAsVirtual(void* bufferPtr, size_t bufferSize, const char* moduleName, const char* modulePath, int flags)
+	static jenova::ModuleHandle LoadModuleAsVirtual(void* bufferPtr, size_t bufferSize, const char* moduleName, const char* modulePath, int flags = 0)
 	{
+		// Update Flags
+		loaderFlags = flags;
+
+		// If Debug Mode Required Load From Disk
+		if ((loaderFlags & jenova::LoaderFlag::LoadInDebugMode) != 0)
+		{
+			return LoadLibraryA(jenova::CreateTemporaryModuleCache((uint8_t*)bufferPtr, bufferSize).c_str());
+		}
 		return LoadLibraryMemoryExA(bufferPtr, bufferSize, moduleName, modulePath, LOAD_FLAGS_USE_DLL_NAME);
 	}
 	static jenova::ModuleAddress GetModuleBaseAddress(jenova::ModuleHandle moduleHandle)
@@ -100,6 +110,9 @@ public:
 	{
 		return FreeLibraryMemory(HMEMORYMODULE(moduleHandle));
 	}
+
+private:
+	static inline jenova::LoaderFlags loaderFlags = 0;
 };
 
 #endif
@@ -183,7 +196,7 @@ public:
 		// Return Loaded Module Handle
 		return reinterpret_cast<jenova::ModuleHandle>(handle);
 	}
-	static jenova::ModuleHandle LoadModuleAsVirtual(void* bufferPtr, size_t bufferSize, const char* moduleName, const char* modulePath, int flags)
+	static jenova::ModuleHandle LoadModuleAsVirtual(void* bufferPtr, size_t bufferSize, const char* moduleName, const char* modulePath, int flags = 0)
 	{
 		return LoadModule(bufferPtr, bufferSize, flags);
 	}

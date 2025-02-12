@@ -37,17 +37,18 @@ Jenova Core has following dependencies :
 
 - [AsmJIT](https://github.com/asmjit/asmjit)
 - [LibArchive](https://github.com/libarchive/libarchive)
+- [LibLZAMA](https://github.com/ShiftMediaProject/liblzma)
 - [LibCurl](https://github.com/curl/curl)
 - [LibFastZLib](https://github.com/gildor2/fast_zlib)
 - [LibTinyCC](http://download.savannah.gnu.org/releases/tinycc/)
 - [LibPThread](https://github.com/GerHobbelt/pthread-win32)
 - [LibVSWhere](https://github.com/TheAenema/libvswhere/tree/jenova-edition)
 - [MemoryModule++](https://github.com/bb107/MemoryModulePP)
-- [MinHook](https://github.com/TsudaKageyu/minhook)
 - [JSON++](https://github.com/nlohmann/json)
 - [FileWatch](https://github.com/ThomasMonkman/filewatch)
 - [ArgParse++](https://github.com/p-ranav/argparse)
 - [Base64++](https://github.com/zaphoyd/websocketpp/blob/master/websocketpp/base64/base64.hpp)
+
 
 > [!IMPORTANT]
 > - Edit **base64.hpp** namespace to `base64`

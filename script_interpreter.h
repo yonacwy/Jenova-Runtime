@@ -50,7 +50,8 @@ public:
     static bool SetPropertyValueFromVariant(const String& propertyName, const Variant& propertyValue, const String& scriptUID);
     static jenova::InterpreterBackend GetInterpreterBackend();
     static void SetInterpreterBackend(jenova::InterpreterBackend newBackend);
-    static void* SolveVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName);
+    static jenova::FunctionPointer SolveVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName);
+    static void SetDebugModeExecutionState(bool debugModeState);
 
 // Module Database API
 public:
@@ -69,6 +70,7 @@ private:
     static inline size_t                        moduleBinarySize        = 0;
     static inline Ref<Mutex>                    interpreterMutex        = nullptr;
     static inline bool                          hasDebugInformation     = false;
+    static inline bool                          executeInDebugMode      = false;
     static inline std::string                   moduleDiskPath          = "";
     static inline jenova::InterpreterBackend    interpreterBackend      = jenova::InterpreterBackend::TinyCC;
     static inline jenova::PointerStorage        propertyStorage         = jenova::PointerStorage();

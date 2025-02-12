@@ -50,5 +50,7 @@ namespace jenova
 
 	// Compiler Factory
 	IJenovaCompiler* CreateMicrosoftCompiler();
+	IJenovaCompiler* CreateClangCompiler();
+	IJenovaCompiler* CreateMinGWCompiler();
 	IJenovaCompiler* CreateGNUCompiler();
 }

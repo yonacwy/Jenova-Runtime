@@ -19,8 +19,8 @@
 
 // Jenova API Import/Export
 #if defined(_WIN32) || defined(_WIN64)
-	#define JENOVA_API_EXPORT _declspec(dllexport)
-	#define JENOVA_API_IMPORT _declspec(dllimport)
+	#define JENOVA_API_EXPORT __declspec(dllexport)
+	#define JENOVA_API_IMPORT __declspec(dllimport)
 #else
 	#define JENOVA_API_EXPORT __attribute__((visibility("default")))
 	#define JENOVA_API_IMPORT 
@@ -71,6 +71,7 @@
 // C++ Runtime Imports
 #ifndef JENOVA_SDK_BUILD
 	#include <string>
+	#include <thread>
 	#include <functional>
 #endif
 

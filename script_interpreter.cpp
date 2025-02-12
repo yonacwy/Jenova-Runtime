@@ -110,11 +110,15 @@ bool JenovaInterpreter::LoadModule(const uint8_t* moduleDataPtr, const size_t mo
         return false;
     }
 
+    // Create Loader Flags
+    jenova::LoaderFlags loaderFlags = 0;
+    if (executeInDebugMode && !QUERY_ENGINE_MODE(Editor)) loaderFlags |= jenova::LoaderFlag::LoadInDebugMode;
+
     // Load And Map Module to Memory
     if (hasDebugInformation)
     {
         // Load Module As Virtual
-        moduleHandle = JenovaLoader::LoadModuleAsVirtual((void*)moduleDataPtr, moduleSize, "Jenova.Module.dll", moduleDiskPath.c_str(), 0);
+        moduleHandle = JenovaLoader::LoadModuleAsVirtual((void*)moduleDataPtr, moduleSize, "Jenova.Module.dll", moduleDiskPath.c_str(), loaderFlags);
 
         // Load Debug Symbol If MSE Disabled
         if (!jenova::GlobalStorage::UseManagedSafeExecution)
@@ -125,7 +129,7 @@ bool JenovaInterpreter::LoadModule(const uint8_t* moduleDataPtr, const size_t mo
     else
     {
         // Load Module As Regular
-        moduleHandle = JenovaLoader::LoadModule((void*)moduleDataPtr, moduleSize, 0);
+        moduleHandle = JenovaLoader::LoadModule((void*)moduleDataPtr, moduleSize, loaderFlags);
     }
     if (!moduleHandle) return false;
 
@@ -172,8 +176,14 @@ bool JenovaInterpreter::LoadModule(const jenova::BuildResult& buildResult)
 }
 bool JenovaInterpreter::ReloadModule(const uint8_t* moduleDataPtr, const size_t moduleSize, const jenova::SerializedData& metaData)
 {
+    // Reload Not Supported In Debug Mode
+    if (executeInDebugMode) return false;
+
+    // Unload Module
     if (!UnloadModule()) return false;
-	return LoadModule(moduleDataPtr, moduleSize, metaData);
+
+    // Load Module
+    return LoadModule(moduleDataPtr, moduleSize, metaData);
 }
 bool JenovaInterpreter::ReloadModule(const jenova::BuildResult& buildResult)
 {
@@ -196,6 +206,9 @@ bool JenovaInterpreter::UnloadModule()
     {
         jenova::Warning("Jenova Interpreter", "Module Shutdown Event Failed. Unexpected Behaviors May Occur.");
     }
+
+    // If Debug Mode is Activated Unload Module Loaded From Disk
+    if (executeInDebugMode) return jenova::ReleaseTemporaryModuleCache();
 
     // Unload Module
 	if (!moduleHandle) return false;
@@ -873,12 +886,12 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
             // Add Extra Info
             if (buildResult.hasDebugInformation)
             {
-                serializer["DebugMode"] = true;
+                serializer["HasDebugInformation"] = true;
                 serializer["BuildPath"] = buildResult.buildPath;
             }
             else
             {
-                serializer["DebugMode"] = false;
+                serializer["HasDebugInformation"] = false;
             }
             serializer["ModuleBinarySize"] = buildResult.builtModuleData.size();
             serializer["InterpreterBackend"] = JenovaInterpreter::GetInterpreterBackend();
@@ -1057,12 +1070,12 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
             // Add Extra Info
             if (buildResult.hasDebugInformation)
             {
-                serializer["DebugMode"] = true;
+                serializer["HasDebugInformation"] = true;
                 serializer["BuildPath"] = buildResult.buildPath;
             }
             else
             {
-                serializer["DebugMode"] = false;
+                serializer["HasDebugInformation"] = false;
             }
             serializer["ModuleBinarySize"] = buildResult.builtModuleData.size();
             serializer["InterpreterBackend"] = JenovaInterpreter::GetInterpreterBackend();
@@ -1101,11 +1114,20 @@ bool JenovaInterpreter::UpdateConfigurationsFromMetaData(const jenova::Serialize
             SetInterpreterBackend(moduleMetaData["InterpreterBackend"].get<jenova::InterpreterBackend>());
         }
 
-        // Set Debug Mode If Present
-        if (moduleMetaData["DebugMode"].get<bool>() == true)
+        // Set Has Debug Information If Present
+        if (moduleMetaData["HasDebugInformation"].get<bool>() == true)
         {
             hasDebugInformation = true;
             moduleDiskPath = std::filesystem::absolute(moduleMetaData["BuildPath"].get<std::string>()).string();
+        }
+
+        // Set Debug Mode If Present
+        if (moduleMetaData.contains("DebugMode"))
+        {
+            if (moduleMetaData["DebugMode"].get<bool>() == true)
+            {
+                executeInDebugMode = true;
+            }
         }
 
         // Update Global Storage From Metadata
@@ -1267,9 +1289,13 @@ void JenovaInterpreter::SetInterpreterBackend(jenova::InterpreterBackend newBack
 {
     interpreterBackend = newBackend;
 }
-void* JenovaInterpreter::SolveVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName)
+jenova::FunctionPointer JenovaInterpreter::SolveVirtualFunction(jenova::ModuleHandle moduleHandle, const char* functionName)
 {
     return JenovaLoader::GetVirtualFunction(moduleHandle, functionName);
+}
+void JenovaInterpreter::SetDebugModeExecutionState(bool debugModeState)
+{
+    executeInDebugMode = debugModeState;
 }
 
 // Jenova Interpreter Implementation :: Module Database

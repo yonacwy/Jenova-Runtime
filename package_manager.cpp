@@ -1187,7 +1187,7 @@ bool JenovaPackageManager::PreparePackageManager()
 	String packageRepositoryPath = projectPath + jenova::GlobalSettings::JenovaPackageRepositoryPath;
 	if (!std::filesystem::exists(AS_STD_STRING(packageRepositoryPath)))
 	{
-		if (std::filesystem::create_directories(AS_STD_STRING(packageRepositoryPath))) return false;
+		if (!std::filesystem::create_directories(AS_STD_STRING(packageRepositoryPath))) return false;
 	}
 	
 	// Create Package Directory .gdignore If Not Exists
