@@ -55,16 +55,12 @@ Jenova Core has following dependencies :
 > - Only header file `libtcc.h` is required from TinyCC beside static library
 > - In **FileWatch.hpp** change `_callback(file.first, file.second);` to `_callback(_path + "/" + file.first, file.second);`
 
-> ### Pre-Built Dependencies
-> - **Pre-Built Windows x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-latest-Dependencies-Win64.7z).**
-> - **Pre-Built Linux x64 Dependencies can be obtained from [here](https://jenova-framework.github.io/archive/dependencies/Jenova-Runtime-latest-Dependencies-Linux64.7z).**
-
 ## Build System
 ### Windows x64
 
-Building Jenova Runtime for Windows x64 requires Visual Studio 2022 with C++20 Support.
+Building Fully-Featured Jenova Runtime for Windows x64 requires Visual Studio 2022 with C++20 Support.
 
-Proprietary Pre-built Windows x64 binaries can be obtained from [here](https://github.com/Jenova-Framework/J.E.N.O.V.A/releases).
+Proprietary Pre-built Windows x64 binaries can be obtained from [here](https://github.com/Jenova-Framework/J.E.N.O.V.A/releases). (Not Available After v0.3.6.0)
 
 > [!TIP]
 > If you want to use pre-built dependencies to build Jenova Runtime on Windows x64 you may need to build `libVSWhere` and `libTinyCC` libraries yourself as these libraries must match your compiler's exact version. Check the [Windows x64 Workflow](https://github.com/Jenova-Framework/Jenova-Runtime/blob/master/.github/workflows/windows-x64-msvc.yml) for more details.

@@ -7022,6 +7022,10 @@ namespace jenova
 			{
 				filteredCompilerPackages.push_back(compilerPackage);
 			}
+			if (compilerModel == jenova::CompilerModel::ClangLLVMCompiler && compilerPackage.pkgDestination.contains("JenovaLLVMCompiler"))
+			{
+				filteredCompilerPackages.push_back(compilerPackage);
+			}
 			if (compilerModel == jenova::CompilerModel::MinGWCompiler && compilerPackage.pkgDestination.contains("JenovaMinGWCompiler"))
 			{
 				filteredCompilerPackages.push_back(compilerPackage);
@@ -7035,6 +7039,10 @@ namespace jenova
 			// Linux Compilers
 			#ifdef TARGET_PLATFORM_LINUX
 			if (compilerModel == jenova::CompilerModel::GNUCompiler && compilerPackage.pkgDestination.contains("JenovaGNUCompiler"))
+			{
+				filteredCompilerPackages.push_back(compilerPackage);
+			}
+			if (compilerModel == jenova::CompilerModel::ClangCompiler && compilerPackage.pkgDestination.contains("JenovaClangCompiler"))
 			{
 				filteredCompilerPackages.push_back(compilerPackage);
 			}
