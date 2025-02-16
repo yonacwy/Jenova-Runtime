@@ -107,7 +107,7 @@ static void gdextension_script_instance_call(GDExtensionScriptInstanceDataPtr p_
 	Variant* ret = reinterpret_cast<Variant*>(r_return);
 
 	// Managed Safe Execution [Windows Only]
-	#ifdef TARGET_PLATFORM_WINDOWS
+	#if defined(TARGET_PLATFORM_WINDOWS) && defined(_MSC_VER)
 
 		// Create Invoker
 		auto invoke_callp = [&]() { *ret = instance->callp(*method, args, p_argument_count, *r_error); };

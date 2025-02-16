@@ -4,16 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Jenova.Runtime", "JenovaRuntime.vcxproj", "{8546F551-80FE-49B0-ABE2-9C8498C0B34E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{5B1F46DB-036E-4A50-AF5F-F5D6584D42C6} = {5B1F46DB-036E-4A50-AF5F-F5D6584D42C6}
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{E112CF6F-98FF-481F-9AB7-C4FB57EFEE05}"
-	ProjectSection(SolutionItems) = preProject
-		Dependencies\Jenova.Loader.h = Dependencies\Jenova.Loader.h
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Jenova.Loader", "Dependencies\MemoryModule\MemoryModule.vcxproj", "{5B1F46DB-036E-4A50-AF5F-F5D6584D42C6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,14 +12,9 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{8546F551-80FE-49B0-ABE2-9C8498C0B34E}.Release|x64.ActiveCfg = Release|x64
 		{8546F551-80FE-49B0-ABE2-9C8498C0B34E}.Release|x64.Build.0 = Release|x64
-		{5B1F46DB-036E-4A50-AF5F-F5D6584D42C6}.Release|x64.ActiveCfg = Release|x64
-		{5B1F46DB-036E-4A50-AF5F-F5D6584D42C6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{5B1F46DB-036E-4A50-AF5F-F5D6584D42C6} = {E112CF6F-98FF-481F-9AB7-C4FB57EFEE05}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DDB23943-0BC9-4FC9-8328-8BCC64209D9F}

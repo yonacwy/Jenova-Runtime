@@ -20,13 +20,13 @@
 #define APP_COMPANYNAME					"MemarDesign™ LLC."
 #define APP_DESCRIPTION					"Real-Time C++ Scripting System for Godot Game Engine, Developed By Hamid.Memar."
 #define APP_COPYRIGHT					"Copyright MemarDesign™ LLC. (©) 2024-2025, All Rights Reserved."
-#define APP_VERSION						"0.3.6.1"
+#define APP_VERSION						"0.3.6.2"
 #define APP_VERSION_MIDDLEFIX			" "
 #define APP_VERSION_POSTFIX				"Alpha"
 #define APP_VERSION_SINGLECHAR			"a"
-#define APP_VERSION_DATA				0, 3, 6, 1
+#define APP_VERSION_DATA				0, 3, 6, 2
 #define APP_VERSION_BUILD				"0"
-#define APP_VERSION_NAME				"Luna"
+#define APP_VERSION_NAME				"Dragon"
 
 #ifndef NO_JENOVA_RUNTIME_SDK
 
@@ -248,7 +248,7 @@
 using namespace godot;
 
 // Logging Macros
-#define jenova_log(fmt,...)					printf(fmt "\n",__VA_ARGS__);
+#define jenova_log(fmt,...)					printf(fmt "\n", ##__VA_ARGS__);
 
 // Helper Macros
 #define JENOVA_API							extern "C" JENOVA_API_EXPORT
@@ -259,10 +259,10 @@ using namespace godot;
 #define AS_C_STRING(gstr)					((*jenova::ConvertToStdString(gstr).str).c_str())
 #define AS_STD_WSTRING(gstr)				(*jenova::ConvertToWideStdString(gstr).wstr)
 #define EDITOR_MENU_ID(id)					int32_t(jenova::EditorMenuID::id)
-#define BUFFER_PTR_SIZE_PARAM(buffer)		buffer, sizeof buffer
+#define BUFFER_PTR_SIZE_PARAM(buffer)		buffer, sizeof(buffer)
 #define JENOVA_RESOURCE(key)				jenova::resources::key
-#define CODE_TEMPLATE(id)					String(std::string(jenova::templates::id, sizeof jenova::templates::id).c_str())
-#define VALIDATE_FUNCTION(func)				if (!func) { jenova::Output("System Failure : %d", __LINE__); quick_exit(__LINE__); }
+#define CODE_TEMPLATE(id)					String(std::string(jenova::templates::id, sizeof(jenova::templates::id)).c_str())
+#define VALIDATE_FUNCTION(func)				if (!func) { jenova::Output("System Failure : %d", __LINE__); jenova::ExitWithCode(__LINE__); }
 #define CREATE_SVG_MENU_ICON(buffer)		jenova::CreateMenuItemIconFromByteArray(BUFFER_PTR_SIZE_PARAM(buffer), jenova::ImageCreationFormat::SVG)
 #define CREATE_PNG_MENU_ICON(buffer)		jenova::CreateMenuItemIconFromByteArray(BUFFER_PTR_SIZE_PARAM(buffer), jenova::ImageCreationFormat::PNG)
 #define CREATE_GLOBAL_TEMPLATE(a,b,c)		JenovaTemplateManager::get_singleton()->RegisterNewGlobalScriptTemplate(a, CODE_TEMPLATE(b), c);
@@ -371,8 +371,9 @@ namespace jenova
 	{
 		#ifdef TARGET_PLATFORM_WINDOWS
 		MicrosoftCompiler,
-		ClangCompiler,
+		ClangLLVMCompiler,
 		MinGWCompiler,
+		MinGWClangCompiler,
 		#endif
 		#ifdef TARGET_PLATFORM_LINUX
 		GNUCompiler,
@@ -485,6 +486,12 @@ namespace jenova
 		Proprietary						= 0x5250,
 		OpenSource						= 0x534F,
 		Unknown							= 0x0000,
+	};
+	enum class SymbolSignatureType
+	{
+		FunctionSymbol,
+		PropertySymbol,
+		UnknownSymbol
 	};
 
 	// Flags
@@ -756,12 +763,15 @@ namespace jenova
 	bool RunFile(const char* filePath);
 	bool OpenURL(const char* url);
 	void* AllocateMemory(size_t memorySize);
+	void* RelocateMemory(void* dest, const void* src, std::size_t count);
 	bool FreeMemory(void* memoryPtr);
 	int GetEnvironmentEntity(const char* entityName, char* bufferPtr, size_t bufferSize);
 	bool SetEnvironmentEntity(const char* entityName, const char* entityValue);
 	bool AddEnvironmentPath(const char* path, const char* pathCollection);
 	jenova::GenericHandle GetCurrentProcessHandle();
 	bool CreateSymbolicFile(const char* srcFile, const char* dstFile);
+	int ExecuteCommand(const std::string& app, const std::string& command);
+	void ExitWithCode(int exitCode);
 	#pragma endregion
 
 	// Utilities & Helpers
@@ -814,6 +824,7 @@ namespace jenova
 	ParameterTypeList ExtractParameterTypesFromSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel);
 	std::string ExtractReturnTypeFromSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel);
 	std::string ExtractPropertyTypeFromSignature(const std::string& propertySignature, jenova::CompilerModel compilerModel);
+	jenova::SymbolSignatureType DetectSymbolSignatureType(const std::string& symbolSignature, jenova::CompilerModel compilerModel);
 	bool LoadSymbolForModule(jenova::GenericHandle process, jenova::LongWord baseAddress, const std::string& pdbPath, size_t dllSize);
 	bool InitializeExtensionModule(const char* initFuncName, jenova::ModuleHandle moduleBase, jenova::ModuleCallMode callType);
 	bool CallModuleEvent(const char* eventFuncName, jenova::ModuleHandle moduleBase, jenova::ModuleCallMode callType);
@@ -891,10 +902,9 @@ namespace jenova
 	bool ResolveAndLoadAddonModulesAtRuntime();
 	std::string CreateTemporaryModuleCache(const uint8_t* moduleDataPtr, const size_t moduleSize);
 	bool ReleaseTemporaryModuleCache();
+	std::string GetVisualStudioInstancesMetadata(std::string arguments);
+	std::string GetRuntimeCompilerName();
 	#pragma endregion
-
-	// Core Reimplementation
-	void* CoreMemoryMove(void* dest, const void* src, std::size_t count);
 
 	// Crash Handlers
 	#ifdef TARGET_PLATFORM_WINDOWS
@@ -903,12 +913,6 @@ namespace jenova
 	static LONG WINAPI JenovaGlobalCrashHandler(EXCEPTION_POINTERS* exceptionInfo);
 	LONG WINAPI JenovaExecutionCrashHandler(EXCEPTION_POINTERS* exceptionInfo);
 	#endif
-
-	// Imported Libraries
-	namespace libraries
-	{
-		std::string GetVisualStudioInstancesMetadata(std::string arguments);
-	}
 }
 
 // Jenova Tools

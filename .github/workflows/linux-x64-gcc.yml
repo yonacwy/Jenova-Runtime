@@ -1,7 +1,7 @@
 
 # Developed by Hamid.Memar
 
-name: Build Jenova Runtime (Linux-64)
+name: Build Jenova Runtime (Linux-x64)
 
 on: [push]
 
@@ -59,7 +59,7 @@ jobs:
 
       - name: Build Jenova Runtime using GCC13
         run: |
-          python3 ./Jenova.Builder.py --compiler gcc --skip-banner
+          python3 ./Jenova.Builder.py --compiler linux-gcc --skip-banner
 
       - name: Verbose Compiled Binary Dependencies
         run: |

@@ -18,10 +18,6 @@
 // Third-Party SDK
 #include <FileWatch/FileWatch.hpp>
 
-/*
-	Note : To make FileWatch provide full path instead of releative path to initialized path I've added `_path` to _callback(_path + file.first, file.second);
-*/
-
 // Helpers
 static String GetCallbackEventStringName(jenova::AssetMonitor::CallbackEvent callbackEvent)
 {

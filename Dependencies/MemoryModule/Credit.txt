@@ -1,2 +1,0 @@
-Jenova Loader is based on MemoryModulePP Project https://github.com/bb107/MemoryModulePP
-For complete credits head to MemoryModulePP Repo.

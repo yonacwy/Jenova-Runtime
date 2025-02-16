@@ -151,6 +151,9 @@
     <ClInclude Include="gdextension_exporter.h">
       <Filter>Implementation\Exporters</Filter>
     </ClInclude>
+    <ClInclude Include="InternalModules.h">
+      <Filter>Resources\Storage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Jenova.Runtime.rc">

@@ -69,22 +69,54 @@ Proprietary Pre-built Windows x64 binaries can be obtained from [here](https://g
 > [!TIP]
 > If you want to use pre-built dependencies to build Jenova Runtime on Windows x64 you may need to build `libVSWhere` and `libTinyCC` libraries yourself as these libraries must match your compiler's exact version. Check the [Windows x64 Workflow](https://github.com/Jenova-Framework/Jenova-Runtime/blob/master/.github/workflows/windows-x64-msvc.yml) for more details.
 
+#### Using GigaChad Toolchain
+
+For Windows, Jenova Framework provides a massive compiler collection including all standard compilers :
+
+- Microsoft Visual C++ (msvc)
+- Microsoft Visual C++ LLVM (clang-cl)
+- LLVM Clang (clang/clang++)
+- Minimalist GNU for Windows (gcc/g++)
+
+You can use **Jenova Builder** to build Jenova Runtime for Windows using GigaChad Toolchain. Everything is automated and all dependencies will be compiled by Jenova Builder.
+
+```bash
+# Running Builder
+python3 ./Jenova.Builder.py
+
+# Build using MSVC
+python3 ./Jenova.Builder.py --compiler win-msvc --skip-banner
+
+# Build using MSVC LLVM
+python3 ./Jenova.Builder.py --compiler win-clangcl --skip-banner
+
+# Build using MinGW Clang
+python3 ./Jenova.Builder.py --compiler win-clang --skip-banner
+
+# Build using MinGW GCC
+python3 ./Jenova.Builder.py --compiler win-gcc --skip-banner
+```
+
+The toolchain is only 200MB and contains all compiler toolchains All-in-One. You don't need to install anything extra, including Visual Studio.
+
 ### Linux x64
 
-Building Jenova Runtime for Linux x64 can be done through Code::Blocks or Custom Builder. To build with Code::Blocks, simply open `Jenova.workspace` and build. To build using Custom Builder, Install Python 3 and then use the following commands from VSCode or Terminal:
+Building Jenova Runtime for Linux x64 can be done through Code::Blocks or **Jenova Builder**. To build with Code::Blocks, simply open `Jenova.workspace` and build. To build using Jenova Builder, Install Python 3 and then use the following commands from VSCode or Terminal:
 
 ```bash
 # Running Builder
 python3 ./Jenova.Builder.py
 
 # Build using Clang++
-python3 ./Jenova.Builder.py --compiler clang --skip-banner
+python3 ./Jenova.Builder.py --compiler linux-clang --skip-banner
 
 # Build using G++
-python3 ./Jenova.Builder.py --compiler gcc --skip-banner
+python3 ./Jenova.Builder.py --compiler linux-gcc --skip-banner
 ```
 
 Jenova Runtime source code is fully compatible with both Clang++ (18+) and G++ (13+). Additionally, [Visual Studio Code](https://code.visualstudio.com/) compatibility files are provided.
+
+
 
 ## Open Source vs Proprietary
 While the public source code of Jenova is ~90% identical to the proprietary version, a few specific features have been removed or disabled.

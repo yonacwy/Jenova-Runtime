@@ -35,7 +35,7 @@
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(BuildPath)</OutDir>
-    <IntDir>$(BuildPath)\Compiler_Cache\Runtime\</IntDir>
+    <IntDir>$(BuildPath)\Cache\Runtime\</IntDir>
     <TargetName>Jenova.Runtime.Win64</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -60,8 +60,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalDependencies>.\Libs\GodotSDK\libGodot.x64.lib;.\Libs\AsmJIT.x64MT.VS2019.lib;.\Libs\MemoryModule.x64MT.VS2022.lib;.\Libs\libFastZlib.x64MT.VS2019.lib;.\Libs\libVSWhere.x64MT.VS2022.lib;.\Libs\libArchive.x64MT.VS2022.lib;.\Libs\libCurl.x64MT.VS2022.lib;.\Libs\libTinyCC.x64MT.VS2022.lib;.\Libs\libPThread.x64MT.VS2022.lib;comctl32.lib;Dbghelp.lib;Ws2_32.lib;Wldap32.lib;Crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>dbghelp.dll;Wldap32.dll;Crypt32.dll;bcrypt.dll;ole32.dll;</DelayLoadDLLs>
+      <AdditionalDependencies>.\Libs\libgodotcpp-static-x86_64.lib;.\Libs\libasmjit-static-x86_64.lib;.\Libs\libzlib-static-x86_64.lib;.\Libs\libarchive-static-x86_64.lib;.\Libs\libcurl-static-x86_64.lib;.\Libs\libtcc-static-x86_64.lib;.\Libs\libpthread-static-x86_64.lib;comctl32.lib;Dbghelp.lib;Ws2_32.lib;Wldap32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>dbghelp.dll;Wldap32.dll;bcrypt.dll</DelayLoadDLLs>
       <TreatLinkerWarningAsErrors>
       </TreatLinkerWarningAsErrors>
       <AdditionalOptions>/IGNORE:4098 /IGNORE:4286 /IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
@@ -99,6 +99,7 @@ rundll32.exe "$(TargetPath)",Deploy --command increment-build-number /in:"$(Solu
     <ClInclude Include="asset_monitor.h" />
     <ClInclude Include="ExtensionHosts.h" />
     <ClInclude Include="gdextension_exporter.h" />
+    <ClInclude Include="InternalModules.h" />
     <ClInclude Include="InternalSources.h" />
     <ClInclude Include="BuiltinFonts.h" />
     <ClInclude Include="CodeTemplates.h" />

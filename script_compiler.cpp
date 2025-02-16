@@ -25,52 +25,101 @@ namespace jenova
     class MicrosoftCompiler : public IJenovaCompiler
     {
     public:
-        MicrosoftCompiler()
+        MicrosoftCompiler(bool useLLVM)
         {
+            // Set Sub-Compiler Model
+            compilerModel = useLLVM ? CompilerModel::ClangLLVMCompiler : CompilerModel::MicrosoftCompiler;
         }
         ~MicrosoftCompiler()
         {
         }
         bool InitializeCompiler(String compilerInstanceName = "<JenovaMSVCCompiler>")
         {
-            // Initialize Tool Chain Settings
-            internalDefaultSettings["instance_name"]                        = compilerInstanceName;
-            internalDefaultSettings["instance_version"]                     = 1.2f;
-            internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMSVCCompiler";
-            internalDefaultSettings["cpp_compiler_binary"]                  = "/Bin/cl.exe";
-            internalDefaultSettings["cpp_linker_binary"]                    = "/Bin/link.exe";
-            internalDefaultSettings["cpp_include_path"]                     = "/Include";
-            internalDefaultSettings["cpp_library_path"]                     = "/Lib";
-            internalDefaultSettings["cpp_symbols_path"]                     = "/Symbols";
-            internalDefaultSettings["cpp_jenovasdk_path"]                   = "/Jenova/JenovaSDK";
-            internalDefaultSettings["cpp_godotsdk_path"]                    = "/Jenova/GodotSDK";
+            // Microsoft Compiler Default Settings
+            if (this->GetCompilerModel() == CompilerModel::MicrosoftCompiler)
+            {
+                // Initialize Tool Chain Settings
+                internalDefaultSettings["instance_name"]                        = compilerInstanceName;
+                internalDefaultSettings["instance_version"]                     = 1.2f;
+                internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMSVCCompiler";
+                internalDefaultSettings["cpp_compiler_binary"]                  = "/Bin/cl.exe";
+                internalDefaultSettings["cpp_linker_binary"]                    = "/Bin/link.exe";
+                internalDefaultSettings["cpp_include_path"]                     = "/Include";
+                internalDefaultSettings["cpp_library_path"]                     = "/Lib";
+                internalDefaultSettings["cpp_symbols_path"]                     = "/Symbols";
+                internalDefaultSettings["cpp_jenovasdk_path"]                   = "/Jenova/JenovaSDK";
+                internalDefaultSettings["cpp_godotsdk_path"]                    = "/Jenova/GodotSDK";
 
-            // MSVC Compiler Settings
-            internalDefaultSettings["cpp_language_standards"]               = "cpp20";                          /* /std:c++20 [cpp20, cpp17] */
-            internalDefaultSettings["cpp_clean_stack"]                      = true;                             /* /Gd */
-            internalDefaultSettings["cpp_intrinsic_functions"]              = true;                             /* /Oi */
-            internalDefaultSettings["cpp_open_mp_support"]                  = true;                             /* /openmp */
-            internalDefaultSettings["cpp_multithreaded"]                    = true;                             /* /MT */
-            internalDefaultSettings["cpp_debug_database"]                   = true;                             /* /Zi */
-            internalDefaultSettings["cpp_conformance_mode"]                 = true;                             /* /permissive vs /permissive- */
-            internalDefaultSettings["cpp_exception_handling"]               = 2;                                /* 1 : /EHsc 2: /EHa */
-            internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /GR /bigobj";            /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
-            internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL";
+                // MSVC Compiler Settings
+                internalDefaultSettings["cpp_language_standards"]               = "cpp20";                          /* /std:c++20 [cpp20, cpp17] */
+                internalDefaultSettings["cpp_clean_stack"]                      = true;                             /* /Gd */
+                internalDefaultSettings["cpp_intrinsic_functions"]              = true;                             /* /Oi */
+                internalDefaultSettings["cpp_open_mp_support"]                  = true;                             /* /openmp */
+                internalDefaultSettings["cpp_multithreaded"]                    = true;                             /* /MT */
+                internalDefaultSettings["cpp_debug_database"]                   = true;                             /* /Zi */
+                internalDefaultSettings["cpp_conformance_mode"]                 = true;                             /* /permissive vs /permissive- */
+                internalDefaultSettings["cpp_exception_handling"]               = 2;                                /* 1 : /EHsc 2: /EHa */
+                internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /GR /bigobj";            /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
+                internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL";
 
-            // MSVC Linker Settings
-            internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug .jnv for Final*/
-            internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";
-            internalDefaultSettings["cpp_output_database"]                  = "Jenova.Module.Database.pdb";
-            internalDefaultSettings["cpp_default_libs"]                     = "kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;delayimp.lib";
-            internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.lib;";
-            internalDefaultSettings["cpp_delayed_dll"]                      = "/DELAYLOAD:\"Jenova.Runtime.Win64.dll\"";
-            internalDefaultSettings["cpp_default_subsystem"]                = "Console";                        /* /SUBSYSTEM:CONSOLE [Console, GUI]*/
-            internalDefaultSettings["cpp_machine_architecture"]             = "Win64";                          /* /MACHINE:X64 [Win64, Win32]*/
-            internalDefaultSettings["cpp_machine_pe_type"]                  = "dll";                            /* /DLL [dll, exe]*/
-            internalDefaultSettings["cpp_add_manifest"]                     = true;                             /* /MANIFEST */
-            internalDefaultSettings["cpp_dynamic_base"]                     = true;                             /* /DYNAMICBASE */
-            internalDefaultSettings["cpp_debug_symbol"]                     = true;                             /* /DEBUG:FULL */
-            internalDefaultSettings["cpp_extra_linker"]                     = "/OPT:ICF /OPT:NOREF /LTCG";      /* Extra Linker Options */
+                // MSVC Linker Settings
+                internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug .jnv for Final*/
+                internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";
+                internalDefaultSettings["cpp_output_database"]                  = "Jenova.Module.Database.pdb";
+                internalDefaultSettings["cpp_default_libs"]                     = "kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;delayimp.lib";
+                internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.lib;";
+                internalDefaultSettings["cpp_delayed_dll"]                      = "/DELAYLOAD:\"Jenova.Runtime.Win64.dll\"";
+                internalDefaultSettings["cpp_default_subsystem"]                = "Console";                        /* /SUBSYSTEM:CONSOLE [Console, GUI]*/
+                internalDefaultSettings["cpp_machine_architecture"]             = "Win64";                          /* /MACHINE:X64 [Win64, Win32]*/
+                internalDefaultSettings["cpp_machine_pe_type"]                  = "dll";                            /* /DLL [dll, exe]*/
+                internalDefaultSettings["cpp_add_manifest"]                     = true;                             /* /MANIFEST */
+                internalDefaultSettings["cpp_dynamic_base"]                     = true;                             /* /DYNAMICBASE */
+                internalDefaultSettings["cpp_debug_symbol"]                     = true;                             /* /DEBUG:FULL */
+                internalDefaultSettings["cpp_extra_linker"]                     = "/OPT:ICF /OPT:NOREF /LTCG";      /* Extra Linker Options */
+            }
+
+            // Microsoft Compiler LLVM Default Settings
+            if (this->GetCompilerModel() == CompilerModel::ClangLLVMCompiler)
+            {
+                                // Initialize Tool Chain Settings
+                internalDefaultSettings["instance_name"]                        = compilerInstanceName;
+                internalDefaultSettings["instance_version"]                     = 1.2f;
+                internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMSVCCompiler";
+                internalDefaultSettings["cpp_compiler_binary"]                  = "/Bin/clang-cl.exe";
+                internalDefaultSettings["cpp_linker_binary"]                    = "/Bin/lld-link.exe";
+                internalDefaultSettings["cpp_include_path"]                     = "/Include";
+                internalDefaultSettings["cpp_library_path"]                     = "/Lib";
+                internalDefaultSettings["cpp_symbols_path"]                     = "/Symbols";
+                internalDefaultSettings["cpp_jenovasdk_path"]                   = "/Jenova/JenovaSDK";
+                internalDefaultSettings["cpp_godotsdk_path"]                    = "/Jenova/GodotSDK";
+
+                // MSVC Compiler Settings
+                internalDefaultSettings["cpp_language_standards"]               = "cpp20";                          /* /std:c++20 [cpp20, cpp17] */
+                internalDefaultSettings["cpp_clean_stack"]                      = true;                             /* /Gd */
+                internalDefaultSettings["cpp_intrinsic_functions"]              = true;                             /* /Oi */
+                internalDefaultSettings["cpp_open_mp_support"]                  = true;                             /* /openmp */
+                internalDefaultSettings["cpp_multithreaded"]                    = true;                             /* /MT */
+                internalDefaultSettings["cpp_debug_database"]                   = true;                             /* /Zi */
+                internalDefaultSettings["cpp_conformance_mode"]                 = true;                             /* /permissive vs /permissive- */
+                internalDefaultSettings["cpp_exception_handling"]               = 2;                                /* 1 : /EHsc 2: /EHa */
+                internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /GR /bigobj";            /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
+                internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL";
+
+                // MSVC Linker Settings
+                internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug .jnv for Final*/
+                internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";
+                internalDefaultSettings["cpp_output_database"]                  = "Jenova.Module.Database.pdb";
+                internalDefaultSettings["cpp_default_libs"]                     = "kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;delayimp.lib";
+                internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.lib;";
+                internalDefaultSettings["cpp_delayed_dll"]                      = "/DELAYLOAD:\"Jenova.Runtime.Win64.dll\"";
+                internalDefaultSettings["cpp_default_subsystem"]                = "Console";                        /* /SUBSYSTEM:CONSOLE [Console, GUI]*/
+                internalDefaultSettings["cpp_machine_architecture"]             = "Win64";                          /* /MACHINE:X64 [Win64, Win32]*/
+                internalDefaultSettings["cpp_machine_pe_type"]                  = "dll";                            /* /DLL [dll, exe]*/
+                internalDefaultSettings["cpp_add_manifest"]                     = true;                             /* /MANIFEST */
+                internalDefaultSettings["cpp_dynamic_base"]                     = true;                             /* /DYNAMICBASE */
+                internalDefaultSettings["cpp_debug_symbol"]                     = true;                             /* /DEBUG:FULL */
+                internalDefaultSettings["cpp_extra_linker"]                     = "/OPT:ICF /OPT:NOREF /LTCG";      /* Extra Linker Options */
+            }
 
             // All Good
             return true;
@@ -383,7 +432,7 @@ namespace jenova
             if (jenova::GlobalStorage::DeveloperModeActivated) jenova::WriteStdStringToFile(jenovaCachePath + "CompilerCommand.txt", compilerArgument);
 
             // Run Compiler
-            STARTUPINFO si;
+            STARTUPINFOW si;
             PROCESS_INFORMATION pi;
             ZeroMemory(&si, sizeof(si));
             si.cb = sizeof(si);
@@ -401,7 +450,7 @@ namespace jenova
             std::wstring wCompilerArgument(compilerArgument.begin(), compilerArgument.end());
 
             // Execute the command
-            if (!CreateProcess(NULL, &wCompilerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+            if (!CreateProcessW(NULL, &wCompilerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
             {
                 result.compileResult = false;
                 result.hasError = true;
@@ -626,7 +675,7 @@ namespace jenova
             if (jenova::GlobalStorage::DeveloperModeActivated) jenova::WriteStdStringToFile(jenovaCachePath + "LinkerCommand.txt", linkerArgument);
 
             // Run Linker
-            STARTUPINFO si;
+            STARTUPINFOW si;
             PROCESS_INFORMATION pi;
             ZeroMemory(&si, sizeof(si));
             si.cb = sizeof(si);
@@ -644,7 +693,7 @@ namespace jenova
             std::wstring wLinkerArgument(linkerArgument.begin(), linkerArgument.end());
 
             // Execute the linker command
-            if (!CreateProcess(NULL, &wLinkerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+            if (!CreateProcessW(NULL, &wLinkerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
             {
                 result.buildResult = false;
                 result.hasError = true;
@@ -748,7 +797,7 @@ namespace jenova
         }
         CompilerModel GetCompilerModel() const
         {
-            return CompilerModel::MicrosoftCompiler;
+            return compilerModel;
         }
         bool SolveCompilerSettings(const Dictionary& compilerSettings)
         {
@@ -777,11 +826,11 @@ namespace jenova
 
             // Solve Compiler Paths
             this->projectPath = std::filesystem::absolute(AS_STD_STRING(projectPath)).string();
-            this->compilerBinaryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + (String)compilerSettings["cpp_compiler_binary"])).string();
-            this->linkerBinaryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + (String)compilerSettings["cpp_linker_binary"])).string();
-            this->includePath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + (String)compilerSettings["cpp_include_path"])).string();
-            this->libraryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + (String)compilerSettings["cpp_library_path"])).string();
-            this->jenovaSDKPath = std::filesystem::absolute(AS_STD_STRING(projectPath + (String)compilerSettings["cpp_jenovasdk_path"])).string();
+            this->compilerBinaryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + String(compilerSettings["cpp_compiler_binary"]))).string();
+            this->linkerBinaryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + String(compilerSettings["cpp_linker_binary"]))).string();
+            this->includePath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + String(compilerSettings["cpp_include_path"]))).string();
+            this->libraryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + String(compilerSettings["cpp_library_path"]))).string();
+            this->jenovaSDKPath = std::filesystem::absolute(AS_STD_STRING(projectPath + String(compilerSettings["cpp_jenovasdk_path"]))).string();
             this->godotSDKPath = std::filesystem::absolute(AS_STD_STRING(selectedGodotKitPath)).string();
             this->jenovaCachePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory());
 
@@ -794,6 +843,7 @@ namespace jenova
         }
 
     private:
+        CompilerModel compilerModel = CompilerModel::Unspecified;
         Dictionary internalDefaultSettings;
         std::string projectPath;
         std::string compilerBinaryPath;
@@ -809,47 +859,91 @@ namespace jenova
     class MinGWCompiler : public IJenovaCompiler
     {
     public:
-        MinGWCompiler()
+        MinGWCompiler(bool useLLVM)
         {
-            // Initialization Code
+            // Set Sub-Compiler Model
+            compilerModel = useLLVM ? CompilerModel::MinGWClangCompiler : CompilerModel::MinGWCompiler;
         }
         ~MinGWCompiler()
         {
-            // Cleanup Code
         }
-        bool InitializeCompiler(String compilerInstanceName)
+        bool InitializeCompiler(String compilerInstanceName = "<JenovaMinGWCompiler>")
         {
-            // Initialize Tool Chain Settings
-            internalDefaultSettings["instance_name"]                        = compilerInstanceName;
-            internalDefaultSettings["instance_version"]                     = 1.0f;
-            internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMinGWCompiler"; // Placeholder
-            internalDefaultSettings["cpp_compiler_binary"]                  = "/bin/g++.exe";
-            internalDefaultSettings["cpp_linker_binary"]                    = "/bin/g++.exe";
-            internalDefaultSettings["cpp_include_path"]                     = "/include";
-            internalDefaultSettings["cpp_library_path"]                     = "/lib";
-            internalDefaultSettings["cpp_jenovasdk_path"]                   = "/Jenova/JenovaSDK";
-            internalDefaultSettings["cpp_godotsdk_path"]                    = "/Jenova/GodotSDK"; // Placeholder
+            // MinGW GCC Compiler Default Settings
+            if (this->GetCompilerModel() == CompilerModel::MinGWCompiler)
+            {
+                // Initialize GCC Tool Chain Settings
+                internalDefaultSettings["instance_name"]                        = compilerInstanceName;
+                internalDefaultSettings["instance_version"]                     = 1.1f;
+                internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMinGWCompiler"; // Placeholder
+                internalDefaultSettings["cpp_compiler_binary"]                  = "/bin/g++.exe";
+                internalDefaultSettings["cpp_linker_binary"]                    = "/bin/g++.exe";
+                internalDefaultSettings["cpp_gdb_binary"]                       = "/bin/gdb.exe";
+                internalDefaultSettings["cpp_include_path"]                     = "/include";
+                internalDefaultSettings["cpp_library_path"]                     = "/lib";
+                internalDefaultSettings["cpp_jenovasdk_path"]                   = "/Jenova/JenovaSDK";
+                internalDefaultSettings["cpp_godotsdk_path"]                    = "/Jenova/GodotSDK"; // Placeholder
 
-            // MinGW Compiler Settings
-            internalDefaultSettings["cpp_language_standards"]               = "cpp20";                          /* -std=c++20 [cpp20, cpp17] */
-            internalDefaultSettings["cpp_open_mp_support"]                  = true;                             /* -fopenmp */
-            internalDefaultSettings["cpp_multithreaded"]                    = true;                             /* -static */
-            internalDefaultSettings["cpp_debug_database"]                   = true;                             /* -gcodeview */
-            internalDefaultSettings["cpp_exception_handling"]               = true;                             /* -fexceptions */
-            internalDefaultSettings["cpp_extra_compiler"]                   = "-O3 -pthread";                   /* Extra Compiler Options*/
-            internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL"; /* REAL_T_IS_DOUBLE Removed for Now */
+                // MinGW GCC Compiler Settings
+                internalDefaultSettings["cpp_language_standards"]               = "cpp20";                          /* -std=c++20 [cpp20, cpp17] */
+                internalDefaultSettings["cpp_open_mp_support"]                  = true;                             /* -fopenmp */
+                internalDefaultSettings["cpp_multithreaded"]                    = true;                             /* -static */
+                internalDefaultSettings["cpp_debug_database"]                   = true;                             /* -g */
+                internalDefaultSettings["cpp_exception_handling"]               = true;                             /* -fexceptions */
+                internalDefaultSettings["cpp_extra_compiler"]                   = "-O1 -pthread";                   /* Extra Compiler Options*/
+                internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL"; /* REAL_T_IS_DOUBLE Removed for Now */
 
-            // MinGW Linker Settings
-            internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug, .jnv for Final*/
-            internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";              /* -Wl,-Map,Jenova.Module.map */
-            internalDefaultSettings["cpp_default_libs"]                     = "m;pthread;dl";
-            internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.a";
-            internalDefaultSettings["cpp_default_subsystem"]                = "Console";                        /* -Wl,-subsystem,console / -Wl,-subsystem,windows */
-            internalDefaultSettings["cpp_machine_architecture"]             = "Win64";                          /* -m64 [Win64, Win32]*/
-            internalDefaultSettings["cpp_machine_pe_type"]                  = "dll";                            /* -shared [None for exe]*/
-            internalDefaultSettings["cpp_debug_symbol"]                     = true;                             /* -g */
-            internalDefaultSettings["cpp_statics_libs"]                     = "-static-libstdc++ -static-libgcc";
-            internalDefaultSettings["cpp_extra_linker"]                     = "-flto";                          /* Extra Linker Options */
+                // MinGW GCC Linker Settings
+                internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug, .jnv for Final*/
+                internalDefaultSettings["cpp_debug_symbol"]                     = "Jenova.Module.pdb";              /* -Wl,--out-implib,Jenova.Module.pdb */
+                internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";              /* -Wl,-Map,Jenova.Module.map */
+                internalDefaultSettings["cpp_default_libs"]                     = "wldap32;bcrypt;dbghelp;delayimp";
+                internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.a";
+                internalDefaultSettings["cpp_delayed_dll"]                     = "";
+                internalDefaultSettings["cpp_default_subsystem"]                = "Console";                        /* -Wl,-subsystem,console / -Wl,-subsystem,windows */
+                internalDefaultSettings["cpp_machine_architecture"]             = "Win64";                          /* -m64 [Win64, Win32]*/
+                internalDefaultSettings["cpp_machine_pe_type"]                  = "dll";                            /* -shared [None for exe]*/
+                internalDefaultSettings["cpp_statics_libs"]                     = "-static-libstdc++ -static-libgcc -Wl,-Bstatic -lpthread";
+                internalDefaultSettings["cpp_extra_linker"]                     = "-fuse-ld=lld -flto";             /* Extra Linker Options */
+            }
+
+            // MinGW Clang Compiler Default Settings
+            if (this->GetCompilerModel() == CompilerModel::MinGWClangCompiler)
+            {
+                // Initialize Clang Tool Chain Settings
+                internalDefaultSettings["instance_name"]                        = compilerInstanceName;
+                internalDefaultSettings["instance_version"]                     = 1.1f;
+                internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMinGWCompiler"; // Placeholder
+                internalDefaultSettings["cpp_compiler_binary"]                  = "/bin/clang++.exe";
+                internalDefaultSettings["cpp_linker_binary"]                    = "/bin/clang++.exe";
+                internalDefaultSettings["cpp_gdb_binary"]                       = "/bin/gdb.exe";
+                internalDefaultSettings["cpp_include_path"]                     = "/include";
+                internalDefaultSettings["cpp_library_path"]                     = "/lib";
+                internalDefaultSettings["cpp_jenovasdk_path"]                   = "/Jenova/JenovaSDK";
+                internalDefaultSettings["cpp_godotsdk_path"]                    = "/Jenova/GodotSDK"; // Placeholder
+
+                // MinGW Clang Compiler Settings
+                internalDefaultSettings["cpp_language_standards"]               = "cpp20";                          /* -std=c++20 [cpp20, cpp17] */
+                internalDefaultSettings["cpp_open_mp_support"]                  = true;                             /* -fopenmp */
+                internalDefaultSettings["cpp_multithreaded"]                    = true;                             /* -static */
+                internalDefaultSettings["cpp_debug_database"]                   = true;                             /* -g */
+                internalDefaultSettings["cpp_exception_handling"]               = true;                             /* -fexceptions */
+                internalDefaultSettings["cpp_extra_compiler"]                   = "-O3 -pthread -femulated-tls";    /* Extra Compiler Options*/
+                internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL"; /* REAL_T_IS_DOUBLE Removed for Now */
+
+                // MinGW Clang Linker Settings
+                internalDefaultSettings["cpp_output_module"]                    = "Jenova.Module.jnv";              /* Must use .dll for Debug, .jnv for Final*/
+                internalDefaultSettings["cpp_debug_symbol"]                     = "Jenova.Module.pdb";              /* -Wl,--out-implib,Jenova.Module.pdb */
+                internalDefaultSettings["cpp_output_map"]                       = "Jenova.Module.map";              /* -Wl,-Map,Jenova.Module.map */
+                internalDefaultSettings["cpp_default_libs"]                     = "wldap32;bcrypt;dbghelp;delayimp";
+                internalDefaultSettings["cpp_native_libs"]                      = "libGodot.x64.a";
+                internalDefaultSettings["cpp_delayed_dll"]                     = "-Xlinker /DELAYLOAD:Jenova.Runtime.Win64.dll";
+                internalDefaultSettings["cpp_default_subsystem"]                = "Console";                        /* -Wl,-subsystem,console / -Wl,-subsystem,windows */
+                internalDefaultSettings["cpp_machine_architecture"]             = "Win64";                          /* -m64 [Win64, Win32]*/
+                internalDefaultSettings["cpp_machine_pe_type"]                  = "dll";                            /* -shared [None for exe]*/
+                internalDefaultSettings["cpp_statics_libs"]                     = "-static-libstdc++ -static-libgcc -Wl,-Bstatic -lpthread";
+                internalDefaultSettings["cpp_extra_linker"]                     = "-fuse-ld=lld";                   /* Extra Linker Options */
+            }
 
             // All Good
             return true;
@@ -881,8 +975,16 @@ namespace jenova
                 jenova::GlobalSettings::JenovaBuildVersion[2], jenova::GlobalSettings::JenovaBuildVersion[3]).c_str());
 
             // Preprocessor Definitions [Compiler]
-            preprocessorDefinitions += "#define JENOVA_COMPILER \"MinGW Compiler\"\n";
-            preprocessorDefinitions += "#define MINGW_COMPILER\n";
+            if (this->GetCompilerModel() == CompilerModel::MinGWCompiler)
+            {
+                preprocessorDefinitions += "#define JENOVA_COMPILER \"MinGW GCC Compiler\"\n";
+                preprocessorDefinitions += "#define MINGW_CLANG_COMPILER\n";
+            }
+            if (this->GetCompilerModel() == CompilerModel::MinGWClangCompiler)
+            {
+                preprocessorDefinitions += "#define JENOVA_COMPILER \"MinGW Clang Compiler\"\n";
+                preprocessorDefinitions += "#define MINGW_GCC_COMPILER\n";
+            }
 
             // Preprocessor Definitions [Linking]
             if (jenova::GlobalStorage::SDKLinkingMode == SDKLinkingMode::Statically) preprocessorDefinitions += "#define JENOVA_SDK_STATIC_LINKING\n";
@@ -997,7 +1099,7 @@ namespace jenova
             if (String(compilerSettings["cpp_language_standards"]) == "cpp17") compilerArgument += "-std=c++17 ";
             if (bool(compilerSettings["cpp_open_mp_support"])) compilerArgument += "-fopenmp ";
             if (bool(compilerSettings["cpp_multithreaded"])) compilerArgument += "-static ";
-            if (bool(compilerSettings["cpp_debug_database"]) && bool(compilerSettings["cpp_generate_debug_info"])) compilerArgument += "-gcodeview ";
+            if (bool(compilerSettings["cpp_debug_database"]) && bool(compilerSettings["cpp_generate_debug_info"])) compilerArgument += "-ggdb ";
             if (bool(compilerSettings["cpp_exception_handling"]) == true) compilerArgument += "-fexceptions ";
             if (QUERY_SDK_LINKING_MODE(Statically)) compilerArgument += "/D \"JENOVA_SDK_STATIC\" ";
             compilerArgument += GeneratePreprocessDefinitions(compilerSettings["cpp_definitions"]);
@@ -1169,7 +1271,7 @@ namespace jenova
                 // Initiate Compilation Task
                 jenova::TaskID taskID = JenovaTaskSystem::InitiateTask([command, &compilationFailed, &compilationMutex, &errorMessages]()
                 {
-                    STARTUPINFO si;
+                    STARTUPINFOW si;
                     PROCESS_INFORMATION pi;
                     ZeroMemory(&si, sizeof(si));
                     si.cb = sizeof(si);
@@ -1183,7 +1285,7 @@ namespace jenova
                     si.hStdError = hStdOutWrite;
 
                     std::wstring wCommand(command.begin(), command.end());
-                    if (!CreateProcess(NULL, &wCommand[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+                    if (!CreateProcessW(NULL, &wCommand[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
                     {
                         std::lock_guard<std::mutex> lock(compilationMutex);
                         compilationFailed = true;
@@ -1228,6 +1330,7 @@ namespace jenova
                 JenovaTaskSystem::ClearTask(taskID);
             }
 
+            // Check Compile Result
             if (compilationFailed)
             {
                 result.compileResult = false;
@@ -1282,6 +1385,7 @@ namespace jenova
 
             // Generate Output Module Path
             std::string outputModule = this->jenovaCachePath + (result.hasDebugInformation ? "Jenova.Module.dll" : AS_STD_STRING((String)linkerSettings["cpp_output_module"]));
+            std::string outputDebugSymbol = this->jenovaCachePath + AS_STD_STRING((String)linkerSettings["cpp_debug_symbol"]);
             std::string outputMap = this->jenovaCachePath + AS_STD_STRING((String)linkerSettings["cpp_output_map"]);
 
             // Utilities
@@ -1328,15 +1432,16 @@ namespace jenova
             // Generate Linker Arguments
             std::string linkerArgument;
             linkerArgument += "\"" + this->linkerBinaryPath + "\" ";
+            linkerArgument += "-B\"" + this->binariesPath + "\" ";
             linkerArgument += "-o \"" + outputModule + "\" ";
             linkerArgument += "-Wl,-Map=\"" + outputMap + "\" ";
+            linkerArgument += "-Wl,--pdb=\"" + outputDebugSymbol + "\" ";
             if (String(linkerSettings["cpp_default_subsystem"]) == "Console") linkerArgument += "-Wl,-subsystem,console ";
             if (String(linkerSettings["cpp_default_subsystem"]) == "GUI") linkerArgument += "-Wl,-subsystem,windows ";
             if (String(linkerSettings["cpp_machine_architecture"]) == "Win64") linkerArgument += "-m64 ";
             if (String(linkerSettings["cpp_machine_architecture"]) == "Win32") linkerArgument += "-m32 ";
             if (String(linkerSettings["cpp_machine_pe_type"]) == "dll") linkerArgument += "-shared ";
             if (String(linkerSettings["cpp_machine_pe_type"]) == "exe") linkerArgument += "-no-pie ";
-            if (bool(linkerSettings["cpp_debug_symbol"]) && result.hasDebugInformation) linkerArgument += "-g ";
             linkerArgument += "-L\"./\" ";
             linkerArgument += "-L\"" + this->projectPath + "\" ";
             linkerArgument += "-L\"" + this->libraryPath + "\" ";
@@ -1355,6 +1460,7 @@ namespace jenova
                     {
                         std::string libraryPath = addonConfig.Path + "/" + addonConfig.Library;
                         linkerArgument += "\"" + libraryPath + "\" ";
+                        linkerArgument += "-Xlinker /DELAYLOAD:\"" + addonConfig.Binary + "\" ";
                     }
                 }
             }
@@ -1368,6 +1474,9 @@ namespace jenova
             // Add Extra Options
             linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_extra_linker"])) + " ";
 
+            // Add Delayed DLLs
+            if (QUERY_SDK_LINKING_MODE(Dynamically)) linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_delayed_dll"])) + " ";
+
             // Handle JenovaSDK Linking
             if (QUERY_SDK_LINKING_MODE(Dynamically)) linkerArgument += "-l:Jenova.SDK.x64.a ";
             if (QUERY_SDK_LINKING_MODE(Statically))
@@ -1379,8 +1488,8 @@ namespace jenova
             }
 
             // Add Libraries [GCC Requires Libraries to be Added at the End]
-            linkerArgument += GenerateLibraries(linkerSettings["cpp_default_libs"]);
             linkerArgument += GenerateLibraries(linkerSettings["cpp_native_libs"], true);
+            linkerArgument += GenerateLibraries(linkerSettings["cpp_default_libs"]);
             linkerArgument += GenerateLibraries(linkerSettings["cpp_extra_libs"]);
 
             // Fix Paths in Command
@@ -1391,7 +1500,7 @@ namespace jenova
             if (jenova::GlobalStorage::DeveloperModeActivated) jenova::WriteStdStringToFile(jenovaCachePath + "LinkerCommand.txt", linkerArgument);
 
             // Run Linker
-            STARTUPINFO si;
+            STARTUPINFOW si;
             PROCESS_INFORMATION pi;
             ZeroMemory(&si, sizeof(si));
             si.cb = sizeof(si);
@@ -1409,7 +1518,7 @@ namespace jenova
             std::wstring wLinkerArgument(linkerArgument.begin(), linkerArgument.end());
 
             // Execute the linker command
-            if (!CreateProcess(NULL, &wLinkerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+            if (!CreateProcessW(NULL, &wLinkerArgument[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
             {
                 result.buildResult = false;
                 result.hasError = true;
@@ -1457,6 +1566,30 @@ namespace jenova
                 result.buildResult = false;
                 result.hasError = true;
                 result.buildError = "L668 : Invalid Module Data.";
+                return result;
+            }
+
+            // Generate Function Information
+            std::string funcInfoCmd = R"(-q -batch -ex "set logging file %FUNC_INFO_FILE%" -ex "set logging enabled" -ex "info functions" -ex "quit" "%BINARY%" > NUL)";
+            jenova::ReplaceAllMatchesWithString(funcInfoCmd, "%FUNC_INFO_FILE%", AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + std::filesystem::path(outputMap).stem().string() + ".finfo");
+            jenova::ReplaceAllMatchesWithString(funcInfoCmd, "%BINARY%", outputModule);
+            if (jenova::ExecuteCommand(this->debuggerBinaryPath, funcInfoCmd) != 0)
+            {
+                result.buildResult = false;
+                result.hasError = true;
+                result.buildError = "L850 : Failed to Extract Module Function Information.";
+                return result;
+            }
+
+            // Generate Variable Information
+            std::string varInfoCmd = R"(-q -batch -ex "set logging file %VAR_INFO_FILE%" -ex "set logging enabled" -ex "info variables" -ex "quit" "%BINARY%" > NUL)";
+            jenova::ReplaceAllMatchesWithString(varInfoCmd, "%VAR_INFO_FILE%", AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + std::filesystem::path(outputMap).stem().string() + ".pinfo");
+            jenova::ReplaceAllMatchesWithString(varInfoCmd, "%BINARY%", outputModule);
+            if (jenova::ExecuteCommand(this->debuggerBinaryPath, varInfoCmd) != 0)
+            {
+                result.buildResult = false;
+                result.hasError = true;
+                result.buildError = "L860 : Failed to Extract Module Variable Information.";
                 return result;
             }
 
@@ -1513,7 +1646,7 @@ namespace jenova
         }
         CompilerModel GetCompilerModel() const
         {
-            return CompilerModel::MinGWCompiler;
+            return compilerModel;
         }
         bool SolveCompilerSettings(const Dictionary& compilerSettings)
         {
@@ -1542,11 +1675,13 @@ namespace jenova
 
             // Solve Compiler Paths
             this->projectPath = std::filesystem::absolute(AS_STD_STRING(projectPath)).string();
-            this->compilerBinaryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + (String)compilerSettings["cpp_compiler_binary"])).string();
-            this->linkerBinaryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + (String)compilerSettings["cpp_linker_binary"])).string();
-            this->includePath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + (String)compilerSettings["cpp_include_path"])).string();
-            this->libraryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + (String)compilerSettings["cpp_library_path"])).string();
-            this->jenovaSDKPath = std::filesystem::absolute(AS_STD_STRING(projectPath + (String)compilerSettings["cpp_jenovasdk_path"])).string();
+            this->binariesPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + "/bin")).string();
+            this->compilerBinaryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + String(compilerSettings["cpp_compiler_binary"]))).string();
+            this->linkerBinaryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + String(compilerSettings["cpp_linker_binary"]))).string();
+            this->debuggerBinaryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + String(compilerSettings["cpp_gdb_binary"]))).string();
+            this->includePath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + String(compilerSettings["cpp_include_path"]))).string();
+            this->libraryPath = std::filesystem::absolute(AS_STD_STRING(selectedCompilerPath + String(compilerSettings["cpp_library_path"]))).string();
+            this->jenovaSDKPath = std::filesystem::absolute(AS_STD_STRING(projectPath + String(compilerSettings["cpp_jenovasdk_path"]))).string();
             this->godotSDKPath = std::filesystem::absolute(AS_STD_STRING(selectedGodotKitPath)).string();
             this->jenovaCachePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory());
 
@@ -1559,10 +1694,13 @@ namespace jenova
         }
 
     private:
+        CompilerModel compilerModel = CompilerModel::Unspecified;
         Dictionary internalDefaultSettings;
         std::string projectPath;
+        std::string binariesPath;
         std::string compilerBinaryPath;
         std::string linkerBinaryPath;
+        std::string debuggerBinaryPath;
         std::string includePath;
         std::string libraryPath;
         std::string jenovaSDKPath;
@@ -2115,8 +2253,8 @@ namespace jenova
             linkerArgument += AS_STD_STRING(String(linkerSettings["cpp_extra_linker"])) + " ";
 
             // Add Libraries [GCC Requires Libraries to be Added at the End]
-            linkerArgument += GenerateLibraries(linkerSettings["cpp_default_libs"]);
             linkerArgument += GenerateLibraries(linkerSettings["cpp_native_libs"], true);
+            linkerArgument += GenerateLibraries(linkerSettings["cpp_default_libs"]);
             linkerArgument += GenerateLibraries(linkerSettings["cpp_extra_libs"]);
 
             // Dump Linker Command If Developer Mode Enabled
@@ -2226,7 +2364,7 @@ namespace jenova
             std::string funcInfoCmd = R"(gdb -q -batch -ex "set logging file "%FUNC_INFO_FILE%"" -ex "set logging on" -ex "info functions" -ex "quit" "%BINARY%" > /dev/null 2>&1)";
             jenova::ReplaceAllMatchesWithString(funcInfoCmd, "%FUNC_INFO_FILE%", AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + std::filesystem::path(outputMap).stem().string() + ".finfo");
             jenova::ReplaceAllMatchesWithString(funcInfoCmd, "%BINARY%", outputModule);
-            if (std::system(funcInfoCmd.c_str()) != 0)
+            if (jenova::ExecuteCommand(std::string(), funcInfoCmd) != 0)
             {
                 result.buildResult = false;
                 result.hasError = true;
@@ -2238,7 +2376,7 @@ namespace jenova
             std::string varInfoCmd = R"(gdb -q -batch -ex "set logging file "%VAR_INFO_FILE%"" -ex "set logging on" -ex "info variables" -ex "quit" "%BINARY%" > /dev/null 2>&1)";
             jenova::ReplaceAllMatchesWithString(varInfoCmd, "%VAR_INFO_FILE%", AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + std::filesystem::path(outputMap).stem().string() + ".pinfo");
             jenova::ReplaceAllMatchesWithString(varInfoCmd, "%BINARY%", outputModule);
-            if (std::system(varInfoCmd.c_str()) != 0)
+            if (jenova::ExecuteCommand(std::string(), varInfoCmd) != 0)
             {
                 result.buildResult = false;
                 result.hasError = true;
@@ -2359,7 +2497,7 @@ namespace jenova
     {
         // Windows Implementation
         #ifdef TARGET_PLATFORM_WINDOWS
-            return new MicrosoftCompiler();
+            return new MicrosoftCompiler(false);
         #endif
 
         // Not Supported
@@ -2369,6 +2507,7 @@ namespace jenova
     {
         // Windows Implementation
         #ifdef TARGET_PLATFORM_WINDOWS
+            return new MicrosoftCompiler(true);
         #endif
 
         // Linux Implementation
@@ -2378,11 +2517,11 @@ namespace jenova
         // Not Supported
         return nullptr;
     }
-    IJenovaCompiler* CreateMinGWCompiler()
+    IJenovaCompiler* CreateMinGWCompiler(bool useLLVM)
     {
         // Windows Implementation
         #ifdef TARGET_PLATFORM_WINDOWS
-            return new MinGWCompiler();
+            return new MinGWCompiler(useLLVM);
         #endif
 
         // Not Supported

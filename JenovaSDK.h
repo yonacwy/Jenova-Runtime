@@ -77,6 +77,7 @@
 
 // GodotSDK Imports
 #ifndef JENOVA_SDK_BUILD
+	#include <Godot/variant/variant.hpp>
 	#include <Godot/classes/global_constants.hpp>
 #endif
 

@@ -25,6 +25,7 @@
 
 // Internal/Built-In Sources
 #include "InternalSources.h"
+#include "InternalModules.h"
 #include "CodeTemplates.h"
 
 // Internal/Built-In Templates
@@ -44,7 +45,7 @@ using namespace std;
 	HINSTANCE jenovaRuntimeInstance = nullptr;
 
 	// Windows Entrypoint
-	static BOOL WINAPI DllMain(HINSTANCE hinstDLL, ULONG fdwReason, LPVOID lpvReserved)
+	extern "C" BOOL WINAPI DllMain(HINSTANCE hinstDLL, ULONG fdwReason, LPVOID lpvReserved)
 	{
 		// Handle Events
 		if (fdwReason == DLL_PROCESS_ATTACH)
@@ -507,8 +508,8 @@ namespace jenova
 
 						// Compiler Model Property
 						String availableCompilers = "";
-						if (QUERY_PLATFORM(Windows)) availableCompilers = "Microsoft Visual C++ (MSVC),LLVM Clang Toolchain,MinGW Standard";
-						if (QUERY_PLATFORM(Linux)) availableCompilers = "GNU Compiler Collection (GCC),LLVM Clang Toolchain";					
+						if (QUERY_PLATFORM(Windows)) availableCompilers = "Microsoft Visual C++ (MSVC),LLVM Toolchain (Clang-cl),MinGW Standard (GCC),MinGW LLVM Toolchain (Clang)";
+						if (QUERY_PLATFORM(Linux)) availableCompilers = "GNU Compiler Collection (GCC),LLVM Toolchain (Clang)";					
 						PropertyInfo CompilerModelProperty(Variant::INT, CompilerModelConfigPath, 
 							PropertyHint::PROPERTY_HINT_ENUM, availableCompilers,
 							PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED, JenovaEditorSettingsCategory);
@@ -1655,7 +1656,7 @@ namespace jenova
 					if (!JenovaInterpreter::InitializeInterpreter())
 					{
 						jenova::Error("Jenova Interpreter", "Jenova Interpreter Failed to Initialize!");
-						quick_exit(jenova::ErrorCode::INTERPRETER_INIT_FAILED);
+						jenova::ExitWithCode(jenova::ErrorCode::INTERPRETER_INIT_FAILED);
 					}
 				}
 
@@ -1917,7 +1918,7 @@ namespace jenova
 						if (!JenovaInterpreter::InitializeInterpreter())
 						{
 							jenova::Error("Jenova Interpreter", "Jenova Interpreter Failed to Initialize!");
-							quick_exit(jenova::ErrorCode::INTERPRETER_INIT_FAILED);
+							jenova::ExitWithCode(jenova::ErrorCode::INTERPRETER_INIT_FAILED);
 						}
 					}
 
@@ -2005,15 +2006,20 @@ namespace jenova
 					jenovaCompiler = jenova::CreateMicrosoftCompiler();
 					jenova::Output("New Microsoft Visual C++ (MSVC) Compiler Implemented at [color=#44e376]%p[/color]", jenovaCompiler);
 					break;
-				case jenova::CompilerModel::ClangCompiler:
+				case jenova::CompilerModel::ClangLLVMCompiler:
 					jenova::Output("Creating LLVM Clang (Windows) Compiler...");
 					jenovaCompiler = jenova::CreateClangCompiler();
 					jenova::Output("New LLVM Clang (Windows) Compiler Implemented at [color=#44e376]%p[/color]", jenovaCompiler);
 					break;
 				case jenova::CompilerModel::MinGWCompiler:
-					jenova::Output("Creating Minimalist GNU for Windows (MinGW) Compiler...");
-					jenovaCompiler = jenova::CreateMinGWCompiler();
-					jenova::Output("New Minimalist GNU for Windows (MinGW) Compiler Implemented at [color=#44e376]%p[/color]", jenovaCompiler);
+					jenova::Output("Creating Minimalist GNU for Windows (MinGW) GCC Compiler...");
+					jenovaCompiler = jenova::CreateMinGWCompiler(false);
+					jenova::Output("New Minimalist GNU for Windows (MinGW) GCC Compiler Implemented at [color=#44e376]%p[/color]", jenovaCompiler);
+					break;
+				case jenova::CompilerModel::MinGWClangCompiler:
+					jenova::Output("Creating Minimalist GNU for Windows (MinGW) Clang Compiler...");
+					jenovaCompiler = jenova::CreateMinGWCompiler(true);
+					jenova::Output("New Minimalist GNU for Windows (MinGW) Clang Compiler Implemented at [color=#44e376]%p[/color]", jenovaCompiler);
 					break;
 				#endif
 
@@ -2807,7 +2813,7 @@ namespace jenova
 				#ifdef TARGET_PLATFORM_WINDOWS
 
 					// Get Metadata from Visual Studio Locator
-					std::string jsonData = jenova::libraries::GetVisualStudioInstancesMetadata("-format json");
+					std::string jsonData = jenova::GetVisualStudioInstancesMetadata("-format json");
 					if (jsonData.empty()) return jenova::SerializedData();
 
 					// Parse Metadata
@@ -2893,8 +2899,9 @@ namespace jenova
 				std::string intelliSenseMode = "not-supported";
 				#ifdef TARGET_PLATFORM_WINDOWS 
 					if (jenovaCompiler->GetCompilerModel() == CompilerModel::MicrosoftCompiler) intelliSenseMode = "windows-msvc-x64";
-					if (jenovaCompiler->GetCompilerModel() == CompilerModel::ClangCompiler) intelliSenseMode = "windows-clang-x64";
+					if (jenovaCompiler->GetCompilerModel() == CompilerModel::ClangLLVMCompiler) intelliSenseMode = "windows-clang-x64";
 					if (jenovaCompiler->GetCompilerModel() == CompilerModel::MinGWCompiler) intelliSenseMode = "windows-gcc-x64";
+					if (jenovaCompiler->GetCompilerModel() == CompilerModel::MinGWClangCompiler) intelliSenseMode = "windows-clang-x64";
 				#endif
 				#ifdef TARGET_PLATFORM_LINUX 
 					if (jenovaCompiler->GetCompilerModel() == CompilerModel::GNUCompiler) intelliSenseMode = "linux-gcc-x64";
@@ -3424,16 +3431,20 @@ namespace jenova
 				jenova_about_ui->add_child(description);
 
 				// Add Version Label
-				Label* version = memnew(Label);
+				RichTextLabel* version = memnew(RichTextLabel);
+				version->set_use_bbcode(true);
 				version->set_name("Version");
 				version->set_offset(Side::SIDE_LEFT, SCALED(327.0));
 				version->set_offset(Side::SIDE_TOP, SCALED(73.0));
 				version->set_offset(Side::SIDE_RIGHT, SCALED(724.0));
-				version->set_offset(Side::SIDE_BOTTOM, SCALED(106.0));
-				version->set_text("Version " + String(APP_VERSION) + " (" + String(APP_VERSION_POSTFIX) + "/" + 
-					String(APP_VERSION_NAME) + ") Build " + String(APP_VERSION_BUILD) + " \n" + __TIMESTAMP__);
-				version->set_autowrap_mode(TextServer::AUTOWRAP_WORD); 
-				version->add_theme_font_size_override("font_size", SCALED(14));
+				version->set_offset(Side::SIDE_BOTTOM, SCALED(120.0));
+				version->append_text(" Version " + String(APP_VERSION) + " (" + String(APP_VERSION_POSTFIX) + "/" + 
+					String(APP_VERSION_NAME) + ") Build " + String(APP_VERSION_BUILD) + " [font_size=20]\n [/font_size]" + "[font_size=13][color=#7c889c]" +
+					String(jenova::GetRuntimeCompilerName().c_str()) + "[/color] [color=#40c27f]/[/color] [color=#585875]" + __TIMESTAMP__ + "[/color][/font_size]");
+				version->set_autowrap_mode(TextServer::AUTOWRAP_OFF);
+				version->set_theme(nullptr);
+				version->add_theme_stylebox_override("normal", memnew(StyleBoxEmpty));
+				version->add_theme_font_size_override("font_size", SCALED(15));
 				jenova_about_ui->add_child(version);
 
 				// Add Author Label
@@ -3935,7 +3946,7 @@ namespace jenova
 				if (!singleton->InitializeRuntime())
 				{
 					jenova::Error("Jenova Runtime", "Fatal Error :: Jenova Runtime Failed to Initialize!");
-					quick_exit(jenova::ErrorCode::RUNTIME_INIT_FAILED);
+					jenova::ExitWithCode(jenova::ErrorCode::RUNTIME_INIT_FAILED);
 				}
 
 				// Verbose
@@ -3947,7 +3958,7 @@ namespace jenova
 				if (!singleton->StartRuntime())
 				{
 					jenova::Error("Jenova Runtime", "Fatal Error :: Jenova Runtime Failed to Start!");
-					quick_exit(jenova::ErrorCode::RUNTIME_START_FAILED);
+					jenova::ExitWithCode(jenova::ErrorCode::RUNTIME_START_FAILED);
 				}
 			}
 			static void deinit()
@@ -3959,7 +3970,7 @@ namespace jenova
 				if (!singleton->StopRuntime())
 				{
 					jenova::Error("Jenova Runtime", "Fatal Error :: Jenova Runtime Failed to Stop!");
-					quick_exit(jenova::ErrorCode::RUNTIME_DEINIT_FAILED);
+					jenova::ExitWithCode(jenova::ErrorCode::RUNTIME_DEINIT_FAILED);
 				}
 
 				// Release Singleton
@@ -4157,12 +4168,12 @@ namespace jenova
 				if (strcmp(buffer, "WRONG_CONFIGURATIONS") == 0) 
 				{
 					ERR_PRINT("[ Jenova Runtime ] ::> Corrupted Configuration Detected, Launch Aborted.");
-					quick_exit(0);
+					jenova::ExitWithCode(-1);
 				}
 				else if (strcmp(buffer, "BUILD_FAILED") == 0) 
 				{
 					ERR_PRINT("[ Jenova Runtime ] ::> Project Build Failed, Check Console for Build Errors.");
-					quick_exit(0);
+					jenova::ExitWithCode(-1);
 				}
 			}
 		}
@@ -4301,7 +4312,7 @@ namespace jenova
 				JenovaRuntime::deinit();
 
 				// Exit (Temp Fix for TLS Handling Failure)
-				if (jenova::GlobalSettings::SafeExitOnPluginUnload && !QUERY_ENGINE_MODE(Editor)) quick_exit(EXIT_SUCCESS);
+				if (jenova::GlobalSettings::SafeExitOnPluginUnload && !QUERY_ENGINE_MODE(Editor)) jenova::ExitWithCode(EXIT_SUCCESS);
 			}
 		}
 
@@ -4396,7 +4407,7 @@ namespace jenova
 							{
 								jenova_log("[Jenova Deployer] Jenova %s (%s) Visual Studio Build Tools Initialized.", APP_VERSION, APP_VERSION_POSTFIX);
 								jenova_log("[Jenova Deployer] Starting Build...");
-								quick_exit(EXIT_SUCCESS);
+								jenova::ExitWithCode(EXIT_SUCCESS);
 							}
 						}
 						if (command == "preprocess")
@@ -4420,7 +4431,7 @@ namespace jenova
 							catch (const std::exception&)
 							{
 								jenova_log("[Jenova Deployer] Error : Failed to Read or Parse Jenova Configuration Data.");
-								quick_exit(EXIT_FAILURE);
+								jenova::ExitWithCode(EXIT_FAILURE);
 							}
 
 							// Preprocess C++ Source
@@ -4429,7 +4440,7 @@ namespace jenova
 								if (scriptSourceCode.empty())
 								{
 									jenova_log("[Jenova Deployer] Error : Preprocessing Failed, Invalid Input Source.");
-									quick_exit(EXIT_FAILURE);
+									jenova::ExitWithCode(EXIT_FAILURE);
 								}
 
 								// Remove Encoding From File Content
@@ -4448,7 +4459,7 @@ namespace jenova
 									if (!jenova::WriteStdStringToFile(propFile, propertiesMetadata))
 									{
 										jenova_log("[Jenova Deployer] Error : Failed to Write Property Metadata On Disk.");
-										quick_exit(EXIT_FAILURE);
+										jenova::ExitWithCode(EXIT_FAILURE);
 									}
 								}
 
@@ -4492,7 +4503,7 @@ namespace jenova
 								if (!jenova::WriteStdStringToFile(outputPath, scriptSourceCode))
 								{
 									jenova_log("[Jenova Deployer] Error : Failed to Write Preprocessed Source On Disk.");
-									quick_exit(EXIT_FAILURE);
+									jenova::ExitWithCode(EXIT_FAILURE);
 								}
 
 								// Apply Reference File Encoding
@@ -4507,7 +4518,7 @@ namespace jenova
 
 							// All Good
 							jenova_log("[Jenova Deployer] C++ Source '%s' Preprocessed.", std::filesystem::path(inputFile).filename().string().c_str());
-							quick_exit(EXIT_SUCCESS);
+							jenova::ExitWithCode(EXIT_SUCCESS);
 						}
 						if (command == "create-internal-scripts")
 						{
@@ -4518,12 +4529,12 @@ namespace jenova
 							if (!jenova::CreateFileFromInternalSource(cacheDirectory + "JenovaModuleLoader.cpp", std::string(JENOVA_RESOURCE(JenovaModuleInitializerCPP))))
 							{
 								jenova_log("[Jenova Deployer] Error : %s", "Unable to Create Internal Script 'JenovaModuleLoader'");
-								quick_exit(EXIT_FAILURE);
+								jenova::ExitWithCode(EXIT_FAILURE);
 							};
 
 							// All Good
 							jenova_log("[Jenova Deployer] Internal Scripts Successfully Generated.");
-							quick_exit(EXIT_SUCCESS);
+							jenova::ExitWithCode(EXIT_SUCCESS);
 						}
 						if (command == "generate-watchdog")
 						{
@@ -4544,7 +4555,7 @@ namespace jenova
 									if (!std::filesystem::remove(visualStudioWatchdogFile))
 									{
 										jenova_log("[Jenova Deployer] Error : Could Not Remove Existing Watchdog Cache.");
-										quick_exit(EXIT_FAILURE);
+										jenova::ExitWithCode(EXIT_FAILURE);
 									}
 								}
 
@@ -4555,17 +4566,17 @@ namespace jenova
 								if (!jenova::WriteStdStringToFile(visualStudioWatchdogFile, jenovaConfiguration))
 								{
 									jenova_log("[Jenova Deployer] Error : Failed to Generate Visual Studio Watchdog Invoker.");
-									quick_exit(EXIT_FAILURE);
+									jenova::ExitWithCode(EXIT_FAILURE);
 								}
 
 								// All Good
 								jenova_log("[Jenova Deployer] Visual Studio Watchdog Invoked Successfully.");
-								quick_exit(EXIT_SUCCESS);
+								jenova::ExitWithCode(EXIT_SUCCESS);
 							}
 
 							// No Valid Command Executed
 							jenova_log("[Jenova Deployer] Error : Invalid Watchdog Invoker Detected.");
-							quick_exit(EXIT_FAILURE);
+							jenova::ExitWithCode(EXIT_FAILURE);
 						}
 						if (command == "finalize")
 						{
@@ -4576,7 +4587,7 @@ namespace jenova
 							if (compilerModel == "msvc")
 							{
 								jenova_log("[Jenova Deployer] Build Completed.");
-								quick_exit(EXIT_SUCCESS);
+								jenova::ExitWithCode(EXIT_SUCCESS);
 							}
 						}
 
@@ -4591,7 +4602,7 @@ namespace jenova
 							if (sourceContent.empty())
 							{
 								jenova_log("[Jenova Deployer] Error : Source File is Empty!");
-								quick_exit(EXIT_FAILURE);
+								jenova::ExitWithCode(EXIT_FAILURE);
 							}
 
 							// Find and Increase Build Number
@@ -4607,29 +4618,29 @@ namespace jenova
 								if (!jenova::WriteStdStringToFile(inputFile, sourceContent))
 								{
 									jenova_log("[Jenova Deployer] Error: Can't Write Source File!");
-									quick_exit(EXIT_FAILURE);
+									jenova::ExitWithCode(EXIT_FAILURE);
 								};
 
 								// Success
 								jenova_log("[Jenova Deployer] Build Number Incremented.");
-								quick_exit(EXIT_SUCCESS);
+								jenova::ExitWithCode(EXIT_SUCCESS);
 							}
 							else
 							{
 								jenova_log("[Jenova Deployer] Error: APP_VERSION_BUILD Not Found!");
-								quick_exit(EXIT_FAILURE);
+								jenova::ExitWithCode(EXIT_FAILURE);
 							}
 						}
 
 						// No Valid Command Executed
 						jenova_log("[Jenova Deployer] Error : Deployment Command Not Found.");
-						quick_exit(EXIT_FAILURE);
+						jenova::ExitWithCode(EXIT_FAILURE);
 					}
 					catch (const std::exception& error)
 					{
 						// Argument Parse Failed
 						jenova_log("[Jenova Deployer] Error : %s", error.what());
-						quick_exit(EXIT_FAILURE);
+						jenova::ExitWithCode(EXIT_FAILURE);
 					}
 				}
 			#endif
@@ -4700,7 +4711,7 @@ namespace jenova
 	{
 		// Windows Implementation
 		#ifdef TARGET_PLATFORM_WINDOWS
-			return GetProcAddress(HMODULE(moduleHandle), functionName);
+			return (void*)GetProcAddress(HMODULE(moduleHandle), functionName);
 		#endif
 
 		// Linux Implementation
@@ -4790,6 +4801,23 @@ namespace jenova
 
 		// Not Implemented
 		return malloc(memorySize);
+	}
+	void* RelocateMemory(void* dest, const void* src, std::size_t count)
+	{
+		char* pDest = static_cast<char*>(dest);
+		const char* pSrc = static_cast<const char*>(src);
+		if (pDest < pSrc)
+		{
+			std::copy(pSrc, pSrc + count, pDest);
+		}
+		else
+		{
+			for (std::size_t i = count; i > 0; --i)
+			{
+				pDest[i - 1] = pSrc[i - 1];
+			}
+		}
+		return dest;
 	}
 	bool FreeMemory(void* memoryPtr)
 	{
@@ -4908,6 +4936,73 @@ namespace jenova
 
 		// Not Implemented
 		return false;
+	}
+	int ExecuteCommand(const std::string& app, const std::string& command)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+			STARTUPINFOA si = { sizeof(STARTUPINFOA) };
+			PROCESS_INFORMATION pi = {};
+			DWORD exitCode;
+			SECURITY_ATTRIBUTES sa;
+			sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+			sa.bInheritHandle = TRUE;
+			sa.lpSecurityDescriptor = NULL;
+			HANDLE hStdOutRead, hStdOutWrite;
+			HANDLE hStdErrRead, hStdErrWrite;
+			if (!CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0)) return -1;
+			if (!CreatePipe(&hStdErrRead, &hStdErrWrite, &sa, 0)) return -1;
+			SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
+			SetHandleInformation(hStdErrRead, HANDLE_FLAG_INHERIT, 0);
+			si.dwFlags = STARTF_USESTDHANDLES;
+			si.hStdOutput = hStdOutWrite;
+			si.hStdError = hStdErrWrite;
+			char cmdBuffer[4096], buffer[4096];
+			strcpy_s(cmdBuffer, command.c_str());
+			if (!CreateProcessA(app.empty() ? NULL : app.c_str(), cmdBuffer, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) return -1;
+			CloseHandle(hStdOutWrite);
+			CloseHandle(hStdErrWrite);
+			DWORD bytesRead;
+			while (ReadFile(hStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0);
+			while (ReadFile(hStdErrRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0);
+			CloseHandle(hStdOutRead);
+			CloseHandle(hStdErrRead);
+			WaitForSingleObject(pi.hProcess, INFINITE);
+			GetExitCodeProcess(pi.hProcess, &exitCode);
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+			return exitCode;
+		#endif
+
+		// Linux Implementation	
+		#ifdef TARGET_PLATFORM_LINUX
+			return std::system(command.c_str());
+		#endif
+
+		// Not Implemented
+		return -1;
+	}
+	void ExitWithCode(int exitCode)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			// Windows MSVC
+			#if defined(_MSC_VER)
+				std::quick_exit(exitCode);
+			#endif
+
+			// Windows MinGW
+			#if defined(__MINGW32__)
+				ExitProcess(exitCode);
+			#endif
+
+		#endif
+
+		// Linux Implementation	
+		#ifdef TARGET_PLATFORM_LINUX
+			quick_exit(exitCode);
+		#endif
 	}
 	#pragma endregion
 
@@ -5808,24 +5903,18 @@ namespace jenova
 		// Windows Compilers
 		#ifdef TARGET_PLATFORM_WINDOWS
 
-			// Demangle MSVC Function
-			if (compilerModel == jenova::CompilerModel::MicrosoftCompiler)
+			// Demangle MSVC/Clang Function
+			if (compilerModel == jenova::CompilerModel::MicrosoftCompiler || compilerModel == jenova::CompilerModel::ClangLLVMCompiler)
 			{
 				char demangled_name[1024];
 				if (UnDecorateSymbolName(mangledName.c_str(), demangled_name, sizeof(demangled_name), UNDNAME_COMPLETE)) return std::string(demangled_name);
 			}
 
-			// Demangle Clang Function
-			if (compilerModel == jenova::CompilerModel::ClangCompiler)
+			// Demangle MinGW GCC/Clang Function
+			if (compilerModel == jenova::CompilerModel::MinGWCompiler || compilerModel == jenova::CompilerModel::MinGWClangCompiler)
 			{
-				char demangled_name[1024];
-				if (UnDecorateSymbolName(mangledName.c_str(), demangled_name, sizeof(demangled_name), UNDNAME_COMPLETE)) return std::string(demangled_name);
-			}
-
-			// Demangle MinGW Function
-			if (compilerModel == jenova::CompilerModel::MinGWCompiler)
-			{
-				// Not Implemented Yet
+				// Not Implemented Yet / Not Required Yet
+				return mangledName;
 			}
 
 		#endif
@@ -5933,8 +6022,8 @@ namespace jenova
 		// Windows Compilers
 		#ifdef TARGET_PLATFORM_WINDOWS
 
-			// Extract MSVC Property Type
-			if (compilerModel == jenova::CompilerModel::MicrosoftCompiler)
+			// Extract MSVC/Clang Property Type
+			if (compilerModel == jenova::CompilerModel::MicrosoftCompiler || compilerModel == jenova::CompilerModel::ClangLLVMCompiler)
 			{
 				std::regex propRegex(R"(^\s*([^\s]+)\s+\w+::\w+$)");
 				std::smatch match;
@@ -5942,17 +6031,8 @@ namespace jenova
 				return std::string();
 			}
 
-			// Extract Clang Property Type
-			if (compilerModel == jenova::CompilerModel::ClangCompiler)
-			{
-				std::regex propRegex(R"(^\s*([^\s]+)\s+\w+::\w+$)");
-				std::smatch match;
-				if (std::regex_search(propertySignature, match, propRegex)) return match[1];
-				return std::string();
-			}
-
-			// Extract MinGW Property Type
-			if (compilerModel == jenova::CompilerModel::MinGWCompiler)
+			// Extract MinGW GCC/Clang Property Type
+			if (compilerModel == jenova::CompilerModel::MinGWCompiler || compilerModel == jenova::CompilerModel::MinGWClangCompiler)
 			{
 				std::regex propRegex(R"(^\s*([^\s]+\s*\*?)\s*\w+::\w+$)");
 				std::smatch match;
@@ -5978,6 +6058,49 @@ namespace jenova
 		
 		// Unknown Compiler, Return Empty String
 		return std::string();
+	}
+	jenova::SymbolSignatureType DetectSymbolSignatureType(const std::string& symbolSignature, jenova::CompilerModel compilerModel)
+	{
+		// Windows Compilers
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			// Detect MSVC/Clang Symbol Signature Type
+			if (compilerModel == jenova::CompilerModel::MicrosoftCompiler || compilerModel == jenova::CompilerModel::ClangLLVMCompiler)
+			{
+				// Check IF Symbol Ends With 'Z' (Indicating A Function)
+				if (std::regex_match(symbolSignature, std::regex(".*@Z$"))) 
+				{
+					return SymbolSignatureType::FunctionSymbol;
+				}
+
+				// Check If Symbol Has '?__prop_' (Indicating A Property)
+				if (symbolSignature.find("?__prop_") != std::string::npos) 
+				{
+					return SymbolSignatureType::PropertySymbol;
+				}
+			}
+
+			// Detect MinGW GCC/Clang Symbol Signature Type
+			if (compilerModel == jenova::CompilerModel::MinGWCompiler || compilerModel == jenova::CompilerModel::MinGWClangCompiler)
+			{
+				// Not Required Yet
+			}
+
+		#endif
+
+		// Linux Compilers
+		#ifdef TARGET_PLATFORM_LINUX
+
+			// Detect  GCC/Clang Symbol Signature Type
+			if (compilerModel == jenova::CompilerModel::GNUCompiler || compilerModel == jenova::CompilerModel::ClangCompiler)
+			{
+				// Not Required Yet
+			}
+
+		#endif
+
+		// Unknown Symbol Signature
+		return jenova::SymbolSignatureType::UnknownSymbol;
 	}
 	bool LoadSymbolForModule(jenova::GenericHandle process, jenova::LongWord baseAddress, const std::string& pdbPath, size_t dllSize)
 	{
@@ -6369,7 +6492,7 @@ namespace jenova
 	bool WriteWideStdStringToFile(const std::wstring& filePath, const std::wstring& str)
 	{
 		// Create Stream
-		#ifdef TARGET_PLATFORM_WINDOWS 
+		#if defined(TARGET_PLATFORM_WINDOWS) && defined(_MSC_VER)
 			std::wofstream outFile(filePath, std::ios::out | std::ios::binary);
 		#else
 			std::wofstream outFile(jenova::Format("%S", filePath.c_str()).c_str(), std::ios::out | std::ios::binary);
@@ -6390,7 +6513,7 @@ namespace jenova
 	std::wstring ReadWideStdStringFromFile(const std::wstring& filePath)
 	{
 		// Create Stream
-		#ifdef TARGET_PLATFORM_WINDOWS 
+		#ifdef defined(TARGET_PLATFORM_WINDOWS) && defined(_MSC_VER)
 			std::wifstream inFile(filePath);
 		#else
 			std::wifstream inFile(jenova::Format("%S", filePath.c_str()).c_str());
@@ -6895,7 +7018,15 @@ namespace jenova
 			{
 				filteredCompilerPackages.push_back(compilerPackage);
 			}
+			if (compilerModel == jenova::CompilerModel::ClangLLVMCompiler && compilerPackage.pkgDestination.contains("JenovaMSVCCompiler"))
+			{
+				filteredCompilerPackages.push_back(compilerPackage);
+			}
 			if (compilerModel == jenova::CompilerModel::MinGWCompiler && compilerPackage.pkgDestination.contains("JenovaMinGWCompiler"))
+			{
+				filteredCompilerPackages.push_back(compilerPackage);
+			}
+			if (compilerModel == jenova::CompilerModel::MinGWClangCompiler && compilerPackage.pkgDestination.contains("JenovaMinGWCompiler"))
 			{
 				filteredCompilerPackages.push_back(compilerPackage);
 			}
@@ -8692,44 +8823,74 @@ namespace jenova
 		// Unsupported Platform
 		return false;
 	}
+	std::string GetVisualStudioInstancesMetadata(std::string arguments)
+	{
+		// Windows Implementation
+		#ifdef TARGET_PLATFORM_WINDOWS
+
+			// Load VSWhere Internal Module
+			jenova::ModuleHandle vsWhereModule = nullptr;
+			if (vsWhereModule == nullptr)
+			{
+				vsWhereModule = JenovaInterpreter::LoadShellModule(LIB_VSWHERE_WIN64_SHELL, sizeof(LIB_VSWHERE_WIN64_SHELL));
+				if (!vsWhereModule) return "{}";
+			}
+			
+			// Call VSWhere Internal Function
+			if (vsWhereModule)
+			{
+				typedef const char* (*InternalGetVisualStudioInstancesMetadata_t)(const char*);
+				auto getVSInstanceMetadata = (InternalGetVisualStudioInstancesMetadata_t)GetProcAddress(HMODULE(vsWhereModule), "GetVisualStudioInstancesMetadata");
+				if (!getVSInstanceMetadata) return "{}";
+				return std::string(getVSInstanceMetadata(arguments.c_str()));
+			}
+
+		#endif
+
+		// Only Supported On Windows
+		return "{}";
+	}
+	std::string GetRuntimeCompilerName()
+	{
+		#if defined(__clang__) && defined(_MSC_VER)
+			std::string vsVersion = (_MSC_VER >= 1930) ? "2022" :
+				(_MSC_VER >= 1920) ? "2019" :
+				(_MSC_VER >= 1910) ? "2017" : "Unknown";
+			return "msvc-" + vsVersion + "-" + std::to_string(_MSVC_STL_VERSION) + "-llvm";
+		#elif defined(_MSC_VER)
+			std::string vsVersion = (_MSC_VER >= 1930) ? "2022" :
+				(_MSC_VER >= 1920) ? "2019" :
+				(_MSC_VER >= 1910) ? "2017" : "Unknown";
+			return "msvc-" + vsVersion + "-" + std::to_string(_MSVC_STL_VERSION);
+		#elif defined(__clang__)
+			return "llvm-clang-" + std::to_string(__clang_major__) + "." + std::to_string(__clang_minor__) + "." + std::to_string(__clang_patchlevel__);
+		#elif defined(__MINGW32__) || defined(__MINGW64__)
+			return "mingw-gcc" + std::to_string(__GNUC__) + "." + std::to_string(__GNUC_MINOR__) + "." + std::to_string(__GNUC_PATCHLEVEL__);
+		#elif defined(__GNUC__)
+			return "gnu-gcc" + std::to_string(__GNUC__) + "." + std::to_string(__GNUC_MINOR__) + "." + std::to_string(__GNUC_PATCHLEVEL__);
+		#else
+			return "Unknown";
+		#endif
+	}
 	#pragma endregion
 	
-	// Core Reimplementation
-	void* CoreMemoryMove(void* dest, const void* src, std::size_t count)
-	{
-		char* pDest = static_cast<char*>(dest);
-		const char* pSrc = static_cast<const char*>(src);
-		if (pDest < pSrc)
-		{
-			std::copy(pSrc, pSrc + count, pDest);
-		}
-		else
-		{
-			for (std::size_t i = count; i > 0; --i)
-			{
-				pDest[i - 1] = pSrc[i - 1];
-			}
-		}
-		return dest;
-	}
-
 	// Crash Handlers
 	#ifdef TARGET_PLATFORM_WINDOWS
 	bool GenerateMiniMemoryDump(EXCEPTION_POINTERS* exceptionInfo)
 	{
 		// Create a directory named "JenovaCrashData" in the Windows temp directory
 		wchar_t tempPath[MAX_PATH];
-		GetTempPath(MAX_PATH, tempPath);
+		GetTempPathW(MAX_PATH, tempPath);
 		std::wstring crashDir = std::wstring(tempPath) + L"JenovaCrashData\\";
-		CreateDirectory(crashDir.c_str(), NULL);
+		CreateDirectoryW(crashDir.c_str(), NULL);
 
 		// Generate a random hash ID for the crash dump file
 		std::string crashHash = GenerateRandomHashString();
 		wchar_t dumpFileName[MAX_PATH];
-		wsprintf(dumpFileName, L"%sJenovaCore_Crash_Dump_%hs.dmp", crashDir.c_str(), crashHash.c_str());
+		wsprintfW(dumpFileName, L"%sJenovaCore_Crash_Dump_%hs.dmp", crashDir.c_str(), crashHash.c_str());
 
 		// Open the dump file for writing
-		HANDLE hDumpFile = CreateFile(dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		HANDLE hDumpFile = CreateFileW(dumpFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hDumpFile != INVALID_HANDLE_VALUE)
 		{
 			// Set up the MiniDumpWriteDump options

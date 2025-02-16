@@ -66,12 +66,12 @@ bool GDExtensionExporter::Export()
 
 			// Create Section Data
 			struct JenovaModuleEntity { size_t originalModuleSize, compressedModuleSize; } jenovaModuleEntity { jenovaModuleBuffer.size(), compressedData.size() };
-			jenova::MemoryBuffer sectionData(sizeof JenovaModuleEntity + compressedData.size());
-			memcpy(sectionData.data(), &jenovaModuleEntity, sizeof JenovaModuleEntity);
-			memcpy(&sectionData.data()[sizeof JenovaModuleEntity], compressedData.data(), compressedData.size());
+			jenova::MemoryBuffer sectionData(sizeof(JenovaModuleEntity) + compressedData.size());
+			memcpy(sectionData.data(), &jenovaModuleEntity, sizeof(JenovaModuleEntity));
+			memcpy(&sectionData.data()[sizeof(JenovaModuleEntity)], compressedData.data(), compressedData.size());
 
 			// Create Win64 Extension PE Clone
-			jenova::MemoryBuffer extensionHostWin64(sizeof jenova::gdextension::hosts::GDEXTENSION_HOST_WIN64);
+			jenova::MemoryBuffer extensionHostWin64(sizeof(jenova::gdextension::hosts::GDEXTENSION_HOST_WIN64));
 			memcpy(extensionHostWin64.data(), jenova::gdextension::hosts::GDEXTENSION_HOST_WIN64, extensionHostWin64.size());
 
 			// x64 PE Editing Functions

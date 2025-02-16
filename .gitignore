@@ -368,3 +368,5 @@ FodyWeavers.xsd
 /Win64
 /Linux64
 /Libs
+/Dependencies
+/Toolchain

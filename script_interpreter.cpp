@@ -15,8 +15,8 @@
 // Jenova SDK
 #include "Jenova.hpp"
 
-// Memory Module
-#include "Dependencies/Jenova.Loader.h"
+// Jenova Loader
+#include "Jenova.Loader.h"
 
 // AsmJIT
 #define ASMJIT_STATIC
@@ -24,13 +24,6 @@
 
 // Tiny C Compiler
 #include <TinyCC/libtcc.h>
-
-// DWARF Parser [Linux Only]
-#ifdef TARGET_PLATFORM_LINUX
-#define LIBDWARF_STATIC
-#include <Parsers/dwarf.h>
-#include <Parsers/libdwarf.h>
-#endif
 
 // Helper Macros
 #define RESOLVE_PARAMETER(index) JenovaInterpreter::GetResolvedParameterPointer(objectPtr, functionParameters[index], functionParametersType[index + parameterOffset])
@@ -44,7 +37,7 @@ void JenovaInterpreter::BootInterpreter()
         if (!JenovaInterpreter::InitializeInterpreter())
         {
             jenova::Warning("Jenova Interpreter", "Jenova Interpreter Failed to Initialize!");
-            quick_exit(jenova::ErrorCode::INTERPRETER_INIT_FAILED);
+            jenova::ExitWithCode(jenova::ErrorCode::INTERPRETER_INIT_FAILED);
         }
     }
 
@@ -593,7 +586,7 @@ Variant JenovaInterpreter::CallFunction(const godot::Object* objectPtr, const st
         tcc_set_options(tcc, "-nostdlib");
 
         // Add Symbols
-        tcc_add_symbol(tcc, "memmove", reinterpret_cast<const void*>(&jenova::CoreMemoryMove));
+        tcc_add_symbol(tcc, "memmove", reinterpret_cast<const void*>(&jenova::RelocateMemory));
         tcc_add_symbol(tcc, "MakeVariant", reinterpret_cast<const void*>(&jenova::MakeVariantFromReturnType));
 
         // Compile Generated Code
@@ -669,24 +662,18 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
     #ifdef TARGET_PLATFORM_WINDOWS
 
     // Microsoft Visual C++ Map Parser
-    if (buildResult.compilerModel == jenova::CompilerModel::MicrosoftCompiler)
+    if (buildResult.compilerModel == jenova::CompilerModel::MicrosoftCompiler || buildResult.compilerModel == jenova::CompilerModel::ClangLLVMCompiler)
     {
         try
         {
             // Create JSON Serializer
             nlohmann::json serializer;
 
-            // Variables to store __ImageBase
+            // Variables to Store __ImageBase
             uint64_t imageBaseAddress = 0;
 
             // Serialize Script Modules
             for (const auto& scriptModule : scriptModules) serializer["Scripts"][AS_STD_STRING(scriptModule.scriptUID)] = nlohmann::json::object();
-
-            // Regex patterns
-            std::regex imageBasePattern(R"(^\s*\d+:\d+\s+__ImageBase\s+([0-9A-Fa-f]{16}))");
-            std::regex jnvNameOffsetFuncPattern(R"(^\s*\d+:(\w+)\s+\?(.*?)@JNV_([a-f0-9]+)@@.*\s+([0-9A-Fa-f]{16})\s+f\s+.*$)");
-            std::regex jnvNameOffsetPropPattern(R"(^\s*\d+:(\w+)\s+\?(.*?)@JNV_([a-f0-9]+)@@.*\s+([0-9A-Fa-f]{16})\s+\s+.*$)");
-            std::regex jnvMangledNamePattern(R"(\?\w+@JNV_\w+@@\S+)");
 
             // Open Map File
             if (!std::filesystem::exists(mapFilePath))
@@ -702,170 +689,538 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
             }
 
             // Parse Map File And Generate Metadata
-            std::string mapFileLine; std::smatch match;
-            while (std::getline(mapfileReader, mapFileLine))
+            if (buildResult.compilerModel == jenova::CompilerModel::MicrosoftCompiler)
             {
-                // Extract __ImageBase
-                if (std::regex_search(mapFileLine, match, imageBasePattern))
+                // Regex Patterns
+                std::regex imageBasePattern(R"(^\s*\d+:\d+\s+__ImageBase\s+([0-9A-Fa-f]{16}))");
+                std::regex jnvNameOffsetFuncPattern(R"(^\s*\d+:(\w+)\s+\?(.*?)@JNV_([a-f0-9]+)@@.*\s+([0-9A-Fa-f]{16})\s+f\s+.*$)");
+                std::regex jnvNameOffsetPropPattern(R"(^\s*\d+:(\w+)\s+\?(.*?)@JNV_([a-f0-9]+)@@.*\s+([0-9A-Fa-f]{16})\s+\s+.*$)");
+                std::regex jnvMangledNamePattern(R"(\?\w+@JNV_\w+@@\S+)");
+
+                // Process Parsing
+                std::string mapFileLine; std::smatch match;
+                while (std::getline(mapfileReader, mapFileLine))
                 {
-                    imageBaseAddress = std::stoull(match[1], nullptr, 16);
-                    serializer["ImageBaseAddress"] = imageBaseAddress;
-                    continue;  // Skip to the next line after extracting __ImageBase
-                }
-
-                // Parse Functions Name and Offsets
-                if (std::regex_search(mapFileLine, match, jnvNameOffsetFuncPattern) && imageBaseAddress)
-                {
-                    // Extract Parsed Data
-                    std::string functionName = match[2];
-                    std::string scriptUID = match[3];
-                    std::string functionOffsetStr = match[4];
-
-                    // Ignore Classed Functions
-                    if (functionName.find("@") != std::string::npos) continue;
-
-                    // Calculate Offset
-                    uint64_t functionOffset = std::stoull(functionOffsetStr, nullptr, 16);
-                    uint64_t actualOffset = functionOffset - imageBaseAddress;
-
-                    // Check for duplicate function names under the same script UID
-                    if (serializer["Scripts"].contains(scriptUID) && serializer["Scripts"][scriptUID].contains(functionName))
+                    // Extract __ImageBase
+                    if (std::regex_search(mapFileLine, match, imageBasePattern))
                     {
-                        jenova::Error("Jenova Interpreter", "Duplicate Function Detected : [%s] Under Script UID: [%s]", functionName.c_str(), scriptUID.c_str());
-                        return jenova::SerializedData();
+                        imageBaseAddress = std::stoull(match[1], nullptr, 16);
+                        serializer["ImageBaseAddress"] = imageBaseAddress;
+                        continue;  // Skip to the next line after extracting __ImageBase
                     }
 
-                    // Create Function Metadata Serializer
-                    nlohmann::json funcSerializer;
-                    funcSerializer["Offset"] = actualOffset;
-
-                    // Parse Functions Mangled Name And Extract Types
-                    if (std::regex_search(mapFileLine, match, jnvMangledNamePattern) && imageBaseAddress)
+                    // Parse Functions Name and Offsets
+                    if (std::regex_search(mapFileLine, match, jnvNameOffsetFuncPattern) && imageBaseAddress)
                     {
-                        // Extract Parsed Data And Demangle
-                        std::string mangledFunctionSignature = match[0];
-                        std::string demangledFunctionSignature = jenova::GetDemangledFunctionSignature(mangledFunctionSignature, buildResult.compilerModel);
-                        if (demangledFunctionSignature.empty())
+                        // Extract Parsed Data
+                        std::string functionName = match[2];
+                        std::string scriptUID = match[3];
+                        std::string functionOffsetStr = match[4];
+
+                        // Ignore Classed Functions
+                        if (functionName.find("@") != std::string::npos) continue;
+
+                        // Calculate Offset
+                        uint64_t functionOffset = std::stoull(functionOffsetStr, nullptr, 16);
+                        uint64_t actualOffset = functionOffset - imageBaseAddress;
+
+                        // Check for duplicate function names under the same script UID
+                        if (serializer["Scripts"].contains(scriptUID) && serializer["Scripts"][scriptUID].contains(functionName))
                         {
-                            jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Demangle Function [%s] [%s]", 
-                                mangledFunctionSignature.c_str(), demangledFunctionSignature.c_str());
+                            jenova::Error("Jenova Interpreter", "Duplicate Function Detected : [%s] Under Script UID: [%s]", functionName.c_str(), scriptUID.c_str());
                             return jenova::SerializedData();
                         }
 
-                        // Clean Function Signature
-                        std::string cleanedFunctionSignature = jenova::CleanFunctionAndPropertySignature(demangledFunctionSignature, buildResult.compilerModel);
+                        // Create Function Metadata Serializer
+                        nlohmann::json funcSerializer;
+                        funcSerializer["Offset"] = actualOffset;
+
+                        // Parse Functions Mangled Name And Extract Types
+                        if (std::regex_search(mapFileLine, match, jnvMangledNamePattern) && imageBaseAddress)
+                        {
+                            // Extract Parsed Data And Demangle
+                            std::string mangledFunctionSignature = match[0];
+                            std::string demangledFunctionSignature = jenova::GetDemangledFunctionSignature(mangledFunctionSignature, buildResult.compilerModel);
+                            if (demangledFunctionSignature.empty())
+                            {
+                                jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Demangle Function [%s] [%s]", 
+                                    mangledFunctionSignature.c_str(), demangledFunctionSignature.c_str());
+                                return jenova::SerializedData();
+                            }
+
+                            // Clean Function Signature
+                            std::string cleanedFunctionSignature = jenova::CleanFunctionAndPropertySignature(demangledFunctionSignature, buildResult.compilerModel);
                     
-                        // Exctract Return Type
-                        std::string returnType = jenova::ExtractReturnTypeFromSignature(cleanedFunctionSignature, buildResult.compilerModel);
-                        if (returnType.empty())
-                        {
-                            jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Extract Function Return Type [%s] [%s]",
-                                mangledFunctionSignature.c_str(), demangledFunctionSignature.c_str());
-                            return jenova::SerializedData();
-                        }
-                        funcSerializer["ReturnType"] = returnType;
-                        jenova::VerboseByID(__LINE__, "Extracted Return Type [%s]", returnType.c_str());
+                            // Exctract Return Type
+                            std::string returnType = jenova::ExtractReturnTypeFromSignature(cleanedFunctionSignature, buildResult.compilerModel);
+                            if (returnType.empty())
+                            {
+                                jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Extract Function Return Type [%s] [%s]",
+                                    mangledFunctionSignature.c_str(), demangledFunctionSignature.c_str());
+                                return jenova::SerializedData();
+                            }
+                            funcSerializer["ReturnType"] = returnType;
+                            jenova::VerboseByID(__LINE__, "Extracted Return Type [%s]", returnType.c_str());
 
-                        // Extract Parameter Types
-                        jenova::ParameterTypeList parameterTypes = jenova::ExtractParameterTypesFromSignature(cleanedFunctionSignature, buildResult.compilerModel);
-                        funcSerializer["ParamCount"] = parameterTypes.size();
-                        jenova::VerboseByID(__LINE__, "Extracted Parameters Count [%d]", parameterTypes.size());
-                        for (size_t i = 0; i < parameterTypes.size(); ++i)
+                            // Extract Parameter Types
+                            jenova::ParameterTypeList parameterTypes = jenova::ExtractParameterTypesFromSignature(cleanedFunctionSignature, buildResult.compilerModel);
+                            funcSerializer["ParamCount"] = parameterTypes.size();
+                            jenova::VerboseByID(__LINE__, "Extracted Parameters Count [%d]", parameterTypes.size());
+                            for (size_t i = 0; i < parameterTypes.size(); ++i)
+                            {
+                                funcSerializer[jenova::Format("Param%02d", i + 1)] = parameterTypes[i];
+                                jenova::VerboseByID(__LINE__, "Extracted Parameter Type [%s]", parameterTypes[i].c_str());
+                            }
+
+                            // Verbose
+                            jenova::VerboseByID(__LINE__, "[Map-Parser] Demangled Function Name: [%s], UID: [%s]", demangledFunctionSignature.c_str(), scriptUID.c_str());
+                        }
+
+                        // Store function name and metadata in the serializer
+                        if (serializer["Scripts"].contains(scriptUID))
                         {
-                            funcSerializer[jenova::Format("Param%02d", i + 1)] = parameterTypes[i];
-                            jenova::VerboseByID(__LINE__, "Extracted Parameter Type [%s]", parameterTypes[i].c_str());
+                            serializer["Scripts"][scriptUID]["methods"][functionName] = funcSerializer;
+                        }
+                        else 
+                        {
+                            serializer["Scripts"][scriptUID]["methods"] = { { functionName, funcSerializer } };
                         }
 
                         // Verbose
-                        jenova::VerboseByID(__LINE__, "[Map-Parser] Demangled Function Name: [%s], UID: [%s]", demangledFunctionSignature.c_str(), scriptUID.c_str());
+                        jenova::VerboseByID(__LINE__, "[Map-Parser] Function Name & Offset Extracted > Name: %s, UID: %s, Offset: %llx", functionName.c_str(), scriptUID.c_str(), actualOffset);
                     }
 
-                    // Store function name and metadata in the serializer
-                    if (serializer["Scripts"].contains(scriptUID))
+                    // Parse Properties Name and Offsets
+                    if (std::regex_search(mapFileLine, match, jnvNameOffsetPropPattern) && imageBaseAddress)
                     {
-                        serializer["Scripts"][scriptUID]["methods"][functionName] = funcSerializer;
-                    }
-                    else 
-                    {
-                        serializer["Scripts"][scriptUID]["methods"] = { { functionName, funcSerializer } };
-                    }
+                        // Extract Parsed Data
+                        std::string propertyName = match[2];
+                        std::string scriptUID = match[3];
+                        std::string propertyOffsetStr = match[4];
 
-                    // Verbose
-                    jenova::VerboseByID(__LINE__, "[Map-Parser] Function Name & Offset Extracted > Name: %s, UID: %s, Offset: %llx", functionName.c_str(), scriptUID.c_str(), actualOffset);
+                        // Clean Property Name
+                        jenova::ReplaceAllMatchesWithString(propertyName, "__prop_", "");
+
+                        // Ignore Classed Properties
+                        if (propertyName.find("@") != std::string::npos) continue;
+
+                        // Calculate Offset
+                        uint64_t propertyOffset = std::stoull(propertyOffsetStr, nullptr, 16);
+                        uint64_t actualOffset = propertyOffset - imageBaseAddress;
+
+                        // Check for duplicate property names under the same script UID
+                        if (serializer["Scripts"].contains(scriptUID) && serializer["Scripts"][scriptUID].contains(propertyName))
+                        {
+                            jenova::Error("Jenova Interpreter", "Duplicate Property Detected : [%s] Under Script UID: [%s]", propertyName.c_str(), scriptUID.c_str());
+                            return jenova::SerializedData();
+                        }
+
+                        // Create Property Metadata Serializer
+                        nlohmann::json propSerializer;
+                        propSerializer["Offset"] = actualOffset;
+
+                        // Parse Properties Mangled Name And Extract Type
+                        if (std::regex_search(mapFileLine, match, jnvMangledNamePattern) && imageBaseAddress)
+                        {
+                            // Extract Parsed Data And Demangle
+                            std::string mangledPropertySignature = match[0];
+                            std::string demangledPropertySignature = jenova::GetDemangledFunctionSignature(mangledPropertySignature, buildResult.compilerModel);
+                            if (demangledPropertySignature.empty())
+                            {
+                                jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Demangle Property [%s] [%s]",
+                                    mangledPropertySignature.c_str(), demangledPropertySignature.c_str());
+                                return jenova::SerializedData();
+                            }
+
+                            // Clean Property Signature
+                            std::string cleanedPropertySignature = jenova::CleanFunctionAndPropertySignature(demangledPropertySignature, buildResult.compilerModel);
+
+                            // Extract Type
+                            std::string propertyType = jenova::ExtractPropertyTypeFromSignature(cleanedPropertySignature, buildResult.compilerModel);
+                            if (propertyType.empty())
+                            {
+                                jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Extract Property Type [%s] [%s]",
+                                    mangledPropertySignature.c_str(), demangledPropertySignature.c_str());
+                                return jenova::SerializedData();
+                            }
+                            propSerializer["Type"] = propertyType;
+                            jenova::VerboseByID(__LINE__, "Extracted Property Type [%s]", propertyType.c_str());
+
+                            // Verbose
+                            jenova::VerboseByID(__LINE__, "[Map-Parser] Demangled Property Name: [%s], UID: [%s]", demangledPropertySignature.c_str(), scriptUID.c_str());
+                        }
+
+                        // Store property name and metadata in the serializer
+                        if (serializer["Scripts"].contains(scriptUID))
+                        {
+                            serializer["Scripts"][scriptUID]["properties"][propertyName] = propSerializer;
+                        }
+                        else
+                        {
+                            serializer["Scripts"][scriptUID]["properties"] = { { propertyName, propSerializer } };
+                        }
+
+                        // Verbose
+                        jenova::VerboseByID(__LINE__, "[Map-Parser] Property Name & Offset Extracted > Name: %s, UID: %s, Offset: %llx", propertyName.c_str(), scriptUID.c_str(), actualOffset);
+                    }
                 }
+            }
+            if (buildResult.compilerModel == jenova::CompilerModel::ClangLLVMCompiler)
+            {
+                // Regex Patterns
+                std::regex imageBasePattern(R"(^\s*\d+:\d+\s+__ImageBase\s+([0-9A-Fa-f]{16}))");
+                std::regex jnvSymbolPattern(R"(^\s*\d+:(\w+)\s+\?(.*?)@JNV_([a-f0-9]+)@@.*\s+([0-9A-Fa-f]{16})\s+\s+.*$)");
+                std::regex jnvMangledNamePattern(R"(\?\w+@JNV_\w+@@\S+)");
 
-                // Parse Properties Name and Offsets
-                if (std::regex_search(mapFileLine, match, jnvNameOffsetPropPattern) && imageBaseAddress)
+                // Process Parsing
+                std::string mapFileLine; std::smatch match;
+                while (std::getline(mapfileReader, mapFileLine))
                 {
-                    // Extract Parsed Data
-                    std::string propertyName = match[2];
-                    std::string scriptUID = match[3];
-                    std::string propertyOffsetStr = match[4];
+                    // Extract __ImageBase
+                    if (std::regex_search(mapFileLine, match, imageBasePattern))
+                    {
+                        imageBaseAddress = std::stoull(match[1], nullptr, 16);
+                        serializer["ImageBaseAddress"] = imageBaseAddress;
+                        continue;  // Skip to the next line after extracting __ImageBase
+                    }
+
+                    // Parse Jenova Symbols
+                    if (std::regex_search(mapFileLine, match, jnvSymbolPattern) && imageBaseAddress)
+                    {
+                        // Detect Property vs Function
+                        if (match[2].str().find("__prop_") != std::string::npos)
+                        {
+                            // Extract Parsed Data
+                            std::string propertyName = match[2];
+                            std::string scriptUID = match[3];
+                            std::string propertyOffsetStr = match[4];
+
+                            // Clean Property Name
+                            jenova::ReplaceAllMatchesWithString(propertyName, "__prop_", "");
+
+                            // Ignore Classed Properties
+                            if (propertyName.find("@") != std::string::npos) continue;
+
+                            // Calculate Offset
+                            uint64_t propertyOffset = std::stoull(propertyOffsetStr, nullptr, 16);
+                            uint64_t actualOffset = propertyOffset - imageBaseAddress;
+
+                            // Check for duplicate property names under the same script UID
+                            if (serializer["Scripts"].contains(scriptUID) && serializer["Scripts"][scriptUID].contains(propertyName))
+                            {
+                                jenova::Error("Jenova Interpreter", "Duplicate Property Detected : [%s] Under Script UID: [%s]", propertyName.c_str(), scriptUID.c_str());
+                                return jenova::SerializedData();
+                            }
+
+                            // Create Property Metadata Serializer
+                            nlohmann::json propSerializer;
+                            propSerializer["Offset"] = actualOffset;
+
+                            // Parse Properties Mangled Name And Extract Type
+                            if (std::regex_search(mapFileLine, match, jnvMangledNamePattern) && imageBaseAddress)
+                            {
+                                // Extract Parsed Data And Demangle
+                                std::string mangledPropertySignature = match[0];
+                                std::string demangledPropertySignature = jenova::GetDemangledFunctionSignature(mangledPropertySignature, buildResult.compilerModel);
+                                if (demangledPropertySignature.empty())
+                                {
+                                    jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Demangle Property [%s] [%s]",
+                                        mangledPropertySignature.c_str(), demangledPropertySignature.c_str());
+                                    return jenova::SerializedData();
+                                }
+
+                                // Clean Property Signature
+                                std::string cleanedPropertySignature = jenova::CleanFunctionAndPropertySignature(demangledPropertySignature, buildResult.compilerModel);
+
+                                // Extract Type
+                                std::string propertyType = jenova::ExtractPropertyTypeFromSignature(cleanedPropertySignature, buildResult.compilerModel);
+                                if (propertyType.empty())
+                                {
+                                    jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Extract Property Type [%s] [%s]",
+                                        mangledPropertySignature.c_str(), demangledPropertySignature.c_str());
+                                    return jenova::SerializedData();
+                                }
+                                propSerializer["Type"] = propertyType;
+                                jenova::VerboseByID(__LINE__, "Extracted Property Type [%s]", propertyType.c_str());
+
+                                // Verbose
+                                jenova::VerboseByID(__LINE__, "[Map-Parser] Demangled Property Name: [%s], UID: [%s]", demangledPropertySignature.c_str(), scriptUID.c_str());
+                            }
+
+                            // Store property name and metadata in the serializer
+                            if (serializer["Scripts"].contains(scriptUID))
+                            {
+                                serializer["Scripts"][scriptUID]["properties"][propertyName] = propSerializer;
+                            }
+                            else
+                            {
+                                serializer["Scripts"][scriptUID]["properties"] = { { propertyName, propSerializer } };
+                            }
+
+                            // Verbose
+                            jenova::VerboseByID(__LINE__, "[Map-Parser] Property Name & Offset Extracted > Name: %s, UID: %s, Offset: %llx", propertyName.c_str(), scriptUID.c_str(), actualOffset);
+                        }
+                        else
+                        {
+                            // Extract Parsed Data
+                            std::string functionName = match[2];
+                            std::string scriptUID = match[3];
+                            std::string functionOffsetStr = match[4];
+
+                            // Ignore Classed Functions
+                            if (functionName.find("@") != std::string::npos) continue;
+
+                            // Calculate Offset
+                            uint64_t functionOffset = std::stoull(functionOffsetStr, nullptr, 16);
+                            uint64_t actualOffset = functionOffset - imageBaseAddress;
+
+                            // Check for duplicate function names under the same script UID
+                            if (serializer["Scripts"].contains(scriptUID) && serializer["Scripts"][scriptUID].contains(functionName))
+                            {
+                                jenova::Error("Jenova Interpreter", "Duplicate Function Detected : [%s] Under Script UID: [%s]", functionName.c_str(), scriptUID.c_str());
+                                return jenova::SerializedData();
+                            }
+
+                            // Create Function Metadata Serializer
+                            nlohmann::json funcSerializer;
+                            funcSerializer["Offset"] = actualOffset;
+
+                            // Parse Functions Mangled Name And Extract Types
+                            if (std::regex_search(mapFileLine, match, jnvMangledNamePattern) && imageBaseAddress)
+                            {
+                                // Extract Parsed Data And Demangle
+                                std::string mangledFunctionSignature = match[0];
+                                std::string demangledFunctionSignature = jenova::GetDemangledFunctionSignature(mangledFunctionSignature, buildResult.compilerModel);
+                                if (demangledFunctionSignature.empty())
+                                {
+                                    jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Demangle Function [%s] [%s]",
+                                        mangledFunctionSignature.c_str(), demangledFunctionSignature.c_str());
+                                    return jenova::SerializedData();
+                                }
+
+                                // Double-Check If Extracted Symbol is Function
+                                if (jenova::DetectSymbolSignatureType(mangledFunctionSignature, buildResult.compilerModel) != jenova::SymbolSignatureType::FunctionSymbol) continue;
+
+                                // Clean Function Signature
+                                std::string cleanedFunctionSignature = jenova::CleanFunctionAndPropertySignature(demangledFunctionSignature, buildResult.compilerModel);
+
+                                // Exctract Return Type
+                                std::string returnType = jenova::ExtractReturnTypeFromSignature(cleanedFunctionSignature, buildResult.compilerModel);
+                                if (returnType.empty())
+                                {
+                                    jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Extract Function Return Type [%s] [%s]",
+                                        mangledFunctionSignature.c_str(), demangledFunctionSignature.c_str());
+                                    return jenova::SerializedData();
+                                }
+                                funcSerializer["ReturnType"] = returnType;
+                                jenova::VerboseByID(__LINE__, "Extracted Return Type [%s]", returnType.c_str());
+
+                                // Extract Parameter Types
+                                jenova::ParameterTypeList parameterTypes = jenova::ExtractParameterTypesFromSignature(cleanedFunctionSignature, buildResult.compilerModel);
+                                funcSerializer["ParamCount"] = parameterTypes.size();
+                                jenova::VerboseByID(__LINE__, "Extracted Parameters Count [%d]", parameterTypes.size());
+                                for (size_t i = 0; i < parameterTypes.size(); ++i)
+                                {
+                                    funcSerializer[jenova::Format("Param%02d", i + 1)] = parameterTypes[i];
+                                    jenova::VerboseByID(__LINE__, "Extracted Parameter Type [%s]", parameterTypes[i].c_str());
+                                }
+
+                                // Verbose
+                                jenova::VerboseByID(__LINE__, "[Map-Parser] Demangled Function Name: [%s], UID: [%s]", demangledFunctionSignature.c_str(), scriptUID.c_str());
+                            }
+
+                            // Store function name and metadata in the serializer
+                            if (serializer["Scripts"].contains(scriptUID))
+                            {
+                                serializer["Scripts"][scriptUID]["methods"][functionName] = funcSerializer;
+                            }
+                            else
+                            {
+                                serializer["Scripts"][scriptUID]["methods"] = { { functionName, funcSerializer } };
+                            }
+
+                            // Verbose
+                            jenova::VerboseByID(__LINE__, "[Map-Parser] Function Name & Offset Extracted > Name: %s, UID: %s, Offset: %llx", functionName.c_str(), scriptUID.c_str(), actualOffset);
+                        }
+                    }
+                }
+            }
+
+            // Add Properties Definitions
+            for (const auto& scriptModule : scriptModules)
+            {
+                if (scriptModule.scriptPropertiesFile.is_empty()) continue;
+                if (std::filesystem::exists(AS_STD_STRING(scriptModule.scriptPropertiesFile)))
+                {
+                    std::string propDatabase = jenova::ReadStdStringFromFile(AS_STD_STRING(scriptModule.scriptPropertiesFile));
+                    if (!propDatabase.empty())
+                    {
+                        serializer["Scripts"][AS_STD_STRING(scriptModule.scriptUID)]["database"]["properties"] = nlohmann::json::parse(propDatabase);
+                    }
+                }
+            }
+
+            // Add Extra Info
+            if (buildResult.hasDebugInformation)
+            {
+                serializer["HasDebugInformation"] = true;
+                serializer["BuildPath"] = buildResult.buildPath;
+            }
+            else
+            {
+                serializer["HasDebugInformation"] = false;
+            }
+            serializer["ModuleBinarySize"] = buildResult.builtModuleData.size();
+            serializer["InterpreterBackend"] = JenovaInterpreter::GetInterpreterBackend();
+            serializer["DeveloperMode"] = jenova::GlobalStorage::DeveloperModeActivated;
+            serializer["ManagedSafeExecution"] = jenova::GlobalStorage::UseManagedSafeExecution;
+
+            // Dump Metadata If Developer Mode Activated
+            if (jenova::GlobalStorage::DeveloperModeActivated)
+            {
+                jenova::WriteStdStringToFile(AS_STD_STRING(jenova::GetJenovaCacheDirectory() + "Jenova.Metadata.json"), serializer.dump(4));
+            }
+
+            // Serialize Data
+            return serializer.dump();
+        }
+        catch (const std::exception& err)
+        {
+            jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : %s", err.what());
+        }
+    }
+
+    // MinGW Compiler Map Parser/LLVM Clang Map Parser
+    if (buildResult.compilerModel == jenova::CompilerModel::MinGWCompiler || buildResult.compilerModel == jenova::CompilerModel::MinGWClangCompiler)
+    {
+        try
+        {
+            // Create JSON Serializer
+            nlohmann::json serializer;
+
+            // Generate Extra Paths
+            std::string moduleFilePath = buildResult.buildPath + "Jenova.Module.so";
+            std::string funcInfoFilePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + std::filesystem::path(mapFilePath).stem().string() + ".finfo";
+            std::string propInfoFilePath = AS_STD_STRING(jenova::GetJenovaCacheDirectory()) + std::filesystem::path(mapFilePath).stem().string() + ".pinfo";
+
+            // Parse Function Info File
+            std::ifstream funcFile(funcInfoFilePath);
+            if (!funcFile.is_open())
+            {
+                jenova::Error("Jenova Interpreter", "Unable to open function info file: %s", funcInfoFilePath.c_str());
+                return jenova::SerializedData();
+            }
+
+            std::string line;
+            std::regex funcPattern(R"(^\s*\d+:\s*(.*JNV_([a-f0-9]+)::(\w+)\((.*?)\));$)");
+            while (std::getline(funcFile, line))
+            {
+                std::smatch match;
+                if (std::regex_search(line, match, funcPattern))
+                {
+                    // Get Extracted Data
+                    std::string funcSignature = match[1];
+                    std::string funcName = match[3];
+                    std::string scriptUID = match[2];
+
+                    // Extract Function Information
+                    std::string cleanedSignature = jenova::CleanFunctionAndPropertySignature(funcSignature, buildResult.compilerModel);
+                    std::vector<std::string> params = jenova::ExtractParameterTypesFromSignature(cleanedSignature, buildResult.compilerModel);
+                    std::string returnType = jenova::ExtractReturnTypeFromSignature(cleanedSignature, buildResult.compilerModel);
+
+                    // If the function has no parameters, Add A Dummy Parameter
+                    if (params.empty()) params.push_back("void");
+
+                    // Add Function
+                    if (!serializer["Scripts"].contains(scriptUID)) serializer["Scripts"][scriptUID]["methods"] = nlohmann::json::object();
+
+                    // Add Parameter Count & Return Type
+                    serializer["Scripts"][scriptUID]["methods"][funcName] = { {"ParamCount", params.size()}, {"ReturnType", returnType} };
+
+                    // Add Parameter Types
+                    for (size_t i = 0; i < params.size(); ++i) serializer["Scripts"][scriptUID]["methods"][funcName][jenova::Format("Param%02d", i + 1)] = params[i];
+                }
+            }
+
+            // Parse Property Info File
+            std::ifstream propFile(propInfoFilePath);
+            if (!propFile.is_open())
+            {
+                jenova::Error("Jenova Interpreter", "Unable to open property info file: %s", propInfoFilePath.c_str());
+                return jenova::SerializedData();
+            }
+
+            std::regex propPattern(R"(^\s*\d+:\s*(.*JNV_([a-f0-9]+)::(__prop_\w+));$)");
+            while (std::getline(propFile, line))
+            {
+                std::smatch match;
+                if (std::regex_search(line, match, propPattern))
+                {
+                    std::string propSignature = match[1];
+                    std::string propName = match[3].str();
+                    std::string scriptUID = match[2];
 
                     // Clean Property Name
-                    jenova::ReplaceAllMatchesWithString(propertyName, "__prop_", "");
+                    jenova::ReplaceAllMatchesWithString(propName, "__prop_", "");
 
                     // Ignore Classed Properties
-                    if (propertyName.find("@") != std::string::npos) continue;
+                    if (propName.find("@") != std::string::npos) continue;
 
-                    // Calculate Offset
-                    uint64_t propertyOffset = std::stoull(propertyOffsetStr, nullptr, 16);
-                    uint64_t actualOffset = propertyOffset - imageBaseAddress;
+                    // Extract Property Type From Signature
+                    std::string propType = jenova::ExtractPropertyTypeFromSignature(propSignature, buildResult.compilerModel);
 
-                    // Check for duplicate property names under the same script UID
-                    if (serializer["Scripts"].contains(scriptUID) && serializer["Scripts"][scriptUID].contains(propertyName))
-                    {
-                        jenova::Error("Jenova Interpreter", "Duplicate Property Detected : [%s] Under Script UID: [%s]", propertyName.c_str(), scriptUID.c_str());
-                        return jenova::SerializedData();
-                    }
+                    // Set Data
+                    if (!serializer["Scripts"].contains(scriptUID)) serializer["Scripts"][scriptUID]["properties"] = nlohmann::json::object();
+                    serializer["Scripts"][scriptUID]["properties"][propName] = { {"Type", propType} };
+                }
+            }
 
-                    // Create Property Metadata Serializer
-                    nlohmann::json propSerializer;
-                    propSerializer["Offset"] = actualOffset;
+            // Parse Map File for Offsets
+            std::ifstream mapFile(mapFilePath);
+            if (!mapFile.is_open())
+            {
+                jenova::Error("Jenova Interpreter", "Unable to open map file: %s", mapFilePath.c_str());
+                return jenova::SerializedData();
+            }
 
-                    // Parse Properties Mangled Name And Extract Type
-                    if (std::regex_search(mapFileLine, match, jnvMangledNamePattern) && imageBaseAddress)
-                    {
-                        // Extract Parsed Data And Demangle
-                        std::string mangledPropertySignature = match[0];
-                        std::string demangledPropertySignature = jenova::GetDemangledFunctionSignature(mangledPropertySignature, buildResult.compilerModel);
-                        if (demangledPropertySignature.empty())
-                        {
-                            jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Demangle Property [%s] [%s]",
-                                mangledPropertySignature.c_str(), demangledPropertySignature.c_str());
-                            return jenova::SerializedData();
-                        }
+            std::regex mapPattern(R"(^\s*([0-9a-fA-F]+)\s+\d+\s+\d+\s+JNV_([a-f0-9]+)::([\w:]+).*$)");
+            while (std::getline(mapFile, line))
+            {
+                std::smatch match;
+                if (std::regex_search(line, match, mapPattern))
+                {
+                    uint64_t offset = std::stoull(match[1], nullptr, 16);
+                    std::string scriptUID = match[2];
+                    std::string name = match[3];
 
-                        // Clean Property Signature
-                        std::string cleanedPropertySignature = jenova::CleanFunctionAndPropertySignature(demangledPropertySignature, buildResult.compilerModel);
-
-                        // Extract Type
-                        std::string propertyType = jenova::ExtractPropertyTypeFromSignature(cleanedPropertySignature, buildResult.compilerModel);
-                        if (propertyType.empty())
-                        {
-                            jenova::Error("Jenova Interpreter", "Failed to Parse Map and Generate Metadata, Parser Error : Unable to Extract Property Type [%s] [%s]",
-                                mangledPropertySignature.c_str(), demangledPropertySignature.c_str());
-                            return jenova::SerializedData();
-                        }
-                        propSerializer["Type"] = propertyType;
-                        jenova::VerboseByID(__LINE__, "Extracted Property Type [%s]", propertyType.c_str());
-
-                        // Verbose
-                        jenova::VerboseByID(__LINE__, "[Map-Parser] Demangled Property Name: [%s], UID: [%s]", demangledPropertySignature.c_str(), scriptUID.c_str());
-                    }
-
-                    // Store property name and metadata in the serializer
                     if (serializer["Scripts"].contains(scriptUID))
                     {
-                        serializer["Scripts"][scriptUID]["properties"][propertyName] = propSerializer;
+                        if (serializer["Scripts"][scriptUID]["methods"].contains(name))
+                        {
+                            serializer["Scripts"][scriptUID]["methods"][name]["Offset"] = offset;
+                        }
+                        else if (serializer["Scripts"][scriptUID]["properties"].contains(name))
+                        {
+                            serializer["Scripts"][scriptUID]["properties"][name]["Offset"] = offset;
+                        }
                     }
-                    else
-                    {
-                        serializer["Scripts"][scriptUID]["properties"] = { { propertyName, propSerializer } };
-                    }
+                }
 
-                    // Verbose
-                    jenova::VerboseByID(__LINE__, "[Map-Parser] Property Name & Offset Extracted > Name: %s, UID: %s, Offset: %llx", propertyName.c_str(), scriptUID.c_str(), actualOffset);
+                // Handle property offsets explicitly
+                std::regex propOffsetPattern(R"(^\s*([0-9a-fA-F]+)\s+\d+\s+\d+\s+JNV_([a-f0-9]+)::(__prop_[\w]+).*$)");
+                if (std::regex_search(line, match, propOffsetPattern))
+                {
+                    uint64_t offset = std::stoull(match[1], nullptr, 16);
+                    std::string scriptUID = match[2];
+                    std::string propName = match[3].str();
+
+                    // Clean Property Name
+                    jenova::ReplaceAllMatchesWithString(propName, "__prop_", "");
+
+                    if (serializer["Scripts"].contains(scriptUID) && serializer["Scripts"][scriptUID]["properties"].contains(propName))
+                    {
+                        serializer["Scripts"][scriptUID]["properties"][propName]["Offset"] = offset;
+                    }
                 }
             }
 
@@ -919,8 +1274,7 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
     #ifdef TARGET_PLATFORM_LINUX
 
     // GNU Compiler Collection/LLVM Clang Map Parser
-    if (buildResult.compilerModel == jenova::CompilerModel::GNUCompiler || 
-        buildResult.compilerModel == jenova::CompilerModel::ClangCompiler)
+    if (buildResult.compilerModel == jenova::CompilerModel::GNUCompiler || buildResult.compilerModel == jenova::CompilerModel::ClangCompiler)
     {
         try
         {
@@ -1297,6 +1651,10 @@ void JenovaInterpreter::SetDebugModeExecutionState(bool debugModeState)
 {
     executeInDebugMode = debugModeState;
 }
+jenova::ModuleHandle JenovaInterpreter::LoadShellModule(const uint8_t* moduleDataPtr, const size_t moduleSize)
+{
+    return JenovaLoader::LoadModule((void*)moduleDataPtr, moduleSize);
+}
 
 // Jenova Interpreter Implementation :: Module Database
 bool JenovaInterpreter::CreateModuleDatabase(const std::string& moduleDatabaseName, const uint8_t* moduleDataPtr, const size_t moduleSize, const jenova::SerializedData& metaData)
@@ -1388,7 +1746,7 @@ bool JenovaInterpreter::DeployFromDatabase(const std::string& moduleDatabaseName
 
     // Validate Header Magic Number
     const unsigned char magicNumber[16] = { 0x5F, 0x5F, 0x4A, 0x45, 0x4E, 0x4F, 0x56, 0x41, 0x5F, 0x43, 0x41, 0x43, 0x48, 0x45, 0x5F, 0x5F };
-    if (memcmp(magicNumber, databaseHeader->magicNumber, sizeof magicNumber) != 0)
+    if (memcmp(magicNumber, databaseHeader->magicNumber, sizeof(magicNumber)) != 0)
     {
         jenova::Error("Jenova Interpreter", "Jenova Module Database is Invalid!");
         return false;
@@ -1406,7 +1764,7 @@ bool JenovaInterpreter::DeployFromDatabase(const std::string& moduleDatabaseName
 
     // Validate Package Version
     const unsigned char appVersionData[4] = { APP_VERSION_DATA };
-    if (memcmp(appVersionData, databaseHeader->databaseVersion, sizeof appVersionData) != 0)
+    if (memcmp(appVersionData, databaseHeader->databaseVersion, sizeof(appVersionData)) != 0)
     {
         // Warn User About Database Version Mismatch
         jenova::Warning("Jenova Interpreter", 
