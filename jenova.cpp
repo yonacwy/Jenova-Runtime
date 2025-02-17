@@ -1538,7 +1538,8 @@ namespace jenova
 				// Compile Scripts [Multi-Thread/Single-Thread]
 				if (bool(jenovaCompiler->GetCompilerOption("cpp_multi_threaded_compilation")))
 				{
-					jenova::Output("Compiling ([color=#53b5ab]%lld[/color]) C++ Script Module%s ([color=#7834f7]Multi-Thread[/color])...", scriptModules.size(), scriptModules.size() == 1 ? "" : "s");
+					jenova::Output("Compiling ([color=#53b5ab]%lld[/color]) C++ Script Module%s...", scriptModules.size(), scriptModules.size() == 1 ? "" : "s");
+					jenova::Output("Compilation Mode : [color=#7834f7]Multi-Thread / Multi-Process[/color]");
 
 					// Create Compile Profiler Checkpoint
 					JenovaTinyProfiler::CreateCheckpoint("JenovaCompileMT");
@@ -1582,7 +1583,10 @@ namespace jenova
 				}
 				else
 				{
-					jenova::Output("Compiling ([color=#53b5ab]%lld[/color]) C++ Script Module%s ([color=#2d2ded]Single-Thread[/color])...", scriptModules.size(), scriptModules.size() == 1 ? "" : "s");
+					jenova::Output("Compiling ([color=#53b5ab]%lld[/color]) C++ Script Module%s...", scriptModules.size(), scriptModules.size() == 1 ? "" : "s");
+					jenova::Output("Compilation Mode : [color=#eb608c]Single-Thread / Single-Process[/color]");
+
+					// Compile Scripts One by One
 					for (const auto& scriptModule : scriptModules)
 					{
 						// Create Compile Profiler Checkpoint
@@ -1608,9 +1612,9 @@ namespace jenova
 						if (scriptModule.scriptType == jenova::ScriptModuleType::InternalScript) continue;
 
 						// Verbose
-						jenova::Output("Script Module [%s] [%s] [%s] Compiled, Compile Time : %f ms",
+						jenova::Output("Script Module [[color=#70a9d4]%s[/color]] [[color=#91b553]%s[/color]] [%s] Compiled, Compile Time : [color=#c8e38a]%f ms[/color]",
 							AS_C_STRING(scriptModule.scriptFilename), AS_C_STRING(scriptModule.scriptUID),
-							scriptModule.scriptType == jenova::ScriptModuleType::UsedScript ? "Used" : "Unused",
+							scriptModule.scriptType == jenova::ScriptModuleType::UsedScript ? "[color=#24ed49]Used[/color]" : "[color=#ed2456]Unused[/color]",
 							JenovaTinyProfiler::GetCheckpointTimeAndDispose("JenovaCompileST"));
 					}
 				}
@@ -3439,8 +3443,9 @@ namespace jenova
 				version->set_offset(Side::SIDE_RIGHT, SCALED(724.0));
 				version->set_offset(Side::SIDE_BOTTOM, SCALED(120.0));
 				version->append_text(" Version " + String(APP_VERSION) + " (" + String(APP_VERSION_POSTFIX) + "/" + 
-					String(APP_VERSION_NAME) + ") Build " + String(APP_VERSION_BUILD) + " [font_size=20]\n [/font_size]" + "[font_size=13][color=#7c889c]" +
-					String(jenova::GetRuntimeCompilerName().c_str()) + "[/color] [color=#40c27f]/[/color] [color=#585875]" + __TIMESTAMP__ + "[/color][/font_size]");
+					String(APP_VERSION_NAME) + ") Build " + String(APP_VERSION_BUILD) + String(jenova::Format(" [font_size=%lf]\n [/font_size]", SCALED(14)).c_str()) +
+					String(jenova::Format("[font_size=%lf][color=#7c889c]", SCALED(10)).c_str()) + String(jenova::GetRuntimeCompilerName().c_str()) +
+					"[/color] [color=#40c27f]/[/color] [color=#585875]" + __TIMESTAMP__ + "[/color][/font_size]");
 				version->set_autowrap_mode(TextServer::AUTOWRAP_OFF);
 				version->set_theme(nullptr);
 				version->add_theme_stylebox_override("normal", memnew(StyleBoxEmpty));
@@ -5941,19 +5946,19 @@ namespace jenova
 	{
 		std::string cleanedSignature = functionSignature;
 
-		// Remove calling conventions
+		// Remove Calling Conventions
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("__cdecl\\s+|__stdcall\\s+|__fastcall\\s+"), "");
 
-		// Remove "class " prefix before classes
+		// Remove "class " Prefix Before Classes
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("class\\s+"), "");
 
-		// Remove "struct " prefix before classes
+		// Remove "struct " Prefix Before Classes
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("struct\\s+"), "");
 
-		// Remove "enum " prefix before classes
+		// Remove "enum " Prefix Before Classes
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("enum\\s+"), "");
 
-		// Remove "__ptrXX" keyword
+		// Remove "__ptrXX" Keyword
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("\\s*__ptr32"), "");
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("\\s*__ptr64"), "");
 
@@ -5965,10 +5970,10 @@ namespace jenova
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("\\s*unsigned int"), "uint32");
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("\\s*unsigned char"), "byte");
 
-		// Remove volatile qualifiers
+		// Remove "volatile" Qualifiers
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("volatile\\s+"), "");
 
-		// Ensure space between type and pointer/reference
+		// Ensure Space Between Type and Pointer/Reference
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("const\\s*\\*"), "*");
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("const\\s*\\&"), "&");
 		cleanedSignature = std::regex_replace(cleanedSignature, std::regex("\\s*\\*"), "*");
@@ -5979,11 +5984,8 @@ namespace jenova
 	jenova::ParameterTypeList ExtractParameterTypesFromSignature(const std::string& functionSignature, jenova::CompilerModel compilerModel)
 	{
 		ParameterTypeList parameterTypes;
-
-		// Regex to match the function signature's parameters inside parentheses
 		std::regex parameterRegex(R"(\(([^)]+)\))");
 		std::smatch match;
-
 		if (std::regex_search(functionSignature, match, parameterRegex))
 		{
 			// Extract Parameter Substring
@@ -6068,7 +6070,7 @@ namespace jenova
 			if (compilerModel == jenova::CompilerModel::MicrosoftCompiler || compilerModel == jenova::CompilerModel::ClangLLVMCompiler)
 			{
 				// Check IF Symbol Ends With 'Z' (Indicating A Function)
-				if (std::regex_match(symbolSignature, std::regex(".*@Z$"))) 
+				if (std::regex_match(symbolSignature, std::regex(".*Z$"))) 
 				{
 					return SymbolSignatureType::FunctionSymbol;
 				}

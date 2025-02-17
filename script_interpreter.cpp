@@ -999,7 +999,11 @@ jenova::SerializedData JenovaInterpreter::GenerateModuleMetadata(const std::stri
                                 }
 
                                 // Double-Check If Extracted Symbol is Function
-                                if (jenova::DetectSymbolSignatureType(mangledFunctionSignature, buildResult.compilerModel) != jenova::SymbolSignatureType::FunctionSymbol) continue;
+                                if (jenova::DetectSymbolSignatureType(mangledFunctionSignature, buildResult.compilerModel) != jenova::SymbolSignatureType::FunctionSymbol)
+                                {
+                                    jenova::VerboseByID(__LINE__, "Skipping Symbol Candidate [%s] due to a Non-Standard Signature.", demangledFunctionSignature.c_str());
+                                    continue;
+                                }
 
                                 // Clean Function Signature
                                 std::string cleanedFunctionSignature = jenova::CleanFunctionAndPropertySignature(demangledFunctionSignature, buildResult.compilerModel);

@@ -94,12 +94,12 @@ def get_os_name():
             return f"{system_name} {platform.release()} {architecture}"
     return f"{system_name} {platform.release()} {architecture}"
 def get_toolchain_name(buildMode):
-    if buildMode == "win-msvc": return "MS-VC"
-    if buildMode == "win-clangcl": return "MS-LLVM"
-    if buildMode == "win-clang": return "MinGW-LLVM"
-    if buildMode == "win-gcc": return "MinGW-GCC"
-    if buildMode == "linux-clang": return "LLVM"
-    if buildMode == "linux-gcc": return "GNU-GCC"
+    if buildMode == "win-msvc": return "msvc"
+    if buildMode == "win-gcc": return "mingw"
+    if buildMode == "win-clangcl": return "msvc-llvm"
+    if buildMode == "win-clang": return "mingw-llvm"
+    if buildMode == "linux-clang": return "llvm"
+    if buildMode == "linux-gcc": return "gnu"
 def print_banner():
     banner = """
 ===========================================================================

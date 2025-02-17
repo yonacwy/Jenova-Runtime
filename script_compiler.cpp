@@ -40,7 +40,7 @@ namespace jenova
             {
                 // Initialize Tool Chain Settings
                 internalDefaultSettings["instance_name"]                        = compilerInstanceName;
-                internalDefaultSettings["instance_version"]                     = 1.2f;
+                internalDefaultSettings["instance_version"]                     = 1.4f;
                 internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMSVCCompiler";
                 internalDefaultSettings["cpp_compiler_binary"]                  = "/Bin/cl.exe";
                 internalDefaultSettings["cpp_linker_binary"]                    = "/Bin/link.exe";
@@ -59,6 +59,7 @@ namespace jenova
                 internalDefaultSettings["cpp_debug_database"]                   = true;                             /* /Zi */
                 internalDefaultSettings["cpp_conformance_mode"]                 = true;                             /* /permissive vs /permissive- */
                 internalDefaultSettings["cpp_exception_handling"]               = 2;                                /* 1 : /EHsc 2: /EHa */
+                internalDefaultSettings["cpp_use_task_system"]                  = false;                            /* Internal Multiprocessing vs Task System */
                 internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /GR /bigobj";            /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
                 internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL";
 
@@ -81,9 +82,9 @@ namespace jenova
             // Microsoft Compiler LLVM Default Settings
             if (this->GetCompilerModel() == CompilerModel::ClangLLVMCompiler)
             {
-                                // Initialize Tool Chain Settings
+                // Initialize Tool Chain Settings
                 internalDefaultSettings["instance_name"]                        = compilerInstanceName;
-                internalDefaultSettings["instance_version"]                     = 1.2f;
+                internalDefaultSettings["instance_version"]                     = 1.4f;
                 internalDefaultSettings["cpp_toolchain_path"]                   = "/Jenova/Compilers/JenovaMSVCCompiler";
                 internalDefaultSettings["cpp_compiler_binary"]                  = "/Bin/clang-cl.exe";
                 internalDefaultSettings["cpp_linker_binary"]                    = "/Bin/lld-link.exe";
@@ -102,6 +103,7 @@ namespace jenova
                 internalDefaultSettings["cpp_debug_database"]                   = true;                             /* /Zi */
                 internalDefaultSettings["cpp_conformance_mode"]                 = true;                             /* /permissive vs /permissive- */
                 internalDefaultSettings["cpp_exception_handling"]               = 2;                                /* 1 : /EHsc 2: /EHa */
+                internalDefaultSettings["cpp_use_task_system"]                  = true;                             /* Internal Multiprocessing vs Task System */
                 internalDefaultSettings["cpp_extra_compiler"]                   = "/Ot /Ox /GR /bigobj";            /* Extra Compiler Options Like /Zc:threadSafeInit /Bt /Zc:tlsGuards /d1reportTime */
                 internalDefaultSettings["cpp_definitions"]                      = "TYPED_METHOD_BIND;HOT_RELOAD_ENABLED;_WINDLL";
 
@@ -385,10 +387,9 @@ namespace jenova
             }
 
             // Add Source/Output Based On Compile Model
+            jenova::ModuleList compilationScripts;
             if (bool(compilerSettings["cpp_multi_threaded_compilation"]))
             {
-                compilerArgument += "/MP ";
-                compilerArgument += "/Fo\"" + this->jenovaCachePath + "\" ";
                 for (const auto& scriptModule : scriptModulesContainer.scriptModules)
                 {
                     // Skip If File Hash Didn't Change
@@ -399,9 +400,9 @@ namespace jenova
                             if (AS_STD_STRING(scriptModule.scriptHash) == buildCacheDatabase["Modules"][AS_STD_STRING(scriptModule.scriptUID)].get<std::string>()) continue;
                         }
                     }
-               
+
                     // Add Source
-                    compilerArgument += "\"" + AS_STD_STRING(scriptModule.scriptCacheFile) + "\" ";
+                    compilationScripts.push_back(scriptModule);
 
                     // Add Script Count
                     result.scriptsCount++;
@@ -409,15 +410,14 @@ namespace jenova
             }
             else
             {
-                // Skip If File Hash Didn't Change
+                // If Script Has Changes Add to Compilation Scripts
                 if (buildCacheDatabase.contains("Modules"))
                 {
                     if (buildCacheDatabase["Modules"].contains(AS_STD_STRING(scriptModulesContainer.scriptModule.scriptUID)))
                     {
                         if (AS_STD_STRING(scriptModulesContainer.scriptModule.scriptHash) != buildCacheDatabase["Modules"][AS_STD_STRING(scriptModulesContainer.scriptModule.scriptUID)].get<std::string>())
                         {
-                            compilerArgument += "\"" + AS_STD_STRING(scriptModulesContainer.scriptModule.scriptCacheFile) + "\" ";
-                            compilerArgument += "/Fo\"" + AS_STD_STRING(scriptModulesContainer.scriptModule.scriptObjectFile) + "\" ";
+                            compilationScripts.push_back(scriptModulesContainer.scriptModule);
                             result.scriptsCount++;
                         }
                     }
@@ -439,10 +439,148 @@ namespace jenova
             // Dump Compiler Command If Developer Mode Enabled
             if (jenova::GlobalStorage::DeveloperModeActivated) jenova::WriteStdStringToFile(jenovaCachePath + "CompilerCommand.txt", compilerArgument);
 
+            // Handle Multi Process Compilation
+            if (bool(compilerSettings["cpp_multi_threaded_compilation"]))
+            {
+                // Using Task System
+                if (bool(compilerSettings["cpp_use_task_system"]))
+                {
+                    // Verbose Multi Processing Model
+                    jenova::Output("Using Task System for Multi-Processing...");
+
+                    // Compile Scripts
+                    std::vector<jenova::TaskID> compilationTasks;
+                    bool compilationFailed = false;
+                    std::mutex compilationMutex;
+                    std::vector<std::string> errorMessages;
+
+                    // Spawn Tasks Per Script
+                    for (const auto& scriptModule : compilationScripts)
+                    {
+                        std::string command = compilerArgument;
+                        command += "\"" + AS_STD_STRING(scriptModule.scriptCacheFile) + "\" ";
+                        command += "-o \"" + AS_STD_STRING(scriptModule.scriptObjectFile) + "\" ";
+
+                        // Fix Paths in Command
+                        jenova::ReplaceAllMatchesWithString(command, "\\", "/");
+                        jenova::ReplaceAllMatchesWithString(command, "\\\\", "/");
+
+                        // Initiate Compilation Task
+                        jenova::TaskID taskID = JenovaTaskSystem::InitiateTask([command, &compilationFailed, &compilationMutex, &errorMessages]()
+                        {
+                            STARTUPINFOW si;
+                            PROCESS_INFORMATION pi;
+                            ZeroMemory(&si, sizeof(si));
+                            si.cb = sizeof(si);
+                            si.dwFlags |= STARTF_USESTDHANDLES;
+
+                            HANDLE hStdOutRead, hStdOutWrite;
+                            SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+                            CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0);
+                            SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
+                            si.hStdOutput = hStdOutWrite;
+                            si.hStdError = hStdOutWrite;
+
+                            std::wstring wCommand(command.begin(), command.end());
+                            if (!CreateProcessW(NULL, &wCommand[0], NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+                            {
+                                std::lock_guard<std::mutex> lock(compilationMutex);
+                                compilationFailed = true;
+                                errorMessages.push_back("Failed to start compilation process.");
+                                return;
+                            }
+
+                            CloseHandle(hStdOutWrite);
+
+                            std::vector<char> buffer(4096);
+                            DWORD bytesRead;
+                            std::string compilerOutput;
+                            while (ReadFile(hStdOutRead, buffer.data(), buffer.size(), &bytesRead, NULL) && bytesRead > 0)
+                            {
+                                compilerOutput.append(buffer.data(), bytesRead);
+                            }
+
+                            CloseHandle(hStdOutRead);
+                            WaitForSingleObject(pi.hProcess, INFINITE);
+                            DWORD exitCode;
+                            GetExitCodeProcess(pi.hProcess, &exitCode);
+                            CloseHandle(pi.hProcess);
+                            CloseHandle(pi.hThread);
+
+                            if (exitCode != 0)
+                            {
+                                std::lock_guard<std::mutex> lock(compilationMutex);
+                                compilationFailed = true;
+                                errorMessages.push_back(compilerOutput);
+                            }
+                        });
+                        compilationTasks.push_back(taskID);
+                    }
+
+                    // Wait for all tasks to complete
+                    for (const auto& taskID : compilationTasks)
+                    {
+                        while (!JenovaTaskSystem::IsTaskComplete(taskID))
+                        {
+                            std::this_thread::yield();
+                        }
+                        JenovaTaskSystem::ClearTask(taskID);
+                    }
+
+                    // Check Compile Result
+                    if (compilationFailed)
+                    {
+                        result.compileResult = false;
+                        result.hasError = true;
+                        result.compileError = "C668 : One or more compilation tasks failed.\n";
+                        for (const auto& errorMsg : errorMessages)
+                        {
+                            result.compileError += String(errorMsg.c_str()) + "\n";
+                        }
+                        return result;
+                    }
+
+                    // Set Compiler Result
+                    result.compileResult = !compilationFailed;
+                    result.hasError = !compilationFailed;
+
+                    // Yield Engine
+                    OS::get_singleton()->delay_msec(1);
+                    std::this_thread::yield();
+
+                    // Return Final Result
+                    return result;
+                }
+
+                // Using Internal Multiprocessing
+                else
+                {
+                    // Verbose Multi Processing Model
+                    jenova::Output("Using Compiler Native Multi-Processing...");
+
+                    // Set Compiler Multi-Processing Mode & Set Output
+                    compilerArgument += "/MP ";
+                    compilerArgument += "/Fo\"" + this->jenovaCachePath + "\" ";
+
+                    // Add Compilation Scripts to Compiler Argument
+                    for (const auto& scriptModule : compilationScripts)
+                    {
+                        // Add Source
+                        compilerArgument += "\"" + AS_STD_STRING(scriptModule.scriptCacheFile) + "\" ";
+                    }
+                }
+            }
+
+            // Handle Single Thread Compilation
+            if (!bool(compilerSettings["cpp_multi_threaded_compilation"]))
+            {
+                compilerArgument += "\"" + AS_STD_STRING(scriptModulesContainer.scriptModule.scriptCacheFile) + "\" ";
+                compilerArgument += "/Fo\"" + AS_STD_STRING(scriptModulesContainer.scriptModule.scriptObjectFile) + "\" ";
+            }
+
             // Run Compiler
-            STARTUPINFOW si;
+            STARTUPINFOW si = { 0 };
             PROCESS_INFORMATION pi;
-            ZeroMemory(&si, sizeof(si));
             si.cb = sizeof(si);
             si.dwFlags |= STARTF_USESTDHANDLES;
 
@@ -1266,6 +1404,7 @@ namespace jenova
             std::mutex compilationMutex;
             std::vector<std::string> errorMessages;
 
+            // Spawn Tasks Per Script
             for (const auto& scriptModule : compilationScripts)
             {
                 std::string command = compilerArgument;
@@ -1354,8 +1493,6 @@ namespace jenova
             // Set Compiler Result
             result.compileResult = !compilationFailed;
             result.hasError = !compilationFailed;
-            //result.compileError = String(resultOutput.c_str());
-            //result.compileVerbose = String(resultOutput.c_str());
 
             // Yield Engine
             OS::get_singleton()->delay_msec(1);
