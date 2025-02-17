@@ -197,7 +197,7 @@ def install_dependencies():
     if os.path.exists("./Dependencies"): return
 
     # Dependencies Package URL
-    dependencies_pkg_url = "https://jenova-framework.github.io/download/development/Jenova-Runtime-Dependencies-Universal.7z"
+    dependencies_pkg_url = "https://jenova-framework.github.io/download/development/Jenova-Runtime-Dependencies-Universal.jnvpkg"
     
     # Downloading Dependencies Package
     rgb_print("#367fff", "[ ^ ] Downloading Dependencies Package...")
@@ -207,7 +207,7 @@ def install_dependencies():
         block_size = 1024
         max_bar_length = 50
         progress_length = 0
-        with open("Jenova-Runtime-Dependencies-Universal.7z", "wb") as f:
+        with open("Jenova-Runtime-Dependencies-Universal.jnvpkg", "wb") as f:
             for data in response.iter_content(block_size):
                 f.write(data)
                 progress_length += len(data)
@@ -223,12 +223,11 @@ def install_dependencies():
 
     # Extracting Dependencies Package
     rgb_print("#367fff","[ ^ ] Installing Dependencies Package...")
-    with py7zr.SevenZipFile("Jenova-Runtime-Dependencies-Universal.7z", mode='r') as z:
-        z.extractall(path="./Dependencies")
+    with py7zr.SevenZipFile("Jenova-Runtime-Dependencies-Universal.jnvpkg", mode='r') as z: z.extractall(path="./Dependencies")
     rgb_print("#38f227", "[ √ ] Dependencies Package Installed.")
 
     # Delete Downloaded Package
-    os.remove("Jenova-Runtime-Dependencies-Universal.7z")
+    os.remove("Jenova-Runtime-Dependencies-Universal.jnvpkg")
 def build_with_ninja(buildPath):
     if platform.system() == "Windows": subprocess.run(["ninja.exe", "-C", buildPath, "-j", f"{os.cpu_count()}"], check=True)
     if platform.system() == "Linux": subprocess.run(["ninja", "-C", buildPath, "-j", f"{os.cpu_count()}"], check=True)
@@ -543,7 +542,67 @@ def build_linux(compilerBinary, linkerBinary, buildMode, buildSystem):
 # Windows Build Functions
 def initialize_toolchain_windows():
 
-    # Todo : If Toolchain doesn't exist download it
+    # Validate Toolchain
+    if not os.path.exists("./Toolchain"): 
+
+        # GigaChad Toolchain Package URL
+        gigachad_toolchain_pkg_pt1_url = "https://jenova-framework.github.io/download/development/GigaChad-Toolchain-v1.0-Win64-U1.jnvpkg"
+        gigachad_toolchain_pkg_pt2_url = "https://jenova-framework.github.io/download/development/GigaChad-Toolchain-v1.0-Win64-U2.jnvpkg"
+
+        # Downloading GigaChad Toolchain Package
+        rgb_print("#367fff", "[ ^ ] Downloading GigaChad Toolchain Package...")
+        response = requests.get(gigachad_toolchain_pkg_pt1_url, stream=True)
+        if response.status_code == 200:
+            total_size = int(response.headers.get('content-length', 0))
+            block_size = 1024
+            max_bar_length = 50
+            progress_length = 0
+            with open("GigaChad-Toolchain-v1.0-Win64-U1.jnvpkg", "wb") as f:
+                for data in response.iter_content(block_size):
+                    f.write(data)
+                    progress_length += len(data)
+                    done = progress_length
+                    bar_length = int((done / total_size) * max_bar_length)
+                    progress_bar = '[ ' + '=' * bar_length + ' ' * (max_bar_length - bar_length) + ' ]'
+                    rgb_print("#367fff", f"[ + ] Downloading First Unit: {done/total_size:.2%} {progress_bar}", True)
+            rgb_print("#38f227", "\n[ √ ] GigaChad Toolchain Package First Unit Download Complete.")
+        else:
+            rgb_print("#e02626", "[ x ] Error : Failed to Download GigaChad Toolchain Package First Unit.")
+            return
+        response = requests.get(gigachad_toolchain_pkg_pt2_url, stream=True)
+        if response.status_code == 200:
+            total_size = int(response.headers.get('content-length', 0))
+            block_size = 1024
+            max_bar_length = 50
+            progress_length = 0
+            with open("GigaChad-Toolchain-v1.0-Win64-U2.jnvpkg", "wb") as f:
+                for data in response.iter_content(block_size):
+                    f.write(data)
+                    progress_length += len(data)
+                    done = progress_length
+                    bar_length = int((done / total_size) * max_bar_length)
+                    progress_bar = '[ ' + '=' * bar_length + ' ' * (max_bar_length - bar_length) + ' ]'
+                    rgb_print("#367fff", f"[ + ] Downloading Second Unit : {done/total_size:.2%} {progress_bar}", True)
+            rgb_print("#38f227", "\n[ √ ] GigaChad Toolchain Package Second Unit Download Complete.")
+        else:
+            rgb_print("#e02626", "[ x ] Error : Failed to Download GigaChad Toolchain Package Second Unit.")
+            return
+
+        # Merge Gigachad Toolchain Package Units
+        parts = ["GigaChad-Toolchain-v1.0-Win64-U1.jnvpkg", "GigaChad-Toolchain-v1.0-Win64-U2.jnvpkg"]
+        with open("GigaChad-Toolchain-v1.0-Win64.jnvpkg", "wb") as merged_file:
+            for part in parts:
+                with open(part, "rb") as part_file: merged_file.write(part_file.read())
+
+        # Extracting Gigachad Toolchain Package
+        rgb_print("#367fff","[ ^ ] Installing GigaChad Toolchain Package...")
+        with py7zr.SevenZipFile("GigaChad-Toolchain-v1.0-Win64.jnvpkg", mode='r') as z: z.extractall(path="./Toolchain")
+        rgb_print("#38f227", "[ √ ] GigaChad Toolchain Package Installed.")
+
+        # Delete Downloaded Package
+        os.remove("GigaChad-Toolchain-v1.0-Win64.jnvpkg")
+        os.remove("GigaChad-Toolchain-v1.0-Win64-U1.jnvpkg")
+        os.remove("GigaChad-Toolchain-v1.0-Win64-U2.jnvpkg")
 
     # Configuring Toolchain
     rgb_print("#367fff", "[ ^ ] Configuring Toolchain...")
