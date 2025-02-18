@@ -37,28 +37,26 @@ Jenova Core has following dependencies :
 
 - [AsmJIT](https://github.com/asmjit/asmjit)
 - [LibArchive](https://github.com/libarchive/libarchive)
-- [LibLZAMA](https://github.com/ShiftMediaProject/liblzma)
+- [LibLZMA](https://github.com/ShiftMediaProject/liblzma)
 - [LibCurl](https://github.com/curl/curl)
 - [LibFastZLib](https://github.com/gildor2/fast_zlib)
 - [LibTinyCC](http://download.savannah.gnu.org/releases/tinycc/)
 - [LibPThread](https://github.com/GerHobbelt/pthread-win32)
-- [LibVSWhere](https://github.com/TheAenema/libvswhere/tree/jenova-edition)
-- [MemoryModule++](https://github.com/bb107/MemoryModulePP)
 - [JSON++](https://github.com/nlohmann/json)
 - [FileWatch](https://github.com/ThomasMonkman/filewatch)
 - [ArgParse++](https://github.com/p-ranav/argparse)
 - [Base64++](https://github.com/zaphoyd/websocketpp/blob/master/websocketpp/base64/base64.hpp)
 
-
 > [!IMPORTANT]
 > - Edit **base64.hpp** namespace to `base64`
 > - Only header file `libtcc.h` is required from TinyCC beside static library
 > - In **FileWatch.hpp** change `_callback(file.first, file.second);` to `_callback(_path + "/" + file.first, file.second);`
+> - By using Jenova Builder, All the dependencies are downloaded, manipulated and compiled automatically.
 
 ## Build System
 ### Windows x64
 
-Building Fully-Featured Jenova Runtime for Windows x64 requires Visual Studio 2022 with C++20 Support.
+Building fully-featured Jenova Runtime for Windows x64 requires Visual Studio 2022 with C++20 Support.
 
 Proprietary Pre-built Windows x64 binaries can be obtained from [here](https://github.com/Jenova-Framework/J.E.N.O.V.A/releases). (Not Available After v0.3.6.0)
 
@@ -112,17 +110,24 @@ python3 ./Jenova.Builder.py --compiler linux-gcc --skip-banner
 
 Jenova Runtime source code is fully compatible with both Clang++ (18+) and G++ (13+). Additionally, [Visual Studio Code](https://code.visualstudio.com/) compatibility files are provided.
 
-
-
 ## Open Source vs Proprietary
 While the public source code of Jenova is ~90% identical to the proprietary version, a few specific features have been removed or disabled.
 ### These changes include :
-- **Jenova Emulator Connector**  is provided in full source code but parts of the integration code for proprietary emulators have been removed. It remains functional if connected to another emulator module.
+- **Jenova Emulator Connector** is provided in full source code but parts of the integration code for proprietary emulators have been removed. It remains functional if connected to another emulator module.
+
 - **A.K.I.R.A JIT** is removed from the public source code. This component was responsible for executing obfuscated code using a proprietary highly secured VM.
+
 - **Code Encryption and Key System** has been omitted from the public version to protect critical proprietary algorithms. However, Code Compression is fully included, Developers can add their own encryption on top of the existing buffering system.
+
 - **Jenova Code Virtualizer/Sandbox** removed due to reliance on the proprietary SecureAngel™ 2.0 technology.
 
-  
+### Cross-Platform
+
+Jenova Proprietary version includes only Microsoft Visual C++ (MSVC) and Microsoft LLVM Clang (Clang-cl) compilers and is compatible only with Windows. Open-Source version, however, is fully ported to Linux and includes support for MinGW GCC and LLVM on Windows as well as GCC and LLVM Clang on Linux.
+
+> [!IMPORTANT]  
+> The Jenova Runtime Proprietary version is no longer available for public access. The last version released was 0.3.6.0 Alpha.
+> Open-Source version will continue to receive all future updates from the proprietary version, Except those related to security.
 
 ----
 Developed & Designed By **Hamid.Memar (MemarDesign™ LLC.)**

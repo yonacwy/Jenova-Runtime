@@ -1,6 +1,7 @@
 # Jenova Runtime Build System Script
 # Developed by Hamid.Memar (2024-2025)
-# Usage : python3 ./Jenova.Builder.py --compiler clang --skip-banner
+# Usage : python3 ./Jenova.Builder.py --compiler win-msvc --skip-banner
+# Use python3 ./Jenova.Builder.py --help For More Information.
 
 # Imports
 import os
@@ -16,6 +17,10 @@ import subprocess
 import py7zr
 from concurrent.futures import ThreadPoolExecutor
 from colored import fg, attr
+
+# Set Encoding
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 
 # Shared Database
 flags = [
@@ -53,6 +58,7 @@ sources = [
 skip_deps           = False
 skip_cache          = False
 skip_packaging      = False
+deploy_mode         = False
 
 # Global Functions
 def rgb_print(hex_color, output, inplace = False):
@@ -214,7 +220,7 @@ def install_dependencies():
                 done = progress_length
                 bar_length = int((done / total_size) * max_bar_length)
                 progress_bar = '[ ' + '=' * bar_length + ' ' * (max_bar_length - bar_length) + ' ]'
-                rgb_print("#367fff", f"[ + ] Downloading : {done/total_size:.2%} {progress_bar}", True)
+                if not deploy_mode: rgb_print("#367fff", f"[ + ] Downloading : {done/total_size:.2%} {progress_bar}", True)
 
         rgb_print("#38f227", "\n[ √ ] Dependencies Package Download Complete.")
     else:
@@ -254,12 +260,21 @@ def create_distribution_package(package_files, output_archive):
             src_path = file['src']
             dst_path = file['dst']
             if os.path.exists(src_path):
-                rgb_print("#764be3", f"[ * ] Packing File {os.path.basename(src_path)}...")
                 file_name = os.path.basename(src_path)
+                if file_name != ".gitignore": rgb_print("#764be3", f"[ * ] Packing File {file_name}...")
                 archive.write(src_path, os.path.join(dst_path, file_name))
 
     # Verbose Success
     rgb_print("#38f227", "[ √ ] Jenova Runtime Distribution Package Created.")
+def clean_up_build(deepMode):
+    if os.path.exists("./Libs"): shutil.rmtree("./Libs")
+    if os.path.exists("./Win64"): shutil.rmtree("./Win64")
+    if os.path.exists("./Linux64"): shutil.rmtree("./Linux64")
+    if deepMode:
+        if os.path.exists("./Toolchain"): shutil.rmtree("./Toolchain")
+        if os.path.exists("./Dependencies"): shutil.rmtree("./Dependencies")
+    rgb_print("#03fc6f", f"[ √ ] Clean Up Successfully Finished.")
+    exit(0)
 
 # Linux Build Functions
 def initialize_toolchain_linux():
@@ -277,9 +292,9 @@ def build_dependencies_linux(buildMode, cacheDir):
     # Set Compiler/Linker Configuration
     os.environ['CC'] = 'clang' if buildMode == "linux-clang" else 'gcc'
     os.environ['CXX'] = 'clang++' if buildMode == "linux-clang" else 'g++'
-    os.environ['CFLAGS'] = '-static -fPIC -w -m64'
-    os.environ['CXXFLAGS'] = '-static -std=c++20 -w -fPIC -m64'
-    os.environ['LDFLAGS'] = '-Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -ldl -lrt -m64'
+    os.environ['CFLAGS'] = '-fPIC -w -m64'
+    os.environ['CXXFLAGS'] = '-std=c++20 -w -fPIC -m64'
+    os.environ['LDFLAGS'] = '-static-libstdc++ -static-libgcc -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -ldl -lrt -m64'
     os.environ['C_COMPILER'] = 'clang' if buildMode == "linux-clang" else 'gcc'
     os.environ['CXX_COMPILER'] = 'clang++' if buildMode == "linux-clang" else 'g++'
 
@@ -525,6 +540,7 @@ def build_linux(compilerBinary, linkerBinary, buildMode, buildSystem):
     run_linker_command(link_command, linker)
 
     # Prepare Release
+    open(f"{sdkDir}/.gitignore", "w").write("*")
     shutil.copy2("./JenovaSDK.h", f"{sdkDir}/JenovaSDK.h")
     shutil.copy2("./Jenova.Runtime.gdextension", f"{outputDir}/Jenova.Runtime.gdextension")
 
@@ -534,6 +550,7 @@ def build_linux(compilerBinary, linkerBinary, buildMode, buildSystem):
         {"src": f"{outputDir}/{outputName}", "dst": "./Jenova"},
         {"src": f"{outputDir}/Jenova.Runtime.gdextension", "dst": "./Jenova"},
         {"src": f"{sdkDir}/JenovaSDK.h", "dst": "./Jenova/JenovaSDK"},
+        {"src": f"{sdkDir}/.gitignore", "dst": "./Jenova/JenovaSDK"}
     ]
     os.makedirs(f"{outputDir}/Distribution", exist_ok=True)
     toolchainName = get_toolchain_name(buildMode)
@@ -564,7 +581,7 @@ def initialize_toolchain_windows():
                     done = progress_length
                     bar_length = int((done / total_size) * max_bar_length)
                     progress_bar = '[ ' + '=' * bar_length + ' ' * (max_bar_length - bar_length) + ' ]'
-                    rgb_print("#367fff", f"[ + ] Downloading First Unit: {done/total_size:.2%} {progress_bar}", True)
+                    if not deploy_mode: rgb_print("#367fff", f"[ + ] Downloading First Unit: {done/total_size:.2%} {progress_bar}", True)
             rgb_print("#38f227", "\n[ √ ] GigaChad Toolchain Package First Unit Download Complete.")
         else:
             rgb_print("#e02626", "[ x ] Error : Failed to Download GigaChad Toolchain Package First Unit.")
@@ -582,7 +599,7 @@ def initialize_toolchain_windows():
                     done = progress_length
                     bar_length = int((done / total_size) * max_bar_length)
                     progress_bar = '[ ' + '=' * bar_length + ' ' * (max_bar_length - bar_length) + ' ]'
-                    rgb_print("#367fff", f"[ + ] Downloading Second Unit : {done/total_size:.2%} {progress_bar}", True)
+                    if not deploy_mode: rgb_print("#367fff", f"[ + ] Downloading Second Unit : {done/total_size:.2%} {progress_bar}", True)
             rgb_print("#38f227", "\n[ √ ] GigaChad Toolchain Package Second Unit Download Complete.")
         else:
             rgb_print("#e02626", "[ x ] Error : Failed to Download GigaChad Toolchain Package Second Unit.")
@@ -984,7 +1001,7 @@ def build_dependencies_windows(buildMode, cacheDir):
             ], cwd=buildPath, check=True)
             subprocess.run(["mingw32-make.exe"], cwd=buildPath, env=os.environ.copy(), check=True)
             shutil.copyfile(os.path.join(buildPath, "libtcc.a"), "./Libs/libtcc-static-x86_64.a")
-            rgb_print("#03fc6f", "[ √ ] Jenova Runtime Dependency 'TinyCC' Compiled Successfully.")
+            rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'TinyCC' Compiled Successfully.")
 
         # Build GodotSDK
         if not os.path.exists("./Libs/libgodotcpp-static-x86_64.a"):
@@ -1264,6 +1281,7 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
         run_linker_command(link_command, linker)
 
     # Prepare Release
+    open(f"{sdkDir}/.gitignore", "w").write("*")
     shutil.copy2("./JenovaSDK.h", f"{sdkDir}/JenovaSDK.h")
     shutil.copy2("./Jenova.Runtime.gdextension", f"{outputDir}/Jenova.Runtime.gdextension")
 
@@ -1275,7 +1293,8 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
         {"src": f"{outputDir}/Jenova.Runtime.gdextension", "dst": "./Jenova"},
         {"src": f"{sdkDir}/JenovaSDK.h", "dst": "./Jenova/JenovaSDK"},
         {"src": f"{sdkDir}/Jenova.SDK.x64.a", "dst": "./Jenova/JenovaSDK"},
-        {"src": f"{sdkDir}/Jenova.SDK.x64.lib", "dst": "./Jenova/JenovaSDK"}
+        {"src": f"{sdkDir}/Jenova.SDK.x64.lib", "dst": "./Jenova/JenovaSDK"},
+        {"src": f"{sdkDir}/.gitignore", "dst": "./Jenova/JenovaSDK"}
     ]
     os.makedirs(f"{outputDir}/Distribution", exist_ok=True)
     toolchainName = get_toolchain_name(buildMode)
@@ -1290,16 +1309,22 @@ if __name__ == "__main__":
     # Create Arguments Parser
     parser = argparse.ArgumentParser(description="Jenova Runtime Build System 2.0 Developed by Hamid.Memar")
     parser.add_argument('--compiler', type=str, help='Specify Compiler to Use.')
+    parser.add_argument('--deploy-mode', action='store_true', help='Run As GitHub Action Deploy Mode')  
     parser.add_argument('--skip-banner', action='store_true', help='Skip Printing Banner')
     parser.add_argument('--skip-deps', action='store_true', help='Skip Building Dependencies')
     parser.add_argument('--skip-cache', action='store_true', help='Skip Source Caching')
     parser.add_argument('--skip-packaging', action='store_true', help='Skip Creating Distribution Package')
-    
+    parser.add_argument('--clean-up', action='store_true', help='Clean Up Build Files')
+    parser.add_argument('--deep-clean-up', action='store_true', help='Clean Up Everything')
+
     # Parser Arguments
     args = parser.parse_args()
 
     # Print Banner
     if not args.skip_banner: print_banner()
+
+    # Enable Deploy Mode
+    if args.deploy_mode: deploy_mode = True
 
     # Skip Building Dependencies
     if args.skip_deps: skip_deps = True
@@ -1309,6 +1334,16 @@ if __name__ == "__main__":
 
     # Skip Source Caching
     if args.skip_packaging: skip_packaging = True   
+
+    # Clean Up
+    if args.clean_up:
+        rgb_print("#367fff", "[ ^ ] Cleaning Up Build...")
+        clean_up_build(False)
+
+    # Deep Clean Up
+    if args.deep_clean_up:
+        rgb_print("#367fff", "[ ^ ] Cleaning Up Everything...")
+        clean_up_build(True)
 
     # Set Compiler And Start Build
     start_time = time.time()
