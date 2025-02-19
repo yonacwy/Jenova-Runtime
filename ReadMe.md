@@ -6,10 +6,10 @@ This repository contains source code of **Jenova Runtime** developed for Godot 4
 
 <div align="center">
   <span>
-    <img src="https://github.com/Jenova-Framework/Jenova-Runtime/actions/workflows/windows-x64-msvc.yml/badge.svg" alt="Jenova Runtime (Windows-x64)">
+    <img src="https://github.com/Jenova-Framework/Jenova-Runtime/actions/workflows/runtime-windows-x64-build.yml/badge.svg" alt="Jenova Runtime (Windows-x64)">
   </span>
   <span>
-    <img src="https://github.com/Jenova-Framework/Jenova-Runtime/actions/workflows/linux-x64-gcc.yml/badge.svg" alt="Jenova Runtime (Linux-64)">
+    <img src="https://github.com/Jenova-Framework/Jenova-Runtime/actions/workflows/runtime-linux-x64-build.yml/badge.svg" alt="Jenova Runtime (Linux-64)">
   </span>
 </div>
 
