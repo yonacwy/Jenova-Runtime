@@ -1184,10 +1184,11 @@ bool JenovaPackageManager::PreparePackageManager()
 	String projectPath = jenova::GetJenovaProjectDirectory();
 
 	// Create Package Directory If Not Exists
-	String packageRepositoryPath = projectPath + jenova::GlobalSettings::JenovaPackageRepositoryPath;
-	if (!std::filesystem::exists(AS_STD_STRING(packageRepositoryPath)))
+	std::string packageRepositoryPath = AS_STD_STRING(projectPath + jenova::GlobalSettings::JenovaPackageRepositoryPath);
+	if (!packageRepositoryPath.empty() && (packageRepositoryPath.back() == '\\' || packageRepositoryPath.back() == '/')) packageRepositoryPath.pop_back();
+	if (!std::filesystem::exists(packageRepositoryPath))
 	{
-		if (!std::filesystem::create_directories(AS_STD_STRING(packageRepositoryPath))) return false;
+		if (!std::filesystem::create_directories(packageRepositoryPath)) return false;
 	}
 	
 	// Create Package Directory .gdignore If Not Exists
