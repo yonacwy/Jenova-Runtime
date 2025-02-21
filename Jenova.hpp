@@ -126,9 +126,6 @@
 #include <godot_cpp/classes/time.hpp>
 #include <godot_cpp/classes/timer.hpp>
 #include <godot_cpp/classes/shader.hpp>
-#include <godot_cpp/classes/shader_material.hpp>
-#include <godot_cpp/classes/standard_material3d.hpp>
-#include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/font.hpp>
 #include <godot_cpp/classes/font_file.hpp>
 #include <godot_cpp/classes/font_variation.hpp>
