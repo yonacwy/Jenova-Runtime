@@ -120,7 +120,7 @@ def print_banner():
 ===========================================================================
     """
     rgb_print("#42f569", banner)
-    rgb_print("#2942ff", f".:: Jenova Build System v2.0 ::.\n")
+    rgb_print("#2942ff", f".:: Jenova Build System v2.2 ::.\n")
 def get_compiler_choice():
     global compiler, linker
     rgb_print("#ff2474", "[ ? ] Select Supported Compiler :\n")
@@ -1036,6 +1036,7 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
     outputName = "Jenova.Runtime.Win64.dll"
     symbolFileName = "Jenova.Runtime.Win64.pdb"
     mapFileName = "Jenova.Runtime.Win64.map"
+    resourceFileName = "Jenova.Runtime.rc"
     cacheDir = f"{outputDir}/Cache"
     sdkDir = f"{outputDir}/JenovaSDK"
     CacheDB = f"{cacheDir}/Build.db"
@@ -1156,6 +1157,17 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
                 object_file = f"{cacheDir}/{os.path.basename(source).replace('.cpp', '.obj')}"
                 object_files.append(object_file)
 
+            # Compile Resource File
+            rgb_print("#367fff", "[ ^ ] Generating Resource Compiler Command...")
+            compiled_resource_file = f"{cacheDir}/Jenova.Runtime.res"
+            if buildMode == "win-msvc": resource_compiler = "rc.exe"
+            if buildMode == "win-clangcl": resource_compiler = "llvm-rc.exe"
+            compile_resource_command = (
+                f"{resource_compiler} -D_UNICODE -DUNICODE -c65001 /NOLOGO /fo "
+                f"\"{compiled_resource_file}\" \"{resourceFileName}\""
+            )
+            run_compile_command(compile_resource_command, "Jenova.Runtime.rc", resource_compiler)
+
             # Generate Linker Command
             rgb_print("#367fff", "[ ^ ] Generating Linker Command...")
             link_command = (
@@ -1163,6 +1175,7 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
                 f"/PDB:\"{outputDir}/{symbolFileName}\" /DYNAMICBASE "
                 f"{' '.join(object_files)} "
                 f"{' '.join(libs)} "
+                f"\"{compiled_resource_file}\" "
                 f"comctl32.lib Dbghelp.lib Ws2_32.lib Wldap32.lib kernel32.lib user32.lib Crypt32.lib "
                 f"gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib "
                 f"bcrypt.lib uuid.lib odbc32.lib odbccp32.lib delayimp.lib "
@@ -1249,6 +1262,16 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
         rgb_print("#367fff", "[ ^ ] Saving Cache...")
         save_cache(cache, CacheDB)
 
+        # Compile Resource File
+        rgb_print("#367fff", "[ ^ ] Generating Resource Compiler Command...")
+        compiled_resource_file = f"{cacheDir}/Jenova.Runtime.res"
+        resource_compiler = "windres.exe"
+        compile_resource_command = (
+            f"{resource_compiler} -D_UNICODE -DUNICODE -c65001 "
+            f"-o \"{compiled_resource_file}\" -i\"{resourceFileName}\""
+        )
+        run_compile_command(compile_resource_command, "Jenova.Runtime.rc", resource_compiler)
+
         # Generate Linker Command
         rgb_print("#367fff", "[ ^ ] Generating Linker Command...")
         if buildMode == "win-clang":
@@ -1261,18 +1284,20 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
                 "-Xlinker /DELAYLOAD:wldap32.dll -Xlinker /DELAYLOAD:dbghelp.dll "
                 f"-Wl,-Map=\"{outputDir}/{mapFileName}\" "
                 f"-Wl,--pdb=\"{outputDir}/{symbolFileName}\" "
+                f"\"{compiled_resource_file}\" "
                 f"-Wl,--out-implib,\"{sdkDir}/Jenova.SDK.x64.a\" "
             )
         if buildMode == "win-gcc":
             link_command = (
                 f"{linker} -shared -static-libstdc++ -static-libgcc -fuse-ld=lld "
-                f"{' '.join(object_files)} -o {outputDir}/{outputName} -m64 "
+                f"{' '.join(object_files)} -o {outputDir}/{outputName} -m64 -flto -Os -s "
                 f"{' '.join(libs)} -lws2_32 -lwinhttp -ldbghelp -lbcrypt -lcrypt32 -lwldap32" + " "
                 "-delayimp -Wl,-Bstatic -lpthread" + " "
                 "-Xlinker /DELAYLOAD:bcrypt.dll -Xlinker /DELAYLOAD:lcrypt32.dll "
                 "-Xlinker /DELAYLOAD:wldap32.dll -Xlinker /DELAYLOAD:dbghelp.dll "
                 f"-Wl,-Map=\"{outputDir}/{mapFileName}\" "
                 f"-Wl,--pdb=\"{outputDir}/{symbolFileName}\" "
+                f"\"{compiled_resource_file}\" "
                 f"-Wl,--out-implib,\"{sdkDir}/Jenova.SDK.x64.a\" "
             )
 
@@ -1307,7 +1332,7 @@ if __name__ == "__main__":
     os.environ['PYTHONDONTWRITEBYTECODE'] = "1"
 
     # Create Arguments Parser
-    parser = argparse.ArgumentParser(description="Jenova Runtime Build System 2.0 Developed by Hamid.Memar")
+    parser = argparse.ArgumentParser(description="Jenova Runtime Build System 2.2 Developed by Hamid.Memar")
     parser.add_argument('--compiler', type=str, help='Specify Compiler to Use.')
     parser.add_argument('--deploy-mode', action='store_true', help='Run As GitHub Action Deploy Mode')  
     parser.add_argument('--skip-banner', action='store_true', help='Skip Printing Banner')
