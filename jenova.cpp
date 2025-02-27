@@ -4153,7 +4153,7 @@ namespace jenova
 			{
 				if (OS::get_singleton()->is_debug_build()) jenova::GlobalStorage::CurrentEngineMode = jenova::EngineMode::Debug;
 				else jenova::GlobalStorage::CurrentEngineMode = jenova::EngineMode::Runtime;
-				if (Engine::get_singleton()->is_editor_hint()) jenova::GlobalStorage::CurrentEngineMode = jenova::EngineMode::Editor;
+				if (Engine::get_singleton()->is_editor_hint()) { jenova::GlobalStorage::CurrentEngineMode = jenova::EngineMode::Editor; jenova::Output("Engine is running in editor mode."); } else { jenova::Output("Engine is NOT running in editor mode."); }
 
 				// Verbose Mode
 				jenova::Output("Running Jenova Core in [%s] Engine Mode.", AS_C_STRING(jenova::GetCurrentEngineInstanceModeAsString()));

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Jenova Runtime Build System Script
 # Developed by Hamid.Memar (2024-2025)
 # Usage : python3 ./Jenova.Builder.py --compiler win-msvc --skip-banner
@@ -450,7 +452,6 @@ def build_dependencies_linux(buildMode, cacheDir):
         shutil.copytree(buildPath + "/gen/include", sdkPath, dirs_exist_ok=True)
         rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'GodotSDK' Compiled Successfully.")
 def build_linux(compilerBinary, linkerBinary, buildMode, buildSystem):
-
     # Verbose Build
     rgb_print("#fff06e", f"[ > ] Building Jenova Runtime for Linux using {buildSystem} Toolchain...")
 
@@ -527,11 +528,11 @@ def build_linux(compilerBinary, linkerBinary, buildMode, buildSystem):
     rgb_print("#367fff", "[ ^ ] Saving Cache...")
     save_cache(cache, CacheDB)
 
-    # Generate Linker Command
+    # Generate Linker Command (Modified to include -lbz2)
     rgb_print("#367fff", "[ ^ ] Generating Linker Command...")
     link_command = (
         f"{linker} -shared -fPIC {' '.join(object_files)} -o {outputDir}/{outputName} -m64 "
-        f"-static-libstdc++ -static-libgcc {' '.join(libs)} -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -ldl -lrt "
+        f"-static-libstdc++ -static-libgcc {' '.join(libs)} -lssl -lcrypto -lbz2 -lnghttp2 -lbrotlidec -lssh2 -lidn2 -lacl -llz4 -ldl -lrt "
         f"-Wl,-Map,{outputDir}/{mapFileName}"
     )
 
@@ -554,14 +555,20 @@ def build_linux(compilerBinary, linkerBinary, buildMode, buildSystem):
     ]
     os.makedirs(f"{outputDir}/Distribution", exist_ok=True)
     toolchainName = get_toolchain_name(buildMode)
+    # Copy Module Cache to res://J.E.N.O.V.A/
+    rgb_print("#367fff", "[ ^ ] Copying Module Cache to res://J.E.N.O.V.A/...")
+    dest_dir = "./Jenova"
+    os.makedirs(dest_dir, exist_ok=True)
+    shutil.copy2(f"{cacheDir}/Build.db", f"{dest_dir}/JenovaRuntime.jdb")
+    # Copy Module Cache to Cache Directory
+    rgb_print("#367fff", "[ ^ ] Copying Module Cache to Cache Directory...")
+    shutil.copy2(f"{cacheDir}/Build.db", f"{cacheDir}/JenovaRuntime.jdb")
     create_distribution_package(packageFiles, f"{outputDir}/Distribution/Jenova-Framework-Linux64-{toolchainName}.7z")
 
 # Windows Build Functions
 def initialize_toolchain_windows():
-
     # Validate Toolchain
     if not os.path.exists("./Toolchain"): 
-
         # GigaChad Toolchain Package URL
         gigachad_toolchain_pkg_pt1_url = "https://jenova-framework.github.io/download/development/GigaChad-Toolchain-v1.0-Win64-U1.jnvpkg"
         gigachad_toolchain_pkg_pt2_url = "https://jenova-framework.github.io/download/development/GigaChad-Toolchain-v1.0-Win64-U2.jnvpkg"
@@ -633,7 +640,6 @@ def initialize_toolchain_windows():
     # Verbose
     rgb_print("#38f227",f"[ √ ] Toolchain ({os.environ['TOOLCHAIN_PATH']}) has been Configured Successfully.")
 def build_dependencies_windows(buildMode, cacheDir):
-
     # Install Dependencies
     install_dependencies()
 
@@ -740,7 +746,6 @@ def build_dependencies_windows(buildMode, cacheDir):
                 "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
                 f"-DCMAKE_C_FLAGS={os.environ['CLFLAGS'] + ' -DLZMA_API_STATIC ' + f'/I{guard_path(lzmaInclude)}'}"
             ], check=True)
-            os.environ["INCLUDE"] += f";"
             build_with_ninja(buildPath)
             shutil.copyfile(buildPath + "/libarchive/archive.lib", "./Libs/libarchive-static-x86_64.lib")
             rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'Archive' Compiled Successfully.")
@@ -776,7 +781,7 @@ def build_dependencies_windows(buildMode, cacheDir):
                 "-S", "./Dependencies/libzlib",
                 "-B", buildPath,
                 "-G", "Ninja",
-                "-DCMAKE_BUILD_TYPE=MinSizeRel",
+                "-CMAKE_BUILD_TYPE=MinSizeRel",
                 "-DBUILD_SHARED_LIBS=OFF",
                 "-DZLIB_BUILD_TESTING=OFF",
                 "-DZLIB_BUILD_SHARED=OFF",
@@ -800,7 +805,7 @@ def build_dependencies_windows(buildMode, cacheDir):
                 "-DBUILD_SHARED_LIBS=OFF",
                 "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
                 "-DCMAKE_C_FLAGS=/w",
-                "-DCMAKE_CXX_FLAGS=/w"
+                "-CMAKE_CXX_FLAGS=/w"
             ], check=True)
             build_with_ninja(buildPath)
             shutil.copyfile(buildPath + "/pthreadVSE3.lib", "./Libs/libpthread-static-x86_64.lib")
@@ -822,7 +827,7 @@ def build_dependencies_windows(buildMode, cacheDir):
             build_with_ninja(buildPath)
             shutil.copyfile(buildPath + "/libtcc.lib", "./Libs/libtcc-static-x86_64.lib")
             rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'TinyCC' Compiled Successfully.")
-     
+       
         # Build GodotSDK
         if not os.path.exists("./Libs/libgodotcpp-static-x86_64.lib"):
             os.environ["GODOT_MSVC_STATIC_RUNTIME"] = "true"
@@ -834,7 +839,7 @@ def build_dependencies_windows(buildMode, cacheDir):
                 "-S", "./Dependencies/libgodot",
                 "-B", buildPath,
                 "-G", "Ninja",
-                "-DCMAKE_BUILD_TYPE=MinSizeRel",
+                "-CMAKE_BUILD_TYPE=MinSizeRel",
                 "-DBUILD_SHARED_LIBS=OFF",
                 "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
                 f"-DCMAKE_CXX_FLAGS={os.environ['CLFLAGS']}"
@@ -847,185 +852,7 @@ def build_dependencies_windows(buildMode, cacheDir):
             shutil.copytree("./Dependencies/libgodot/include", sdkPath, dirs_exist_ok=True)
             shutil.copytree(buildPath + "/gen/include", sdkPath, dirs_exist_ok=True)
             rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'GodotSDK' Compiled Successfully.")
-
-    # Build Dependencies for Clang & GNU
-    if buildMode == "win-clang" or buildMode == "win-gcc":
-
-        # Set Compiler/Linker Configuration
-        os.environ['CC'] = 'clang.exe' if buildMode == "win-clang" else 'gcc.exe'
-        os.environ['CXX'] = 'clang++.exe' if buildMode == "win-clang" else 'g++.exe'
-        os.environ['CFLAGS'] = '-static -w -m64'
-        os.environ['CXXFLAGS'] = '-static -std=c++20 -w -m64'
-        os.environ['LDFLAGS'] = '-static -static-libgcc -static-libstdc++ -pthread -m64'
-        os.environ['C_COMPILER'] = 'clang' if buildMode == "win-clang" else 'gcc'
-        os.environ['CXX_COMPILER'] = 'clang++' if buildMode == "win-clang" else 'g++'
-
-        # Set Specific Build System Configuration
-        if buildMode == "win-clang":
-            os.environ['CFLAGS'] += ' -Qunused-arguments'
-            os.environ['CXXFLAGS'] += ' -Qunused-arguments -femulated-tls'
-
-        # Build AsmJIT
-        if not os.path.exists("./Libs/libasmjit-static-x86_64.a"):
-            buildPath = cacheDir + "/Dependencies/asmjit"
-            if os.path.exists(buildPath): shutil.rmtree(buildPath)
-            subprocess.run([
-                "cmake.exe",
-                "-S", "./Dependencies/libasmjit",
-                "-B", buildPath,
-                "-G", "Ninja",
-                "-DCMAKE_BUILD_TYPE=MinSizeRel",
-                "-DBUILD_SHARED_LIBS=OFF",
-                "-DASMJIT_STATIC=ON"
-            ], check=True)
-            build_with_ninja(buildPath)
-            shutil.copyfile(buildPath + "/libasmjit.a", "./Libs/libasmjit-static-x86_64.a")
-            rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'AsmJIT' Compiled Successfully.")
-
-        # Build Curl
-        if not os.path.exists("./Libs/libcurl-static-x86_64.a"):
-            buildPath = cacheDir + "/Dependencies/curl"
-            if os.path.exists(buildPath): shutil.rmtree(buildPath)
-            subprocess.run([
-                "cmake.exe",
-                "-S", "./Dependencies/libcurl",
-                "-B", buildPath,
-                "-G", "Ninja",
-                "-DCMAKE_BUILD_TYPE=MinSizeRel",
-                "-DBUILD_SHARED_LIBS=OFF",
-                "-DCURL_USE_OPENSSL=OFF",
-                "-DCURL_USE_SCHANNEL=ON",
-                "-DBUILD_LIBCURL_DOCS=OFF",
-                "-DBUILD_MISC_DOCS=OFF",
-                "-DCURL_USE_LIBPSL=OFF"
-            ], check=True)
-            build_with_ninja(buildPath)
-            shutil.copyfile(buildPath + "/lib/libcurl.a", "./Libs/libcurl-static-x86_64.a")
-            rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'Curl' Compiled Successfully.")
-
-        # Build LZMA
-        if not os.path.exists("./Libs/liblzma-static-x86_64.a"):
-            buildPath = cacheDir + "/Dependencies/lzma"
-            if os.path.exists(buildPath): shutil.rmtree(buildPath)
-            subprocess.run([
-                "cmake",
-                "-S", "./Dependencies/liblzma",
-                "-B", buildPath,
-                "-G", "Ninja",
-                "-DCMAKE_BUILD_TYPE=MinSizeRel",
-                "-DBUILD_SHARED_LIBS=OFF"
-            ], check=True)
-            build_with_ninja(buildPath)
-            shutil.copyfile(buildPath + "/liblzma.a", "./Libs/liblzma-static-x86_64.a")
-            rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'LZMA' Compiled Successfully.")
-
-        # Build Archive
-        if not os.path.exists("./Libs/libarchive-static-x86_64.a"):
-            buildPath = cacheDir + "/Dependencies/archive"
-            lzmaInclude = os.path.abspath('./Dependencies/liblzma/src/liblzma/api');
-            if os.path.exists(buildPath): shutil.rmtree(buildPath)
-            subprocess.run([
-                "cmake.exe",
-                "-S", "./Dependencies/libarchive",
-                "-B", buildPath,
-                "-G", "Ninja",
-                "-DCMAKE_BUILD_TYPE=MinSizeRel",
-                "-DBUILD_SHARED_LIBS=OFF",
-                "-DENABLE_LZMA=ON",
-                "-DHAVE_LZMA_H=ON",
-                "-DBUILD_TESTING=OFF",
-                "-DENABLE_TEST=OFF",
-                "-DENABLE_TAR=OFF",
-                "-DENABLE_CAT=OFF",
-                "-DENABLE_CPIO=OFF",
-                f"-DCMAKE_C_FLAGS={os.environ['CFLAGS'] + ' -DLZMA_API_STATIC ' + f'-I{guard_path(lzmaInclude)}'}"
-            ], check=True)
-            build_with_ninja(buildPath)
-            shutil.copyfile(buildPath + "/libarchive/libarchive.a", "./Libs/libarchive-static-x86_64.a")
-            rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'Archive' Compiled Successfully.")
-
-        # Build XML2
-        if not os.path.exists("./Libs/libxml2-static-x86_64.a"):
-            buildPath = cacheDir + "/Dependencies/xml2"
-            if os.path.exists(buildPath): shutil.rmtree(buildPath)
-            subprocess.run([
-                "cmake",
-                "-S", "./Dependencies/libxml2",
-                "-B", buildPath,
-                "-G", "Ninja",
-                "-DCMAKE_BUILD_TYPE=MinSizeRel",
-                "-DBUILD_SHARED_LIBS=OFF",
-                "-DLIBXML2_WITH_MODULES=OFF",
-                "-DLIBXML2_WITH_PYTHON=OFF",
-                "-DLIBXML2_WITH_TESTS=OFF",
-                "-DLIBXML2_WITH_ICONV=OFF"
-            ], check=True)
-            build_with_ninja(buildPath)
-            shutil.copyfile(buildPath + "/libxml2.a", "./Libs/libxml2-static-x86_64.a")
-            rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'XML2' Compiled Successfully.")
-
-        # Build ZLIB
-        if not os.path.exists("./Libs/libzlib-static-x86_64.a"):
-            buildPath = cacheDir + "/Dependencies/zlib"
-            if os.path.exists(buildPath): shutil.rmtree(buildPath)
-            os.makedirs(buildPath)
-            subprocess.run([
-                "cmake.exe",
-                "-S", "./Dependencies/libzlib",
-                "-B", buildPath,
-                "-G", "Ninja",
-                "-DCMAKE_BUILD_TYPE=MinSizeRel",
-                "-DBUILD_SHARED_LIBS=OFF",
-                "-DZLIB_BUILD_TESTING=OFF",
-                "-DZLIB_BUILD_SHARED=OFF",
-                "-DZLIB_BUILD_STATIC=ON"
-            ], check=True)
-            build_with_ninja(buildPath)
-            shutil.copyfile(buildPath + "/libzs.a", "./Libs/libzlib-static-x86_64.a")
-            rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'ZLIB' Compiled Successfully.")
-
-        # Build TinyCC
-        if not os.path.exists("./Libs/libtcc-static-x86_64.a"):
-            buildPath = cacheDir + "/Dependencies/tinycc"
-            if os.path.exists(buildPath): shutil.rmtree(buildPath)
-            os.makedirs(buildPath, exist_ok=True)
-            shutil.copytree("./Dependencies/libtinycc", buildPath, dirs_exist_ok=True)
-            subprocess.run([
-                "busybox.exe",
-                "sh",
-                "./configure",
-                f"--cc={os.environ['C_COMPILER']}",
-                "--config-mingw32",
-                "--enable-static",
-                "--cpu=x86_64"
-            ], cwd=buildPath, check=True)
-            subprocess.run(["mingw32-make.exe"], cwd=buildPath, env=os.environ.copy(), check=True)
-            shutil.copyfile(os.path.join(buildPath, "libtcc.a"), "./Libs/libtcc-static-x86_64.a")
-            rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'TinyCC' Compiled Successfully.")
-
-        # Build GodotSDK
-        if not os.path.exists("./Libs/libgodotcpp-static-x86_64.a"):
-            buildPath = cacheDir + "/Dependencies/godotcpp"
-            sdkPath = "./Libs/GodotSDK"
-            if os.path.exists(buildPath): shutil.rmtree(buildPath)
-            subprocess.run([
-                "cmake.exe",
-                "-S", "./Dependencies/libgodot",
-                "-B", buildPath,
-                "-G", "Ninja",
-                "-DCMAKE_BUILD_TYPE=MinSizeRel",
-                "-DBUILD_SHARED_LIBS=OFF"
-            ], check=True)
-            build_with_ninja(buildPath)
-            shutil.copyfile(buildPath + "/bin/libgodot-cpp.windows.minsizerel.64.a", "./Libs/libgodotcpp-static-x86_64.a")
-            if os.path.exists(sdkPath): shutil.rmtree(sdkPath)
-            os.makedirs(sdkPath, exist_ok=True)
-            shutil.copyfile("./Dependencies/libgodot/gdextension/gdextension_interface.h", sdkPath + "/gdextension_interface.h")
-            shutil.copytree("./Dependencies/libgodot/include", sdkPath, dirs_exist_ok=True)
-            shutil.copytree(buildPath + "/gen/include", sdkPath, dirs_exist_ok=True)
-            rgb_print("#38f227", "[ √ ] Jenova Runtime Dependency 'GodotSDK' Compiled Successfully.")
 def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
-
     # Verbose Build
     rgb_print("#4eb8ff", f"[ > ] Building Jenova Runtime for Windows using {buildSystem} Toolchain...")
 
@@ -1053,13 +880,13 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
     # Build Dependencies
     if not skip_deps:
         rgb_print("#367fff", "[ ^ ] Building Dependencies...")
+        rgb_print("#367fff", "[ ^ ] Building Dependencies...")
         build_dependencies_windows(buildMode, cacheDir)
     else:
         rgb_print("#367fff", "[ ^ ] Building Dependencies Skipped by User.")
 
     # Build Runtime Using MSVC & LLVM
     if buildMode == "win-msvc" or buildMode == "win-clangcl":
-
         # Verbose Build Start
         rgb_print("#367fff", "[ ^ ] Building Fully-Featured Jenova Runtime...")
 
@@ -1084,6 +911,7 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
             "Ws2_32.lib",
             "Wldap32.lib"
         ]
+        libs = [guard_path(lib) for lib in libs]
 
         # Add Extra Directories
         directories.append("Libs/Threading")
@@ -1101,7 +929,6 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
 
         # Check If Compile Required
         if changedSources:
-
             # Generate Compiler Command
             rgb_print("#367fff", "[ ^ ] Generating Compiler Command...")
             if buildMode == "win-msvc":
@@ -1229,7 +1056,7 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
                     f"{compiler} -m64 -O3 -g -gcodeview -fno-use-linker-plugin "
                     "-pipe -w -std=c++20 -pthread -fexceptions -femulated-tls "
                     f"{' '.join([f'-D{flag}' for flag in flags])} "
-                    f"{' '.join([f'-I{directory}' for directory in directories])} "
+                    f"{' '.join([f'-I{guard_path(directory)}' for directory in directories])} "
                     f"-c {source} -o {object_file}"
                 )
                 compile_commands[source] = compile_command
@@ -1241,7 +1068,7 @@ def build_windows(compilerBinary, linkerBinary, buildMode, buildSystem):
                     f"{compiler} -m64 -O3 -g -gcodeview -fno-use-linker-plugin "
                     "-pipe -w -std=c++20 -pthread -fexceptions "
                     f"{' '.join([f'-D{flag}' for flag in flags])} "
-                    f"{' '.join([f'-I{directory}' for directory in directories])} "
+                    f"{' '.join([f'-I{guard_path(directory)}' for directory in directories])} "
                     f"-c {source} -o {object_file}"
                 )
                 compile_commands[source] = compile_command
